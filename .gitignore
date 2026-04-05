@@ -1,0 +1,16 @@
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Editor / IDE
+/.idea
+/.vscode
+/.fleet
+/.nova
+/.zed
+*.swp
+
+# Docker local overrides
+docker-compose.override.yml
+.env
