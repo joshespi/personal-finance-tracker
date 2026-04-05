@@ -58,6 +58,16 @@
                     @endif
                 </div>
 
+                {{-- Portfolio history chart --}}
+                @if ($chartLabels->isNotEmpty())
+                    <div class="bg-white shadow-sm sm:rounded-lg px-6 py-5">
+                        <h3 class="text-base font-semibold text-gray-900 mb-4">Portfolio Value — Last 90 Days</h3>
+                        <div class="relative h-64">
+                            <canvas id="portfolioChart"></canvas>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Per-portfolio breakdown --}}
                 <div class="bg-white shadow-sm sm:rounded-lg">
                     <div class="px-6 py-4 border-b border-gray-100">
@@ -112,4 +122,52 @@
             @endif
         </div>
     </div>
+
+    @if ($chartLabels->isNotEmpty())
+        @push('scripts')
+        <script>
+document.addEventListener("DOMContentLoaded", function () {
+            
+
+            const ctx = document.getElementById('portfolioChart');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: @json($chartLabels),
+                    datasets: [{
+                        label: 'Total Value',
+                        data: @json($chartData),
+                        borderColor: 'rgb(17, 24, 39)',
+                        backgroundColor: 'rgba(17, 24, 39, 0.05)',
+                        borderWidth: 2,
+                        pointRadius: 2,
+                        fill: true,
+                        tension: 0.3,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => '$' + ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2 })
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            ticks: {
+                                callback: val => '$' + val.toLocaleString('en-US', { minimumFractionDigits: 0 })
+                            }
+                        }
+                    }
+                }
+            });
+        });
+</script>
+        @endpush
+    @endif
 </x-app-layout>

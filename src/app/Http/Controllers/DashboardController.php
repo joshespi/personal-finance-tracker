@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PortfolioSnapshot;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -13,6 +14,18 @@ class DashboardController extends Controller
             ->portfolios()
             ->with(['transactions.asset.latestPrice', 'manualAssets.latestValuation'])
             ->get();
+
+        // 90-day snapshot history for the chart (total value across all portfolios per day)
+        $snapshots = PortfolioSnapshot::whereIn('portfolio_id', $portfolios->pluck('id'))
+            ->where('recorded_on', '>=', now()->subDays(90)->toDateString())
+            ->orderBy('recorded_on')
+            ->get()
+            ->groupBy(fn ($s) => $s->recorded_on->toDateString())
+            ->map(fn ($group) => round($group->sum(fn ($s) => (float) $s->market_value + (float) $s->manual_value), 2))
+            ->sortKeys();
+
+        $chartLabels = $snapshots->keys()->values();
+        $chartData   = $snapshots->values();
 
         $summaries = $portfolios->map(function ($portfolio) {
             $holdings = $portfolio->computeHoldings();
@@ -48,6 +61,6 @@ class DashboardController extends Controller
             'total_value'  => round($summaries->sum('total_value'), 2),
         ];
 
-        return view('dashboard', compact('summaries', 'totals'));
+        return view('dashboard', compact('summaries', 'totals', 'chartLabels', 'chartData'));
     }
 }

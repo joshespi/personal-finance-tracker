@@ -76,12 +76,24 @@ docker compose exec app npm run dev
 
 ## Scheduled Commands
 
-The following Artisan commands are intended to run on a schedule (configure via `app/Console/Kernel.php` or a cron job in the container):
+The Laravel scheduler is configured in `bootstrap/app.php`:
 
-| Command                   | Description                                                |
-| ------------------------- | ---------------------------------------------------------- |
-| `app:fetch-asset-prices`  | Fetches latest prices for tracked assets via Finnhub       |
-| `app:snapshot-portfolios` | Records a point-in-time snapshot of each portfolio's value |
+| Command               | Frequency     | Description                                                |
+| --------------------- | ------------- | ---------------------------------------------------------- |
+| `assets:fetch-prices` | Every hour    | Fetches latest prices for tracked assets via Finnhub       |
+| `portfolios:snapshot` | Daily @ 00:05 | Records a point-in-time snapshot of each portfolio's value |
+
+To run the scheduler, add a single cron entry on the host machine:
+
+```bash
+crontab -e
+```
+
+```
+* * * * * docker compose -f /path/to/laravel-app/docker-compose.yml exec -T app php artisan schedule:run >> /dev/null 2>&1
+```
+
+Replace `/path/to/laravel-app` with the absolute path to this project.
 
 ## Key Models
 

@@ -24,12 +24,41 @@ class TransactionController extends Controller
     {
         abort_unless($portfolio->user_id === $request->user()->id, 403);
 
-        $transactions = $portfolio->transactions()
-            ->with('asset')
-            ->orderByDesc('transacted_at')
-            ->paginate(50);
+        $query = $portfolio->transactions()->with('asset');
 
-        return view('transactions.index', compact('portfolio', 'transactions'));
+        if ($search = $request->input('search')) {
+            $query->whereHas('asset', fn ($q) => $q->where('symbol', 'like', strtoupper($search) . '%'));
+        }
+
+        if ($type = $request->input('type')) {
+            $query->where('type', $type);
+        }
+
+        if ($from = $request->input('from')) {
+            $query->whereDate('transacted_at', '>=', $from);
+        }
+
+        if ($to = $request->input('to')) {
+            $query->whereDate('transacted_at', '<=', $to);
+        }
+
+        $sortCol = in_array($request->input('sort'), ['transacted_at', 'symbol', 'type', 'quantity'])
+            ? $request->input('sort')
+            : 'transacted_at';
+
+        $sortDir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
+
+        if ($sortCol === 'symbol') {
+            $query->join('assets', 'assets.id', '=', 'transactions.asset_id')
+                  ->orderBy('assets.symbol', $sortDir)
+                  ->select('transactions.*');
+        } else {
+            $query->orderBy($sortCol, $sortDir);
+        }
+
+        $transactions = $query->paginate(50)->withQueryString();
+
+        return view('transactions.index', compact('portfolio', 'transactions', 'sortCol', 'sortDir'));
     }
 
     public function create(Request $request, Portfolio $portfolio): View
