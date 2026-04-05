@@ -4,10 +4,10 @@ A Laravel application for tracking investment portfolios. Supports transactions,
 
 ## Stack
 
-- **PHP 8.3** / Laravel (FPM)
-- **MariaDB 11**
+- **PHP 8.5** / Laravel (FPM)
+- **MariaDB 11.8**
 - **Nginx**
-- **Node 20** / Vite / Tailwind CSS
+- **Node 24** / Vite / Tailwind CSS
 - Orchestrated with Docker Compose
 
 ## Prerequisites
@@ -78,24 +78,24 @@ docker compose exec app npm run dev
 
 The following Artisan commands are intended to run on a schedule (configure via `app/Console/Kernel.php` or a cron job in the container):
 
-| Command | Description |
-|---|---|
-| `app:fetch-asset-prices` | Fetches latest prices for tracked assets via Finnhub |
+| Command                   | Description                                                |
+| ------------------------- | ---------------------------------------------------------- |
+| `app:fetch-asset-prices`  | Fetches latest prices for tracked assets via Finnhub       |
 | `app:snapshot-portfolios` | Records a point-in-time snapshot of each portfolio's value |
 
 ## Key Models
 
-| Model | Description |
-|---|---|
-| `Portfolio` | A named collection of assets belonging to a user |
-| `Transaction` | A buy/sell record for a tracked asset within a portfolio |
-| `Asset` / `AssetPrice` | Market-traded assets and their historical prices |
+| Model                             | Description                                                   |
+| --------------------------------- | ------------------------------------------------------------- |
+| `Portfolio`                       | A named collection of assets belonging to a user              |
+| `Transaction`                     | A buy/sell record for a tracked asset within a portfolio      |
+| `Asset` / `AssetPrice`            | Market-traded assets and their historical prices              |
 | `ManualAsset` / `ManualValuation` | User-defined assets (e.g. real estate) with manual valuations |
-| `PortfolioSnapshot` | Periodic snapshots of portfolio value over time |
+| `PortfolioSnapshot`               | Periodic snapshots of portfolio value over time               |
 
 ## Ports
 
-| Service | Host port |
-|---|---|
-| Nginx (app) | 8080 |
-| MariaDB | 3306 |
+| Service     | Host port |
+| ----------- | --------- |
+| Nginx (app) | 8080      |
+| MariaDB     | 3306      |
