@@ -110,4 +110,4 @@ Replace `/path/to/laravel-app` with the absolute path to this project.
 | Service     | Host port |
 | ----------- | --------- |
 | Nginx (app) | 8080      |
-| MariaDB     | 3306      |
+| MariaDB     | 3307      |
