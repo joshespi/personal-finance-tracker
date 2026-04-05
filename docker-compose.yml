@@ -28,7 +28,7 @@ services:
       - laravel
 
   db:
-    image: mariadb:11
+    image: mariadb:11.8
     container_name: port-tracker-db
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
