@@ -85,60 +85,6 @@
                         <canvas id="portfolioChart" height="80"></canvas>
                     </div>
                 </div>
-
-                <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-                <script>
-                    const chartData = @json($chartData);
-                    const labels = chartData.map(d => d.date);
-                    const values = chartData.map(d => d.value);
-                    const costs  = chartData.map(d => d.cost);
-
-                    new Chart(document.getElementById('portfolioChart'), {
-                        type: 'line',
-                        data: {
-                            labels,
-                            datasets: [
-                                {
-                                    label: 'Market Value',
-                                    data: values,
-                                    borderColor: 'rgb(99, 102, 241)',
-                                    backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                                    fill: true,
-                                    tension: 0.3,
-                                    pointRadius: chartData.length > 60 ? 0 : 3,
-                                },
-                                {
-                                    label: 'Cost Basis',
-                                    data: costs,
-                                    borderColor: 'rgb(156, 163, 175)',
-                                    borderDash: [5, 5],
-                                    fill: false,
-                                    tension: 0.3,
-                                    pointRadius: 0,
-                                },
-                            ],
-                        },
-                        options: {
-                            responsive: true,
-                            interaction: { mode: 'index', intersect: false },
-                            plugins: {
-                                legend: { position: 'bottom' },
-                                tooltip: {
-                                    callbacks: {
-                                        label: ctx => ' $' + ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2 }),
-                                    },
-                                },
-                            },
-                            scales: {
-                                y: {
-                                    ticks: {
-                                        callback: val => '$' + val.toLocaleString('en-US', { minimumFractionDigits: 0 }),
-                                    },
-                                },
-                            },
-                        },
-                    });
-                </script>
             @endif
 
             {{-- Holdings --}}
@@ -283,4 +229,59 @@
 
         </div>
     </div>
+
+    @if ($chartData->count() > 1)
+        @push('scripts')
+        <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const chartData = @json($chartData);
+            new Chart(document.getElementById('portfolioChart'), {
+                type: 'line',
+                data: {
+                    labels: chartData.map(d => d.date),
+                    datasets: [
+                        {
+                            label: 'Market Value',
+                            data: chartData.map(d => d.value),
+                            borderColor: 'rgb(99, 102, 241)',
+                            backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: chartData.length > 60 ? 0 : 3,
+                        },
+                        {
+                            label: 'Cost Basis',
+                            data: chartData.map(d => d.cost),
+                            borderColor: 'rgb(156, 163, 175)',
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ' $' + ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2 }),
+                            },
+                        },
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: val => '$' + val.toLocaleString('en-US', { minimumFractionDigits: 0 }),
+                            },
+                        },
+                    },
+                },
+            });
+        });
+        </script>
+        @endpush
+    @endif
 </x-app-layout>
