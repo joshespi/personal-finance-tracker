@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('portfolios:snapshot')->dailyAt('00:05');
     })
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
