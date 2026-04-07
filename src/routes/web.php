@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ManualAssetController;
 use App\Http\Controllers\ManualValuationController;
@@ -36,6 +37,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::resource('users', AdminUserController::class)->only(['index', 'edit', 'update', 'destroy']);
+    });
 });
 
 require __DIR__.'/auth.php';

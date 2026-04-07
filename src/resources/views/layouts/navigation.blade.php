@@ -15,6 +15,11 @@
                     <x-nav-link :href="route('portfolios.index')" :active="request()->routeIs('portfolios.*') || request()->routeIs('transactions.*') || request()->routeIs('manual-assets.*')">
                         {{ __('Portfolios') }}
                     </x-nav-link>
+                    @if (Auth::user()->is_admin)
+                        <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.*')">
+                            {{ __('Admin') }}
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -64,6 +69,11 @@
             <x-responsive-nav-link :href="route('portfolios.index')" :active="request()->routeIs('portfolios.*')">
                 {{ __('Portfolios') }}
             </x-responsive-nav-link>
+            @if (Auth::user()->is_admin)
+                <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.*')">
+                    {{ __('Admin') }}
+                </x-responsive-nav-link>
+            @endif
         </div>
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="px-4">

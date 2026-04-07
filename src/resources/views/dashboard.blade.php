@@ -48,14 +48,12 @@
                         </div>
                     @endif
 
-                    @if ($totals['manual_value'] > 0)
-                        <div class="bg-white shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 uppercase tracking-wide">Manual Assets</p>
-                            <p class="mt-1 text-2xl font-semibold font-mono text-gray-900">
-                                ${{ number_format($totals['manual_value'], 2) }}
-                            </p>
-                        </div>
-                    @endif
+                    <div class="bg-white shadow-sm sm:rounded-lg px-5 py-4">
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Total Assets</p>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-900">
+                            ${{ number_format($totals['total_value'], 2) }}
+                        </p>
+                    </div>
                 </div>
 
                 {{-- Portfolio history chart --}}
