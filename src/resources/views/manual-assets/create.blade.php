@@ -1,16 +1,16 @@
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <p class="text-sm text-gray-500">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
                 <a href="{{ route('portfolios.show', $portfolio) }}" class="hover:underline">{{ $portfolio->name }}</a>
             </p>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Add Manual Asset</h2>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Add Manual Asset</h2>
         </div>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
                 <form method="POST" action="{{ route('portfolios.manual-assets.store', $portfolio) }}" class="space-y-6">
                     @csrf
 
@@ -25,7 +25,7 @@
                     <div>
                         <x-input-label for="asset_class" value="Asset Class" />
                         <select id="asset_class" name="asset_class"
-                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                             @foreach ($assetClasses as $value => $label)
                                 <option value="{{ $value }}" @selected(old('asset_class') === $value)>{{ $label }}</option>
                             @endforeach
@@ -36,7 +36,7 @@
                     <div>
                         <x-input-label for="description" value="Description (optional)" />
                         <textarea id="description" name="description"
-                                  class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                  class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
                                   rows="3" maxlength="1000">{{ old('description') }}</textarea>
                         <x-input-error :messages="$errors->get('description')" class="mt-2" />
                     </div>
@@ -52,7 +52,7 @@
                     <div class="flex items-center gap-4">
                         <x-primary-button>Add Asset</x-primary-button>
                         <a href="{{ route('portfolios.manual-assets.index', $portfolio) }}"
-                           class="text-sm text-gray-600 hover:underline">Cancel</a>
+                           class="text-sm text-gray-600 dark:text-gray-400 hover:underline">Cancel</a>
                     </div>
                 </form>
             </div>

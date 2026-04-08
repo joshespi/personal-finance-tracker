@@ -1,12 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <p class="text-sm text-gray-500">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
                 <a href="{{ route('portfolios.show', $portfolio) }}" class="hover:underline">{{ $portfolio->name }}</a>
                 &rsaquo;
                 <a href="{{ route('portfolios.transactions.index', $portfolio) }}" class="hover:underline">Transactions</a>
             </p>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 Edit Transaction &mdash; {{ $transaction->asset->symbol }}
             </h2>
         </div>
@@ -14,11 +14,11 @@
 
     <div class="py-12">
         <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
-                <div class="mb-6 p-3 bg-gray-50 rounded-md">
-                    <p class="text-xs text-gray-500">Symbol</p>
-                    <p class="font-mono font-bold text-gray-900 text-lg">{{ $transaction->asset->symbol }}</p>
-                    <p class="text-xs text-gray-400">{{ ucfirst($transaction->asset->asset_type) }}</p>
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                <div class="mb-6 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Symbol</p>
+                    <p class="font-mono font-bold text-gray-900 dark:text-gray-100 text-lg">{{ $transaction->asset->symbol }}</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ ucfirst($transaction->asset->asset_type) }}</p>
                 </div>
 
                 <form method="POST" action="{{ route('transactions.update', $transaction) }}" class="space-y-6">
@@ -28,7 +28,7 @@
                     <div>
                         <x-input-label for="type" value="Transaction Type" />
                         <select id="type" name="type"
-                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                             @foreach ($types as $value => $label)
                                 <option value="{{ $value }}" @selected(old('type', $transaction->type) === $value)>{{ $label }}</option>
                             @endforeach
@@ -76,7 +76,7 @@
                     <div>
                         <x-input-label for="notes" value="Notes (optional)" />
                         <textarea id="notes" name="notes"
-                                  class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                  class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
                                   rows="2" maxlength="1000">{{ old('notes', $transaction->notes) }}</textarea>
                         <x-input-error :messages="$errors->get('notes')" class="mt-2" />
                     </div>
@@ -84,7 +84,7 @@
                     <div class="flex items-center gap-4">
                         <x-primary-button>Save Changes</x-primary-button>
                         <a href="{{ route('portfolios.transactions.index', $portfolio) }}"
-                           class="text-sm text-gray-600 hover:underline">Cancel</a>
+                           class="text-sm text-gray-600 dark:text-gray-400 hover:underline">Cancel</a>
                     </div>
                 </form>
             </div>

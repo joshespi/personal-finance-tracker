@@ -2,21 +2,21 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
                     <a href="{{ route('portfolios.show', $manualAsset->portfolio) }}" class="hover:underline">
                         {{ $manualAsset->portfolio->name }}
                     </a>
                     &rsaquo; Manual Assets
                 </p>
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ $manualAsset->name }}</h2>
-                <p class="text-sm text-gray-500 mt-0.5">
+                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">{{ $manualAsset->name }}</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                     {{ $assetClasses[$manualAsset->asset_class] ?? $manualAsset->asset_class }}
                     &bull; {{ $manualAsset->currency }}
                 </p>
             </div>
             <div class="flex items-center gap-2">
                 <a href="{{ route('manual-assets.edit', $manualAsset) }}"
-                   class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-50 transition">
+                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                     Edit Asset
                 </a>
                 <form method="POST" action="{{ route('manual-assets.destroy', $manualAsset) }}"
@@ -36,21 +36,21 @@
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
             @if (session('success'))
-                <div class="bg-green-100 border border-green-300 text-green-800 rounded-md px-4 py-3 text-sm">
+                <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-300 rounded-md px-4 py-3 text-sm">
                     {{ session('success') }}
                 </div>
             @endif
 
             @if ($manualAsset->description)
-                <div class="bg-white shadow-sm sm:rounded-lg p-6">
-                    <p class="text-sm text-gray-700">{{ $manualAsset->description }}</p>
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <p class="text-sm text-gray-700 dark:text-gray-300">{{ $manualAsset->description }}</p>
                 </div>
             @endif
 
             {{-- Add Valuation --}}
-            <div class="bg-white shadow-sm sm:rounded-lg">
-                <div class="px-6 py-4 border-b border-gray-100">
-                    <h3 class="text-base font-semibold text-gray-900">Record New Valuation</h3>
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Record New Valuation</h3>
                 </div>
                 <div class="p-6">
                     <form method="POST" action="{{ route('manual-assets.valuations.store', $manualAsset) }}"
@@ -86,36 +86,36 @@
             </div>
 
             {{-- Valuation History --}}
-            <div class="bg-white shadow-sm sm:rounded-lg">
-                <div class="px-6 py-4 border-b border-gray-100">
-                    <h3 class="text-base font-semibold text-gray-900">Valuation History</h3>
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Valuation History</h3>
                 </div>
 
                 @if ($manualAsset->valuations->isEmpty())
-                    <div class="p-6 text-sm text-gray-500">No valuations recorded yet.</div>
+                    <div class="p-6 text-sm text-gray-500 dark:text-gray-400">No valuations recorded yet.</div>
                 @else
                     <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-100 text-sm">
-                            <thead class="bg-gray-50">
+                        <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Value ({{ $manualAsset->currency }})</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Value ({{ $manualAsset->currency }})</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Notes</th>
                                     <th class="px-6 py-3"></th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-100">
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach ($manualAsset->valuations as $v)
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-3 text-gray-700 whitespace-nowrap">{{ $v->valued_at->format('M j, Y') }}</td>
-                                        <td class="px-6 py-3 text-right font-mono font-semibold text-gray-900">{{ number_format((float)$v->value, 2) }}</td>
-                                        <td class="px-6 py-3 text-gray-500">{{ $v->notes ?? '—' }}</td>
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                        <td class="px-6 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ $v->valued_at->format('M j, Y') }}</td>
+                                        <td class="px-6 py-3 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">{{ number_format((float)$v->value, 2) }}</td>
+                                        <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $v->notes ?? '—' }}</td>
                                         <td class="px-6 py-3 text-right">
                                             <form method="POST" action="{{ route('valuations.destroy', $v) }}" class="inline"
                                                   onsubmit="return confirm('Delete this valuation?')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="text-red-600 hover:underline text-xs">Delete</button>
+                                                <button type="submit" class="text-red-600 dark:text-red-400 hover:underline text-xs">Delete</button>
                                             </form>
                                         </td>
                                     </tr>

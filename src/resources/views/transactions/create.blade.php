@@ -1,16 +1,16 @@
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <p class="text-sm text-gray-500">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
                 <a href="{{ route('portfolios.show', $portfolio) }}" class="hover:underline">{{ $portfolio->name }}</a>
             </p>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Add Transaction</h2>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Add Transaction</h2>
         </div>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
                 <form method="POST" action="{{ route('portfolios.transactions.store', $portfolio) }}" class="space-y-6">
                     @csrf
 
@@ -25,7 +25,7 @@
                         <div>
                             <x-input-label for="asset_type" value="Asset Type" />
                             <select id="asset_type" name="asset_type"
-                                    class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                                 <option value="stock" @selected(old('asset_type') === 'stock')>Stock</option>
                                 <option value="crypto" @selected(old('asset_type') === 'crypto')>Crypto</option>
                             </select>
@@ -36,7 +36,7 @@
                     <div>
                         <x-input-label for="type" value="Transaction Type" />
                         <select id="type" name="type"
-                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                             @foreach ($types as $value => $label)
                                 <option value="{{ $value }}" @selected(old('type', 'buy') === $value)>{{ $label }}</option>
                             @endforeach
@@ -84,7 +84,7 @@
                     <div>
                         <x-input-label for="notes" value="Notes (optional)" />
                         <textarea id="notes" name="notes"
-                                  class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                  class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
                                   rows="2" maxlength="1000">{{ old('notes') }}</textarea>
                         <x-input-error :messages="$errors->get('notes')" class="mt-2" />
                     </div>
@@ -92,7 +92,7 @@
                     <div class="flex items-center gap-4">
                         <x-primary-button>Add Transaction</x-primary-button>
                         <a href="{{ route('portfolios.transactions.index', $portfolio) }}"
-                           class="text-sm text-gray-600 hover:underline">Cancel</a>
+                           class="text-sm text-gray-600 dark:text-gray-400 hover:underline">Cancel</a>
                     </div>
                 </form>
             </div>
