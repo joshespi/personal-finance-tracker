@@ -42,7 +42,7 @@ services:
   db:
     image: mariadb:11.8
     container_name: port-tracker-db
-    srestart: always
+    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
       MYSQL_DATABASE: ${DB_DATABASE:-laravel}
