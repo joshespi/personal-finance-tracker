@@ -17,7 +17,7 @@ services:
       DB_DATABASE: ${DB_DATABASE}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
-
+    restart: always
     depends_on:
       db:
         condition: service_healthy
@@ -28,6 +28,7 @@ services:
   nginx:
     image: nginx:alpine
     container_name: port-tracker-nginx
+    restart: always
     ports:
       - "8080:80"
     volumes:
@@ -41,6 +42,7 @@ services:
   db:
     image: mariadb:11.8
     container_name: port-tracker-db
+    srestart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
       MYSQL_DATABASE: ${DB_DATABASE:-laravel}
