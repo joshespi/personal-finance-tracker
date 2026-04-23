@@ -2,10 +2,16 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Dashboard</h2>
-            <a href="{{ route('portfolios.create') }}"
-               class="inline-flex items-center px-3 py-1.5 bg-gray-800 dark:bg-gray-700 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition">
-                + New Portfolio
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('transfers.create') }}"
+                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                    Portfolio Transfer
+                </a>
+                <a href="{{ route('portfolios.create') }}"
+                   class="inline-flex items-center px-3 py-1.5 bg-gray-800 dark:bg-gray-700 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition">
+                    + New Portfolio
+                </a>
+            </div>
         </div>
     </x-slot>
 
@@ -62,6 +68,69 @@
                         <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Portfolio Value — Last 90 Days</h3>
                         <div class="relative h-64">
                             <canvas id="portfolioChart"></canvas>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- All Holdings (aggregated across all portfolios) --}}
+                @if ($allHoldings->isNotEmpty())
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
+                        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">All Holdings</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                                <thead class="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Symbol</th>
+                                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
+                                        <th class="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total Qty</th>
+                                        <th class="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Cost Basis</th>
+                                        <th class="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Price</th>
+                                        <th class="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Market Value</th>
+                                        <th class="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Unrealized P&L</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
+                                    @foreach ($allHoldings as $h)
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                            <td class="px-5 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">
+                                                {{ $h['asset']->symbol }}
+                                            </td>
+                                            <td class="px-5 py-3">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                                                    {{ $h['asset']->asset_type === 'crypto'
+                                                        ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
+                                                        : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' }}">
+                                                    {{ ucfirst($h['asset']->asset_type) }}
+                                                </span>
+                                            </td>
+                                            <td class="px-5 py-3 text-right font-mono text-gray-900 dark:text-gray-100">
+                                                {{ rtrim(rtrim(number_format((float)$h['quantity'], 8), '0'), '.') }}
+                                            </td>
+                                            <td class="px-5 py-3 text-right font-mono text-gray-700 dark:text-gray-300">
+                                                ${{ number_format($h['total_cost'], 2) }}
+                                            </td>
+                                            <td class="px-5 py-3 text-right font-mono text-gray-500 dark:text-gray-400">
+                                                {{ $h['current_price'] !== null ? '$' . number_format($h['current_price'], 4) : '—' }}
+                                            </td>
+                                            <td class="px-5 py-3 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">
+                                                {{ $h['current_value'] !== null ? '$' . number_format($h['current_value'], 2) : '—' }}
+                                            </td>
+                                            <td class="px-5 py-3 text-right font-mono font-semibold">
+                                                @if ($h['unrealized_gain'] !== null)
+                                                    @php $g = $h['unrealized_gain']; @endphp
+                                                    <span class="{{ $g >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                                        {{ $g >= 0 ? '+' : '' }}${{ number_format($g, 2) }}
+                                                    </span>
+                                                @else
+                                                    <span class="text-gray-400">—</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 @endif

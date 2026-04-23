@@ -27,8 +27,15 @@ class DashboardController extends Controller
         $chartLabels = $snapshots->keys()->values();
         $chartData   = $snapshots->values();
 
-        $summaries = $portfolios->map(function ($portfolio) {
-            $holdings = $portfolio->computeHoldings();
+        // Compute per-portfolio holdings once and reuse
+        $portfolioHoldings = $portfolios->map(fn ($p) => [
+            'portfolio' => $p,
+            'holdings'  => $p->computeHoldings(),
+        ]);
+
+        $summaries = $portfolioHoldings->map(function ($ph) {
+            $portfolio = $ph['portfolio'];
+            $holdings  = $ph['holdings'];
 
             $costBasis    = $holdings->sum('total_cost');
             $marketValue  = $holdings->filter(fn ($h) => $h['current_value'] !== null)->sum('current_value');
@@ -61,6 +68,31 @@ class DashboardController extends Controller
             'total_value'  => round($summaries->sum('total_value'), 2),
         ];
 
-        return view('dashboard', compact('summaries', 'totals', 'chartLabels', 'chartData'));
+        // Aggregate holdings across all portfolios by asset symbol
+        $allHoldings = $portfolioHoldings
+            ->flatMap(fn ($ph) => $ph['holdings']->all())
+            ->groupBy(fn ($h) => $h['asset']->symbol)
+            ->map(function ($group) {
+                $first      = $group->first();
+                $totalQty   = round($group->sum('quantity'), 8);
+                $totalCost  = round($group->sum('total_cost'), 2);
+                $price      = $group->first(fn ($h) => $h['current_price'] !== null)['current_price'] ?? null;
+                $value      = $price !== null ? round($totalQty * $price, 2) : null;
+                $unrealized = $value !== null ? round($value - $totalCost, 2) : null;
+
+                return [
+                    'asset'           => $first['asset'],
+                    'quantity'        => $totalQty,
+                    'total_cost'      => $totalCost,
+                    'current_price'   => $price,
+                    'current_value'   => $value,
+                    'unrealized_gain' => $unrealized,
+                ];
+            })
+            ->filter(fn ($h) => $h['quantity'] > 0)
+            ->sortByDesc(fn ($h) => $h['current_value'] ?? $h['total_cost'])
+            ->values();
+
+        return view('dashboard', compact('summaries', 'totals', 'chartLabels', 'chartData', 'allHoldings'));
     }
 }

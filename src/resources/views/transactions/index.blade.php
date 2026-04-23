@@ -8,6 +8,10 @@
                 <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Transactions</h2>
             </div>
             <div class="flex items-center gap-2" x-data="{ importOpen: false }">
+                <a href="{{ route('transfers.create') }}"
+                   class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                    Portfolio Transfer
+                </a>
                 <button @click="importOpen = true"
                         class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                     Import CSV
@@ -164,6 +168,15 @@
                                             ])>
                                                 {{ ucwords(str_replace('_', ' ', $t->type)) }}
                                             </span>
+                                            @if ($t->type === 'transfer_in' && $t->linkedFrom)
+                                                <span class="block text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                                    ← {{ $t->linkedFrom->portfolio->name }}
+                                                </span>
+                                            @elseif ($t->type === 'transfer_out' && $t->linkedTo)
+                                                <span class="block text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                                    → {{ $t->linkedTo->portfolio->name }}
+                                                </span>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-3 text-right font-mono text-gray-900 dark:text-gray-100">
                                             {{ rtrim(rtrim(number_format((float)$t->quantity, 8), '0'), '.') }}

@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ManualAssetController;
 use App\Http\Controllers\ManualValuationController;
 use App\Http\Controllers\PortfolioController;
+use App\Http\Controllers\PortfolioTransferController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\TransactionImportController;
@@ -27,6 +28,9 @@ Route::middleware('auth')->group(function () {
 
     Route::post('portfolios/{portfolio}/transactions/import', [TransactionImportController::class, 'store'])
         ->name('portfolios.transactions.import');
+
+    Route::get('/transfers/create', [PortfolioTransferController::class, 'create'])->name('transfers.create');
+    Route::post('/transfers', [PortfolioTransferController::class, 'store'])->name('transfers.store');
 
     Route::resource('portfolios.manual-assets', ManualAssetController::class)->shallow();
 

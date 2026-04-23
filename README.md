@@ -1,6 +1,6 @@
 # Portfolio Tracker
 
-A Laravel application for tracking investment portfolios. Supports transactions, asset price fetching via Finnhub, manual assets with custom valuations, and periodic portfolio snapshots.
+A Laravel application for tracking investment portfolios. Supports transactions, asset price fetching via Finnhub, manual assets with custom valuations, periodic portfolio snapshots, an aggregated all-holdings view across all portfolios, and linked portfolio-to-portfolio transfers (e.g. exchange → cold wallet).
 
 ## Stack
 
@@ -97,13 +97,28 @@ Replace `/path/to/laravel-app` with the absolute path to this project.
 
 ## Key Models
 
-| Model                             | Description                                                   |
-| --------------------------------- | ------------------------------------------------------------- |
-| `Portfolio`                       | A named collection of assets belonging to a user              |
-| `Transaction`                     | A buy/sell record for a tracked asset within a portfolio      |
-| `Asset` / `AssetPrice`            | Market-traded assets and their historical prices              |
-| `ManualAsset` / `ManualValuation` | User-defined assets (e.g. real estate) with manual valuations |
-| `PortfolioSnapshot`               | Periodic snapshots of portfolio value over time               |
+| Model                             | Description                                                          |
+| --------------------------------- | -------------------------------------------------------------------- |
+| `Portfolio`                       | A named collection of assets belonging to a user                     |
+| `Transaction`                     | A buy/sell/transfer record for a tracked asset within a portfolio    |
+| `Asset` / `AssetPrice`            | Market-traded assets and their historical prices                     |
+| `ManualAsset` / `ManualValuation` | User-defined assets (e.g. real estate) with manual valuations        |
+| `PortfolioSnapshot`               | Periodic snapshots of portfolio value over time                      |
+
+## Transaction Types
+
+| Type             | Effect on holdings          |
+| ---------------- | --------------------------- |
+| `buy`            | Adds quantity and cost      |
+| `sell`           | Reduces quantity and cost   |
+| `transfer_in`    | Adds quantity and cost      |
+| `transfer_out`   | Reduces quantity and cost   |
+| `staking_reward` | Adds quantity and cost      |
+| `dividend`       | Income only, no holdings    |
+
+### Portfolio Transfers
+
+Use the **Portfolio Transfer** button (dashboard or transactions list) to record a linked pair of `transfer_out` / `transfer_in` across two portfolios in a single step — for example, moving crypto from an exchange portfolio to a cold wallet portfolio. The two transactions are linked so the source and destination portfolio names are shown inline in the transaction list.
 
 ## Ports
 

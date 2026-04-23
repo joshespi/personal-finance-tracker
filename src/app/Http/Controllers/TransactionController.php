@@ -24,7 +24,11 @@ class TransactionController extends Controller
     {
         abort_unless($portfolio->user_id === $request->user()->id, 403);
 
-        $query = $portfolio->transactions()->with('asset');
+        $query = $portfolio->transactions()->with([
+            'asset',
+            'linkedFrom.portfolio',
+            'linkedTo.portfolio',
+        ]);
 
         if ($search = $request->input('search')) {
             $query->whereHas('asset', fn ($q) => $q->where('symbol', 'like', strtoupper($search) . '%'));

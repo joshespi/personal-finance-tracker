@@ -2,62 +2,62 @@
     <x-slot name="header">
         <div>
             <p class="text-sm text-gray-500 dark:text-gray-400">
-                <a href="{{ route('portfolios.show', $portfolio) }}" class="hover:underline">{{ $portfolio->name }}</a>
+                <a href="{{ route('dashboard') }}" class="hover:underline">Dashboard</a>
             </p>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Add Transaction</h2>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Transfer Between Portfolios</h2>
         </div>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                <form method="POST" action="{{ route('portfolios.transactions.store', $portfolio) }}" class="space-y-6"
-                      x-data="{ type: '{{ old('type', 'buy') }}' }">
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                    Records a linked Transfer Out and Transfer In across two portfolios (e.g. exchange → cold wallet).
+                </p>
+                <form method="POST" action="{{ route('transfers.store') }}" class="space-y-6">
                     @csrf
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <x-input-label for="symbol" value="Symbol (e.g. AAPL, BTC)" />
+                            <x-input-label for="from_portfolio_id" value="From Portfolio" />
+                            <select id="from_portfolio_id" name="from_portfolio_id" required
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <option value="">Select…</option>
+                                @foreach ($portfolios as $p)
+                                    <option value="{{ $p->id }}" @selected(old('from_portfolio_id') == $p->id)>{{ $p->name }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('from_portfolio_id')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label for="to_portfolio_id" value="To Portfolio" />
+                            <select id="to_portfolio_id" name="to_portfolio_id" required
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <option value="">Select…</option>
+                                @foreach ($portfolios as $p)
+                                    <option value="{{ $p->id }}" @selected(old('to_portfolio_id') == $p->id)>{{ $p->name }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('to_portfolio_id')" class="mt-2" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <x-input-label for="symbol" value="Symbol (e.g. BTC, AAPL)" />
                             <x-text-input id="symbol" name="symbol" type="text" class="mt-1 block w-full"
                                           :value="old('symbol')" required autofocus maxlength="20"
-                                          placeholder="AAPL" style="text-transform:uppercase" />
+                                          placeholder="BTC" style="text-transform:uppercase" />
                             <x-input-error :messages="$errors->get('symbol')" class="mt-2" />
                         </div>
                         <div>
                             <x-input-label for="asset_type" value="Asset Type" />
                             <select id="asset_type" name="asset_type"
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                                <option value="stock" @selected(old('asset_type') === 'stock')>Stock</option>
-                                <option value="crypto" @selected(old('asset_type') === 'crypto')>Crypto</option>
+                                <option value="crypto" @selected(old('asset_type', 'crypto') === 'crypto')>Crypto</option>
+                                <option value="stock"  @selected(old('asset_type') === 'stock')>Stock</option>
                             </select>
                             <x-input-error :messages="$errors->get('asset_type')" class="mt-2" />
-                        </div>
-                    </div>
-
-                    <div>
-                        <x-input-label for="type" value="Transaction Type" />
-                        <select id="type" name="type" x-model="type"
-                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                            @foreach ($types as $value => $label)
-                                <option value="{{ $value }}" @selected(old('type', 'buy') === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        <x-input-error :messages="$errors->get('type')" class="mt-2" />
-
-                        {{-- Hint shown when a transfer type is selected --}}
-                        <div x-show="type === 'transfer_in' || type === 'transfer_out'" x-cloak
-                             class="mt-2 flex items-start gap-2 rounded-md bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 px-3 py-2 text-sm text-indigo-700 dark:text-indigo-300">
-                            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                            </svg>
-                            <span>
-                                Moving assets between two of your portfolios?
-                                <a href="{{ route('transfers.create') }}"
-                                   class="font-semibold underline hover:text-indigo-900 dark:hover:text-indigo-100">
-                                    Use the Portfolio Transfer form
-                                </a>
-                                to record both sides at once and keep them linked.
-                            </span>
                         </div>
                     </div>
 
@@ -65,13 +65,13 @@
                         <div>
                             <x-input-label for="quantity" value="Quantity" />
                             <x-text-input id="quantity" name="quantity" type="number" class="mt-1 block w-full"
-                                          :value="old('quantity')" required min="0.00000001" step="any" placeholder="10" />
+                                          :value="old('quantity')" required min="0.00000001" step="any" placeholder="0.5" />
                             <x-input-error :messages="$errors->get('quantity')" class="mt-2" />
                         </div>
                         <div>
                             <x-input-label for="price_per_unit" value="Price / Unit" />
                             <x-text-input id="price_per_unit" name="price_per_unit" type="number" class="mt-1 block w-full"
-                                          :value="old('price_per_unit')" required min="0" step="any" placeholder="150.00" />
+                                          :value="old('price_per_unit', '0')" required min="0" step="any" placeholder="0.00" />
                             <x-input-error :messages="$errors->get('price_per_unit')" class="mt-2" />
                         </div>
                         <div>
@@ -86,7 +86,7 @@
                         <div>
                             <x-input-label for="currency" value="Currency" />
                             <x-text-input id="currency" name="currency" type="text" class="mt-1 block w-full"
-                                          :value="old('currency', $portfolio->currency)" required maxlength="3"
+                                          :value="old('currency', 'USD')" required maxlength="3"
                                           placeholder="USD" style="text-transform:uppercase" />
                             <x-input-error :messages="$errors->get('currency')" class="mt-2" />
                         </div>
@@ -107,8 +107,8 @@
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <x-primary-button>Add Transaction</x-primary-button>
-                        <a href="{{ route('portfolios.transactions.index', $portfolio) }}"
+                        <x-primary-button>Record Transfer</x-primary-button>
+                        <a href="{{ route('dashboard') }}"
                            class="text-sm text-gray-600 dark:text-gray-400 hover:underline">Cancel</a>
                     </div>
                 </form>
