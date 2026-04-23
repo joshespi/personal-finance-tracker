@@ -93,6 +93,14 @@ class DashboardController extends Controller
             ->sortByDesc(fn ($h) => $h['current_value'] ?? $h['total_cost'])
             ->values();
 
+        $allHoldingsTotal = $allHoldings->sum(fn ($h) => $h['current_value'] ?? $h['total_cost']);
+
+        $allHoldings = $allHoldings->map(function ($h) use ($allHoldingsTotal) {
+            $effective = $h['current_value'] ?? $h['total_cost'];
+            $h['pct']  = $allHoldingsTotal > 0 ? round($effective / $allHoldingsTotal * 100, 2) : 0;
+            return $h;
+        });
+
         return view('dashboard', compact('summaries', 'totals', 'chartLabels', 'chartData', 'allHoldings'));
     }
 }

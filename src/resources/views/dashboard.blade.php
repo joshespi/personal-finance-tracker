@@ -89,6 +89,7 @@
                                         <th class="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Price</th>
                                         <th class="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Market Value</th>
                                         <th class="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Unrealized P&L</th>
+                                        <th class="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">% of Total</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
@@ -126,6 +127,9 @@
                                                 @else
                                                     <span class="text-gray-400">—</span>
                                                 @endif
+                                            </td>
+                                            <td class="px-5 py-3 text-right font-mono text-gray-500 dark:text-gray-400">
+                                                {{ number_format($h['pct'], 1) }}%
                                             </td>
                                         </tr>
                                     @endforeach

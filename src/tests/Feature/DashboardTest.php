@@ -157,6 +157,27 @@ class DashboardTest extends TestCase
         $response->assertDontSee('Theirs');
     }
 
+    public function test_all_holdings_pct_sums_to_100_and_is_proportional(): void
+    {
+        $user = $this->makeUser();
+        $p    = $this->makePortfolio($user);
+        $btc  = $this->makeAsset('BTC', 50000.0);
+        $eth  = $this->makeAsset('ETH', 3000.0);
+
+        $this->addBuy($p, $btc, 1.0, 40000); // value: $50,000
+        $this->addBuy($p, $eth, 2.0,  2000); // value: $6,000 — total $56,000
+
+        $response    = $this->actingAs($user)->get(route('dashboard'));
+        $allHoldings = $response->viewData('allHoldings');
+
+        $btcRow = $allHoldings->first(fn ($h) => $h['asset']->symbol === 'BTC');
+        $ethRow = $allHoldings->first(fn ($h) => $h['asset']->symbol === 'ETH');
+
+        $this->assertEquals(round(50000 / 56000 * 100, 2), $btcRow['pct']);
+        $this->assertEquals(round(6000  / 56000 * 100, 2), $ethRow['pct']);
+        $this->assertEqualsWithDelta(100.0, $btcRow['pct'] + $ethRow['pct'], 0.1);
+    }
+
     public function test_dashboard_sorted_by_value_descending(): void
     {
         $user  = $this->makeUser();
