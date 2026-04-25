@@ -20,8 +20,11 @@
                     <x-nav-link :href="route('portfolios.index')" :active="request()->routeIs('portfolios.*') || request()->routeIs('transactions.*') || request()->routeIs('manual-assets.*')">
                         {{ __('Portfolios') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('watchlist.index')" :active="request()->routeIs('watchlist.*')">
+                        {{ __('Watchlist') }}
+                    </x-nav-link>
                     @if (Auth::user()->is_admin)
-                        <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.*')">
+                        <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
                             {{ __('Admin') }}
                         </x-nav-link>
                     @endif
@@ -98,8 +101,11 @@
             <x-responsive-nav-link :href="route('portfolios.index')" :active="request()->routeIs('portfolios.*')">
                 {{ __('Portfolios') }}
             </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('watchlist.index')" :active="request()->routeIs('watchlist.*')">
+                {{ __('Watchlist') }}
+            </x-responsive-nav-link>
             @if (Auth::user()->is_admin)
-                <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.*')">
+                <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
                     {{ __('Admin') }}
                 </x-responsive-nav-link>
             @endif

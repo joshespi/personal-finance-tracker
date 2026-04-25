@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Asset;
 use App\Models\Portfolio;
 use App\Models\Transaction;
@@ -105,6 +106,8 @@ class TransactionController extends Controller
             'notes'          => $validated['notes'] ?? null,
         ]);
 
+        ActivityLog::record('transaction.created', null, ['symbol' => $symbol, 'type' => $validated['type']]);
+
         return redirect()
             ->route('portfolios.transactions.index', $portfolio)
             ->with('success', "Transaction for {$symbol} added.");
@@ -157,6 +160,10 @@ class TransactionController extends Controller
         abort_unless($transaction->portfolio->user_id === $request->user()->id, 403);
 
         $portfolioId = $transaction->portfolio_id;
+        $symbol = $transaction->asset->symbol ?? 'unknown';
+
+        ActivityLog::record('transaction.deleted', null, ['symbol' => $symbol]);
+
         $transaction->delete();
 
         return redirect()

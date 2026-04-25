@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
+use App\Models\BenchmarkPrice;
 use App\Models\Portfolio;
+use App\Services\RealizedGainService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -36,6 +39,8 @@ class PortfolioController extends Controller
 
         $portfolio = $request->user()->portfolios()->create($validated);
 
+        ActivityLog::record('portfolio.created', $portfolio, ['name' => $portfolio->name]);
+
         return redirect()->route('portfolios.show', $portfolio)->with('success', 'Portfolio created.');
     }
 
@@ -43,7 +48,7 @@ class PortfolioController extends Controller
     {
         abort_unless($portfolio->user_id === $request->user()->id, 403);
 
-        $portfolio->load(['transactions.asset.latestPrice', 'manualAssets.latestValuation']);
+        $portfolio->load(['transactions.asset.latestPrice', 'manualAssets.latestValuation', 'snapshots']);
 
         $holdings = $portfolio->computeHoldings();
 
@@ -56,17 +61,34 @@ class PortfolioController extends Controller
             ])
             ->values();
 
-        $snapshots = $portfolio->snapshots()
-            ->orderBy('recorded_on')
-            ->get(['recorded_on', 'market_value', 'manual_value', 'cost_basis']);
+        // All snapshot history for chart (no date cap — frontend filters by range)
+        $chartData = $portfolio->snapshots
+            ->sortBy('recorded_on')
+            ->map(fn ($s) => [
+                'date'  => $s->recorded_on->format('Y-m-d'),
+                'value' => round((float) $s->market_value + (float) $s->manual_value, 2),
+                'cost'  => round((float) $s->cost_basis, 2),
+            ])->values();
 
-        $chartData = $snapshots->map(fn ($s) => [
-            'date'  => $s->recorded_on->format('Y-m-d'),
-            'value' => round((float) $s->market_value + (float) $s->manual_value, 2),
-            'cost'  => round((float) $s->cost_basis, 2),
-        ])->values();
+        // Realized P&L (FIFO)
+        $realizedGains = (new RealizedGainService())->compute($portfolio);
 
-        return view('portfolios.show', compact('portfolio', 'holdings', 'incomeByAsset', 'chartData'));
+        // Time-weighted return
+        $twr = (new RealizedGainService())->computeTwr($portfolio);
+
+        // Benchmark data for overlay
+        $benchmarkData = $this->buildBenchmarkData();
+
+        // Asset allocation for donut
+        $allocation = $this->buildAllocation($holdings, $portfolio);
+
+        // Rebalancing suggestion
+        $rebalancing = $this->buildRebalancing($holdings, $portfolio);
+
+        return view('portfolios.show', compact(
+            'portfolio', 'holdings', 'incomeByAsset', 'chartData',
+            'realizedGains', 'twr', 'benchmarkData', 'allocation', 'rebalancing'
+        ));
     }
 
     public function edit(Request $request, Portfolio $portfolio): View
@@ -81,12 +103,24 @@ class PortfolioController extends Controller
         abort_unless($portfolio->user_id === $request->user()->id, 403);
 
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:100'],
-            'description' => ['nullable', 'string', 'max:1000'],
-            'currency'    => ['required', 'string', 'size:3'],
+            'name'               => ['required', 'string', 'max:100'],
+            'description'        => ['nullable', 'string', 'max:1000'],
+            'currency'           => ['required', 'string', 'size:3'],
+            'target_stock_pct'   => ['nullable', 'integer', 'min:0', 'max:100'],
+            'target_crypto_pct'  => ['nullable', 'integer', 'min:0', 'max:100'],
+            'target_manual_pct'  => ['nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
-        $portfolio->update($validated);
+        $portfolio->update([
+            'name'               => $validated['name'],
+            'description'        => $validated['description'] ?? null,
+            'currency'           => $validated['currency'],
+            'target_stock_pct'   => $validated['target_stock_pct'] ?? 0,
+            'target_crypto_pct'  => $validated['target_crypto_pct'] ?? 0,
+            'target_manual_pct'  => $validated['target_manual_pct'] ?? 0,
+        ]);
+
+        ActivityLog::record('portfolio.updated', $portfolio, ['name' => $portfolio->name]);
 
         return redirect()->route('portfolios.show', $portfolio)->with('success', 'Portfolio updated.');
     }
@@ -95,8 +129,104 @@ class PortfolioController extends Controller
     {
         abort_unless($portfolio->user_id === $request->user()->id, 403);
 
+        ActivityLog::record('portfolio.deleted', null, ['name' => $portfolio->name]);
+
         $portfolio->delete();
 
         return redirect()->route('portfolios.index')->with('success', 'Portfolio deleted.');
+    }
+
+    private function buildBenchmarkData(): array
+    {
+        $tickers = ['SPY', 'BTC'];
+        $result  = [];
+
+        foreach ($tickers as $ticker) {
+            $prices = BenchmarkPrice::where('ticker', $ticker)
+                ->orderBy('recorded_on')
+                ->get(['recorded_on', 'close_price'])
+                ->map(fn ($p) => ['date' => $p->recorded_on->toDateString(), 'price' => (float) $p->close_price])
+                ->values()
+                ->all();
+
+            if (! empty($prices)) {
+                $result[$ticker] = $prices;
+            }
+        }
+
+        return $result;
+    }
+
+    private function buildAllocation($holdings, Portfolio $portfolio): array
+    {
+        $byHolding = $holdings->map(fn ($h) => [
+            'symbol' => $h['asset']->symbol,
+            'value'  => round($h['current_value'] ?? $h['total_cost'], 2),
+            'type'   => $h['asset']->asset_type,
+        ])->sortByDesc('value')->values();
+
+        $manualValue = $portfolio->manualAssets->sum(
+            fn ($ma) => $ma->latestValuation ? (float) $ma->latestValuation->value : 0
+        );
+
+        $total = $byHolding->sum('value') + $manualValue;
+
+        return [
+            'holdings'     => $byHolding,
+            'manual_value' => round($manualValue, 2),
+            'total'        => round($total, 2),
+        ];
+    }
+
+    private function buildRebalancing($holdings, Portfolio $portfolio): array
+    {
+        $targets = [
+            'stock'  => $portfolio->target_stock_pct,
+            'crypto' => $portfolio->target_crypto_pct,
+            'manual' => $portfolio->target_manual_pct,
+        ];
+
+        $totalTargetPct = array_sum($targets);
+        if ($totalTargetPct === 0) {
+            return [];
+        }
+
+        $stockValue = $holdings->where(fn ($h) => $h['asset']->asset_type === 'stock')
+            ->sum(fn ($h) => $h['current_value'] ?? $h['total_cost']);
+        $cryptoValue = $holdings->where(fn ($h) => $h['asset']->asset_type === 'crypto')
+            ->sum(fn ($h) => $h['current_value'] ?? $h['total_cost']);
+        $manualValue = $portfolio->manualAssets->sum(
+            fn ($ma) => $ma->latestValuation ? (float) $ma->latestValuation->value : 0
+        );
+
+        $current = [
+            'stock'  => round($stockValue, 2),
+            'crypto' => round($cryptoValue, 2),
+            'manual' => round($manualValue, 2),
+        ];
+
+        $total = array_sum($current);
+        if ($total <= 0) {
+            return [];
+        }
+
+        $currentPct = array_map(fn ($v) => round($v / $total * 100, 1), $current);
+
+        $rows = [];
+        foreach (['stock', 'crypto', 'manual'] as $type) {
+            $targetValue = round($total * $targets[$type] / 100, 2);
+            $diff        = round($targetValue - $current[$type], 2);
+            $rows[]      = [
+                'type'         => $type,
+                'label'        => ucfirst($type === 'manual' ? 'Manual Assets' : $type . 's'),
+                'current_pct'  => $currentPct[$type],
+                'target_pct'   => $targets[$type],
+                'current_val'  => $current[$type],
+                'target_val'   => $targetValue,
+                'diff'         => $diff,
+            ];
+        }
+
+        return $rows;
     }
 }

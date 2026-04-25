@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\HandleImpersonation;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '0.0.0.0/0');
         $middleware->alias(['admin' => EnsureUserIsAdmin::class]);
+        $middleware->appendToGroup('web', HandleImpersonation::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -9,7 +9,13 @@ use Illuminate\Support\Collection;
 
 class Portfolio extends Model
 {
-    protected $fillable = ['user_id', 'name', 'description', 'currency'];
+    protected $fillable = ['user_id', 'name', 'description', 'currency', 'target_stock_pct', 'target_crypto_pct', 'target_manual_pct'];
+
+    protected $casts = [
+        'target_stock_pct'  => 'integer',
+        'target_crypto_pct' => 'integer',
+        'target_manual_pct' => 'integer',
+    ];
 
     public function user(): BelongsTo
     {

@@ -23,6 +23,20 @@
     </head>
     <body class="font-sans antialiased bg-gray-100 dark:bg-gray-900">
         <div class="min-h-screen">
+            @if (session('impersonate_admin_id'))
+                <div class="bg-amber-500 text-amber-950 text-sm font-medium px-4 py-2 flex items-center justify-between">
+                    <span>
+                        You are impersonating <strong>{{ Auth::user()->name }}</strong> ({{ Auth::user()->email }}).
+                        Changes you make will affect this user's account.
+                    </span>
+                    <form method="POST" action="{{ route('admin.impersonate.stop') }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="ml-4 underline font-semibold hover:text-amber-900">Exit &rarr;</button>
+                    </form>
+                </div>
+            @endif
+
             @include('layouts.navigation')
 
             <!-- Page Heading -->

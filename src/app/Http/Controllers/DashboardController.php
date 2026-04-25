@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BenchmarkPrice;
 use App\Models\PortfolioSnapshot;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,17 +16,22 @@ class DashboardController extends Controller
             ->with(['transactions.asset.latestPrice', 'manualAssets.latestValuation'])
             ->get();
 
-        // 90-day snapshot history for the chart (total value across all portfolios per day)
-        $snapshots = PortfolioSnapshot::whereIn('portfolio_id', $portfolios->pluck('id'))
-            ->where('recorded_on', '>=', now()->subDays(90)->toDateString())
+        // All snapshot history (no date limit — let the frontend filter by range)
+        $rawSnapshots = PortfolioSnapshot::whereIn('portfolio_id', $portfolios->pluck('id'))
             ->orderBy('recorded_on')
-            ->get()
+            ->get(['portfolio_id', 'recorded_on', 'market_value', 'manual_value', 'cost_basis'])
             ->groupBy(fn ($s) => $s->recorded_on->toDateString())
-            ->map(fn ($group) => round($group->sum(fn ($s) => (float) $s->market_value + (float) $s->manual_value), 2))
+            ->map(fn ($group) => [
+                'value' => round($group->sum(fn ($s) => (float) $s->market_value + (float) $s->manual_value), 2),
+                'cost'  => round($group->sum(fn ($s) => (float) $s->cost_basis), 2),
+            ])
             ->sortKeys();
 
-        $chartLabels = $snapshots->keys()->values();
-        $chartData   = $snapshots->values();
+        $chartData = $rawSnapshots->map(fn ($v, $date) => ['date' => $date, 'value' => $v['value'], 'cost' => $v['cost']])
+            ->values();
+
+        // Benchmark data (SPY and BTC) — all time, aligned to chart dates
+        $benchmarkData = $this->buildBenchmarkData();
 
         // Compute per-portfolio holdings once and reuse
         $portfolioHoldings = $portfolios->map(fn ($p) => [
@@ -73,11 +79,11 @@ class DashboardController extends Controller
             ->flatMap(fn ($ph) => $ph['holdings']->all())
             ->groupBy(fn ($h) => $h['asset']->symbol)
             ->map(function ($group) {
-                $first      = $group->first();
-                $totalQty   = round($group->sum('quantity'), 8);
-                $totalCost  = round($group->sum('total_cost'), 2);
-                $price      = $group->first(fn ($h) => $h['current_price'] !== null)['current_price'] ?? null;
-                $value      = $price !== null ? round($totalQty * $price, 2) : null;
+                $first     = $group->first();
+                $totalQty  = round($group->sum('quantity'), 8);
+                $totalCost = round($group->sum('total_cost'), 2);
+                $price     = $group->first(fn ($h) => $h['current_price'] !== null)['current_price'] ?? null;
+                $value     = $price !== null ? round($totalQty * $price, 2) : null;
                 $unrealized = $value !== null ? round($value - $totalCost, 2) : null;
 
                 return [
@@ -101,6 +107,63 @@ class DashboardController extends Controller
             return $h;
         });
 
-        return view('dashboard', compact('summaries', 'totals', 'chartLabels', 'chartData', 'allHoldings'));
+        // Asset allocation breakdown for donut chart
+        $allocation = $this->buildAllocation($allHoldings, $portfolios);
+
+        return view('dashboard', compact(
+            'summaries', 'totals', 'chartData', 'allHoldings', 'allocation', 'benchmarkData'
+        ));
+    }
+
+    private function buildBenchmarkData(): array
+    {
+        $tickers = ['SPY', 'BTC'];
+        $result  = [];
+
+        foreach ($tickers as $ticker) {
+            $prices = BenchmarkPrice::where('ticker', $ticker)
+                ->orderBy('recorded_on')
+                ->get(['recorded_on', 'close_price'])
+                ->map(fn ($p) => ['date' => $p->recorded_on->toDateString(), 'price' => (float) $p->close_price])
+                ->values()
+                ->all();
+
+            if (! empty($prices)) {
+                $result[$ticker] = $prices;
+            }
+        }
+
+        return $result;
+    }
+
+    private function buildAllocation($allHoldings, $portfolios): array
+    {
+        $stockValue  = 0.0;
+        $cryptoValue = 0.0;
+
+        foreach ($allHoldings as $h) {
+            $val = $h['current_value'] ?? $h['total_cost'];
+            if ($h['asset']->asset_type === 'crypto') {
+                $cryptoValue += $val;
+            } else {
+                $stockValue += $val;
+            }
+        }
+
+        $manualValue = $portfolios->sum(function ($p) {
+            return $p->manualAssets->sum(fn ($ma) => $ma->latestValuation ? (float) $ma->latestValuation->value : 0);
+        });
+
+        $total = $stockValue + $cryptoValue + $manualValue;
+
+        return [
+            'labels' => ['Stocks', 'Crypto', 'Manual Assets'],
+            'values' => [
+                round($stockValue, 2),
+                round($cryptoValue, 2),
+                round($manualValue, 2),
+            ],
+            'total'  => round($total, 2),
+        ];
     }
 }

@@ -1,13 +1,14 @@
 # Portfolio Tracker
 
-A Laravel application for tracking investment portfolios. Supports transactions, asset price fetching via Finnhub, manual assets with custom valuations, periodic portfolio snapshots, an aggregated all-holdings view across all portfolios, and linked portfolio-to-portfolio transfers (e.g. exchange → cold wallet).
+A Laravel application for tracking investment portfolios. Supports transactions, asset price fetching via Finnhub, manual assets with custom valuations, periodic portfolio snapshots, an aggregated all-holdings view across all portfolios, linked portfolio-to-portfolio transfers, FIFO realized gain/loss tracking, watchlist, time-weighted return, rebalancing suggestions, benchmark comparison, and ApexCharts-powered visualizations.
 
 ## Stack
 
 - **PHP 8.5** / Laravel (FPM)
 - **MariaDB 11.8**
 - **Nginx**
-- **Node 24** / Vite / Tailwind CSS
+- **Node 24** / Vite / Tailwind CSS / ApexCharts
+- **Alpine.js** for reactive UI (autocomplete, dark mode, etc.)
 - Orchestrated with Docker Compose
 
 ## Prerequisites
@@ -74,26 +75,60 @@ docker compose exec app composer require <package>
 docker compose exec app npm run dev
 ```
 
+## Features
+
+### Dashboard
+
+- Total cost basis, market value, unrealized P&L, and total assets across all portfolios
+- **Portfolio value chart** (ApexCharts area chart) with time range toggles: 5D · 1W · 1M · 3M · 6M · 1Y · YTD · 5Y · 10Y · All
+- **Benchmark comparison chart** normalized to 100% — compare your portfolio return against SPY (S&P 500) and BTC
+- **Asset allocation donut chart** — Stocks / Crypto / Manual Assets breakdown
+- Aggregated holdings table across all portfolios with % of total
+
+### Portfolio page
+
+- Per-portfolio value history chart with the same time range toggle set
+- Benchmark comparison overlay on the same period
+- **Holdings allocation donut** — per-ticker breakdown
+- **FIFO Realized Gains/Losses** — closed lot-by-lot detail with buy date, sell date, cost basis, proceeds, gain/loss, days held, and short/long term indicator (LT ≥ 365 days)
+  - Annual summary (by-year realized gain)
+- **Time-Weighted Return (TWR)** — total and annualized, shown in the header stats
+- **Rebalancing suggestions** — set target stock/crypto/manual % in portfolio settings; the page shows current vs. target and buy/sell amounts
+- Dividend / income received by asset
+- Manual assets (real estate, vehicles, etc.)
+
+### Watchlist
+
+- Add any ticker with an optional target price and notes
+- Shows current price, % to target (green = already hit, amber = upside remaining), and asset type badge
+- Syncs with the assets table for prices already fetched
+
+### Ticker Autocomplete
+
+- On the "Add Transaction" and "Add to Watchlist" forms, the symbol field queries local assets first, then falls back to Finnhub search (stocks) or CoinGecko search (crypto)
+- Keyboard-navigable dropdown; selecting a result auto-fills asset type
+
 ## Scheduled Commands
 
-The Laravel scheduler is configured in `bootstrap/app.php`:
+| Command                 | Frequency     | Description                                                          |
+| ----------------------- | ------------- | -------------------------------------------------------------------- |
+| `assets:fetch-prices`   | Every hour    | Fetches latest prices for tracked assets via Finnhub / CoinGecko     |
+| `portfolios:snapshot`   | Daily @ 00:05 | Records a point-in-time snapshot of each portfolio's value           |
+| `benchmarks:fetch`      | Daily @ 00:10 | Fetches daily SPY and BTC close prices for benchmark comparison      |
 
-| Command               | Frequency     | Description                                                |
-| --------------------- | ------------- | ---------------------------------------------------------- |
-| `assets:fetch-prices` | Every hour    | Fetches latest prices for tracked assets via Finnhub       |
-| `portfolios:snapshot` | Daily @ 00:05 | Records a point-in-time snapshot of each portfolio's value |
+### Initial benchmark seeding
 
-To run the scheduler, add a single cron entry on the host machine:
+Run this once to populate historical benchmark data (up to 10 years):
 
 ```bash
-crontab -e
+docker compose exec app php artisan benchmarks:fetch
 ```
 
-```
+To add a cron entry for ongoing updates:
+
+```bash
 * * * * * docker compose -f /path/to/laravel-app/docker-compose.yml exec -T app php artisan schedule:run >> /dev/null 2>&1
 ```
-
-Replace `/path/to/laravel-app` with the absolute path to this project.
 
 ## Key Models
 
@@ -104,6 +139,8 @@ Replace `/path/to/laravel-app` with the absolute path to this project.
 | `Asset` / `AssetPrice`            | Market-traded assets and their historical prices                     |
 | `ManualAsset` / `ManualValuation` | User-defined assets (e.g. real estate) with manual valuations        |
 | `PortfolioSnapshot`               | Periodic snapshots of portfolio value over time                      |
+| `BenchmarkPrice`                  | Daily close prices for benchmark tickers (SPY, BTC)                  |
+| `WatchlistItem`                   | User-watched tickers with optional target price and notes            |
 
 ## Transaction Types
 
@@ -118,7 +155,13 @@ Replace `/path/to/laravel-app` with the absolute path to this project.
 
 ### Portfolio Transfers
 
-Use the **Portfolio Transfer** button (dashboard or transactions list) to record a linked pair of `transfer_out` / `transfer_in` across two portfolios in a single step — for example, moving crypto from an exchange portfolio to a cold wallet portfolio. The two transactions are linked so the source and destination portfolio names are shown inline in the transaction list.
+Use the **Portfolio Transfer** button (dashboard or transactions list) to record a linked pair of `transfer_out` / `transfer_in` across two portfolios in a single step.
+
+### Rebalancing Setup
+
+1. Go to a portfolio → Edit
+2. Set target percentages for Stocks %, Crypto %, and Manual Assets % (must sum to 100)
+3. The portfolio page will show current vs. target allocation and recommended buy/sell amounts
 
 ## Ports
 

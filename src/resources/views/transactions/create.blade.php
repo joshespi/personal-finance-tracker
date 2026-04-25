@@ -12,20 +12,46 @@
         <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
                 <form method="POST" action="{{ route('portfolios.transactions.store', $portfolio) }}" class="space-y-6"
-                      x-data="{ type: '{{ old('type', 'buy') }}' }">
+                      x-data="transactionForm()">
                     @csrf
 
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <x-input-label for="symbol" value="Symbol (e.g. AAPL, BTC)" />
-                            <x-text-input id="symbol" name="symbol" type="text" class="mt-1 block w-full"
-                                          :value="old('symbol')" required autofocus maxlength="20"
-                                          placeholder="AAPL" style="text-transform:uppercase" />
+                        <div class="relative">
+                            <x-input-label for="symbol" value="Symbol" />
+                            <input id="symbol" name="symbol" type="text" required maxlength="20"
+                                   placeholder="AAPL"
+                                   x-model="query"
+                                   @input.debounce.300ms="search()"
+                                   @focus="search()"
+                                   @keydown.arrow-down.prevent="moveDown()"
+                                   @keydown.arrow-up.prevent="moveUp()"
+                                   @keydown.enter.prevent="selectCurrent()"
+                                   @keydown.escape="close()"
+                                   @blur="delayClose()"
+                                   autocomplete="off"
+                                   class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm uppercase"
+                                   value="{{ old('symbol') }}" />
+                            <div x-show="open && results.length > 0" x-cloak
+                                 class="absolute z-50 mt-1 w-72 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg">
+                                <template x-for="(r, i) in results" :key="r.symbol">
+                                    <div @mousedown.prevent="select(r)"
+                                         :class="i === activeIndex ? 'bg-indigo-50 dark:bg-indigo-900/40' : ''"
+                                         class="px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 text-sm">
+                                        <span class="font-mono font-semibold text-gray-900 dark:text-gray-100" x-text="r.symbol"></span>
+                                        <span class="ml-2 text-gray-500 dark:text-gray-400 truncate" x-text="r.name"></span>
+                                        <span class="ml-1 text-xs px-1 rounded"
+                                              :class="r.type === 'crypto' ? 'text-orange-500' : 'text-blue-500'"
+                                              x-text="r.type"></span>
+                                    </div>
+                                </template>
+                            </div>
                             <x-input-error :messages="$errors->get('symbol')" class="mt-2" />
                         </div>
                         <div>
                             <x-input-label for="asset_type" value="Asset Type" />
                             <select id="asset_type" name="asset_type"
+                                    x-model="assetType"
+                                    @change="results = []; query && search()"
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                                 <option value="stock" @selected(old('asset_type') === 'stock')>Stock</option>
                                 <option value="crypto" @selected(old('asset_type') === 'crypto')>Crypto</option>
@@ -36,7 +62,7 @@
 
                     <div>
                         <x-input-label for="type" value="Transaction Type" />
-                        <select id="type" name="type" x-model="type"
+                        <select id="type" name="type" x-model="txType"
                                 class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                             @foreach ($types as $value => $label)
                                 <option value="{{ $value }}" @selected(old('type', 'buy') === $value)>{{ $label }}</option>
@@ -44,16 +70,14 @@
                         </select>
                         <x-input-error :messages="$errors->get('type')" class="mt-2" />
 
-                        {{-- Hint shown when a transfer type is selected --}}
-                        <div x-show="type === 'transfer_in' || type === 'transfer_out'" x-cloak
+                        <div x-show="txType === 'transfer_in' || txType === 'transfer_out'" x-cloak
                              class="mt-2 flex items-start gap-2 rounded-md bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 px-3 py-2 text-sm text-indigo-700 dark:text-indigo-300">
                             <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                             </svg>
                             <span>
-                                Moving assets between two of your portfolios?
-                                <a href="{{ route('transfers.create') }}"
-                                   class="font-semibold underline hover:text-indigo-900 dark:hover:text-indigo-100">
+                                Moving assets between portfolios?
+                                <a href="{{ route('transfers.create') }}" class="font-semibold underline hover:text-indigo-900 dark:hover:text-indigo-100">
                                     Use the Portfolio Transfer form
                                 </a>
                                 to record both sides at once and keep them linked.
@@ -115,4 +139,44 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+    function transactionForm() {
+        return {
+            query: '{{ old('symbol', '') }}',
+            assetType: '{{ old('asset_type', 'stock') }}',
+            txType: '{{ old('type', 'buy') }}',
+            results: [],
+            open: false,
+            activeIndex: -1,
+            async search() {
+                if (this.query.length < 1) { this.results = []; this.open = false; return; }
+                try {
+                    const res = await fetch(`/tickers/search?q=${encodeURIComponent(this.query)}&type=${this.assetType}`);
+                    this.results = await res.json();
+                    this.open = this.results.length > 0;
+                    this.activeIndex = -1;
+                } catch { this.results = []; }
+            },
+            select(r) {
+                this.query     = r.symbol;
+                this.assetType = r.type;
+                this.open      = false;
+                // sync the hidden select
+                document.getElementById('asset_type').value = r.type;
+            },
+            selectCurrent() {
+                if (this.activeIndex >= 0 && this.results[this.activeIndex]) {
+                    this.select(this.results[this.activeIndex]);
+                }
+            },
+            moveDown() { this.activeIndex = Math.min(this.activeIndex + 1, this.results.length - 1); },
+            moveUp()   { this.activeIndex = Math.max(this.activeIndex - 1, -1); },
+            close()    { this.open = false; this.activeIndex = -1; },
+            delayClose() { setTimeout(() => this.close(), 150); },
+        };
+    }
+    </script>
+    @endpush
 </x-app-layout>

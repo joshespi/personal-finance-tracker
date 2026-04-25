@@ -18,6 +18,14 @@ class UserController extends Controller
         return view('admin.users.index', compact('users'));
     }
 
+    public function show(User $user): View
+    {
+        $user->loadCount('portfolios');
+        $loginHistory = $user->loginHistory()->latest('created_at')->limit(10)->get();
+
+        return view('admin.users.show', compact('user', 'loginHistory'));
+    }
+
     public function edit(User $user): View
     {
         return view('admin.users.edit', compact('user'));

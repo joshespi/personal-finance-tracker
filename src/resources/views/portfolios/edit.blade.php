@@ -35,6 +35,32 @@
                         <x-input-error :messages="$errors->get('currency')" class="mt-2" />
                     </div>
 
+                    <div>
+                        <x-input-label value="Target Allocation (optional, must sum to 100)" />
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">Used to show rebalancing suggestions on your portfolio page. Leave at 0 to disable.</p>
+                        <div class="grid grid-cols-3 gap-4 mt-1">
+                            <div>
+                                <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Stocks %</label>
+                                <x-text-input name="target_stock_pct" type="number" class="mt-1 block w-full"
+                                              :value="old('target_stock_pct', $portfolio->target_stock_pct)"
+                                              min="0" max="100" step="1" />
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Crypto %</label>
+                                <x-text-input name="target_crypto_pct" type="number" class="mt-1 block w-full"
+                                              :value="old('target_crypto_pct', $portfolio->target_crypto_pct)"
+                                              min="0" max="100" step="1" />
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Manual Assets %</label>
+                                <x-text-input name="target_manual_pct" type="number" class="mt-1 block w-full"
+                                              :value="old('target_manual_pct', $portfolio->target_manual_pct)"
+                                              min="0" max="100" step="1" />
+                            </div>
+                        </div>
+                        <x-input-error :messages="$errors->get('target_stock_pct')" class="mt-2" />
+                    </div>
+
                     <div class="flex items-center gap-4">
                         <x-primary-button>Save Changes</x-primary-button>
                         <a href="{{ route('portfolios.show', $portfolio) }}" class="text-sm text-gray-600 dark:text-gray-400 hover:underline">Cancel</a>

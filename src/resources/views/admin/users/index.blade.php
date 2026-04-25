@@ -19,7 +19,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Portfolios</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Admin</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Joined</th>
                             <th class="px-6 py-3"></th>
                         </tr>
@@ -27,15 +27,24 @@
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                         @forelse ($users as $user)
                             <tr>
-                                <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{{ $user->name }}</td>
+                                <td class="px-6 py-4">
+                                    <a href="{{ route('admin.users.show', $user) }}" class="font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline">
+                                        {{ $user->name }}
+                                    </a>
+                                </td>
                                 <td class="px-6 py-4 text-gray-600 dark:text-gray-400">{{ $user->email }}</td>
                                 <td class="px-6 py-4 text-gray-600 dark:text-gray-400">{{ $user->portfolios_count }}</td>
                                 <td class="px-6 py-4">
-                                    @if ($user->is_admin)
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300">Admin</span>
-                                    @else
-                                        <span class="text-gray-400 dark:text-gray-600">&mdash;</span>
-                                    @endif
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        @if ($user->is_admin)
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300">Admin</span>
+                                        @endif
+                                        @if ($user->email_verified_at)
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">Verified</span>
+                                        @else
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Unverified</span>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td class="px-6 py-4 text-gray-500 dark:text-gray-400">{{ $user->created_at->format('M j, Y') }}</td>
                                 <td class="px-6 py-4 text-right">
@@ -45,6 +54,13 @@
                                             Edit
                                         </a>
                                         @if ($user->id !== Auth::id())
+                                            <form method="POST" action="{{ route('admin.impersonate', $user) }}">
+                                                @csrf
+                                                <button type="submit"
+                                                        class="inline-flex items-center px-3 py-1.5 bg-indigo-600 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-indigo-500 transition">
+                                                    Impersonate
+                                                </button>
+                                            </form>
                                             <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
                                                   onsubmit="return confirm('Delete {{ addslashes($user->name) }}? This will also delete all their portfolios and data.')">
                                                 @csrf

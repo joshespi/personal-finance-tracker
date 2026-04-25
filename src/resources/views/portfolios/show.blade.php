@@ -33,7 +33,7 @@
                 </div>
             @endif
 
-            {{-- Portfolio Summary --}}
+            {{-- Summary stats --}}
             @if ($holdings->isNotEmpty())
                 @php
                     $totalCostBasis    = $holdings->sum('total_cost');
@@ -43,7 +43,7 @@
                     $totalUnrealized   = $holdingsWithPrice->sum('unrealized_gain');
                     $hasAnyPrice       = $holdingsWithPrice->isNotEmpty();
                 @endphp
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Cost Basis</p>
                         <p class="mt-1 text-xl font-semibold font-mono text-gray-900 dark:text-gray-100">
@@ -64,6 +64,27 @@
                             </p>
                         </div>
                     @endif
+                    @if ($twr['total_pct'] !== null)
+                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">TWR Return</p>
+                            <p class="mt-1 text-xl font-semibold font-mono {{ $twr['total_pct'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                {{ $twr['total_pct'] >= 0 ? '+' : '' }}{{ $twr['total_pct'] }}%
+                            </p>
+                            @if ($twr['annualized_pct'] !== null)
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                    {{ $twr['annualized_pct'] >= 0 ? '+' : '' }}{{ $twr['annualized_pct'] }}% ann.
+                                </p>
+                            @endif
+                        </div>
+                    @endif
+                    @if ($realizedGains['totalGain'] != 0)
+                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Realized P&L</p>
+                            <p class="mt-1 text-xl font-semibold font-mono {{ $realizedGains['totalGain'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                {{ $realizedGains['totalGain'] >= 0 ? '+' : '' }}{{ $portfolio->currency }} {{ number_format($realizedGains['totalGain'], 2) }}
+                            </p>
+                        </div>
+                    @endif
                     @if ($totalManualValue > 0)
                         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                             <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Manual Assets</p>
@@ -75,14 +96,82 @@
                 </div>
             @endif
 
-            {{-- Historical Chart --}}
+            {{-- Value history chart with time range toggles --}}
             @if ($chartData->count() > 1)
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
-                    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                         <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Portfolio Value History</h3>
+                        <div class="flex flex-wrap gap-1" id="port-range-btns">
+                            @foreach (['5D','1W','1M','3M','6M','1Y','YTD','5Y','10Y','All'] as $r)
+                                <button data-range="{{ $r }}"
+                                        class="px-2.5 py-1 text-xs rounded font-medium transition
+                                               bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300
+                                               hover:bg-gray-200 dark:hover:bg-gray-600">
+                                    {{ $r }}
+                                </button>
+                            @endforeach
+                        </div>
                     </div>
-                    <div class="p-6">
-                        <canvas id="portfolioChart" height="80"></canvas>
+                    <div id="portChart" class="h-72"></div>
+                </div>
+
+                {{-- Benchmark comparison --}}
+                @if (!empty($benchmarkData))
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                            <div>
+                                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Benchmark Comparison</h3>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Normalized to 100 — relative % return</p>
+                            </div>
+                            <div class="flex flex-wrap gap-1" id="port-bench-range-btns">
+                                @foreach (['1M','3M','6M','1Y','5Y','10Y','All'] as $r)
+                                    <button data-range="{{ $r }}"
+                                            class="px-2.5 py-1 text-xs rounded font-medium transition
+                                                   bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300
+                                                   hover:bg-gray-200 dark:hover:bg-gray-600">
+                                        {{ $r }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                        <div id="portBenchChart" class="h-64"></div>
+                    </div>
+                @endif
+            @endif
+
+            {{-- Asset allocation donut --}}
+            @if ($allocation['total'] > 0)
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Allocation</h3>
+                    <div class="flex flex-col sm:flex-row items-center gap-8">
+                        <div id="portAllocationDonut" class="w-64 h-64 shrink-0"></div>
+                        <div class="space-y-2 text-sm w-full max-w-sm">
+                            @foreach ($allocation['holdings'] as $h)
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono font-semibold text-gray-900 dark:text-gray-100 w-16">{{ $h['symbol'] }}</span>
+                                        <span class="text-xs {{ $h['type'] === 'crypto' ? 'text-orange-500' : 'text-blue-500' }}">{{ ucfirst($h['type']) }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-right">
+                                        <span class="font-mono text-gray-900 dark:text-gray-100">${{ number_format($h['value'], 2) }}</span>
+                                        <span class="text-gray-400 dark:text-gray-500 w-12">
+                                            {{ $allocation['total'] > 0 ? number_format($h['value'] / $allocation['total'] * 100, 1) : 0 }}%
+                                        </span>
+                                    </div>
+                                </div>
+                            @endforeach
+                            @if ($allocation['manual_value'] > 0)
+                                <div class="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-700">
+                                    <span class="text-gray-600 dark:text-gray-400">Manual Assets</span>
+                                    <div class="flex items-center gap-4 text-right">
+                                        <span class="font-mono text-gray-900 dark:text-gray-100">${{ number_format($allocation['manual_value'], 2) }}</span>
+                                        <span class="text-gray-400 dark:text-gray-500 w-12">
+                                            {{ $allocation['total'] > 0 ? number_format($allocation['manual_value'] / $allocation['total'] * 100, 1) : 0 }}%
+                                        </span>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
             @endif
@@ -163,6 +252,130 @@
                 @endif
             </div>
 
+            {{-- Realized P&L --}}
+            @if ($realizedGains['lots']->isNotEmpty())
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Realized Gains / Losses (FIFO)</h3>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Closed positions only</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-gray-400 dark:text-gray-500">Total Realized</p>
+                            <p class="font-mono font-semibold text-lg {{ $realizedGains['totalGain'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                {{ $realizedGains['totalGain'] >= 0 ? '+' : '' }}{{ $portfolio->currency }} {{ number_format($realizedGains['totalGain'], 2) }}
+                            </p>
+                        </div>
+                    </div>
+
+                    {{-- By year summary --}}
+                    @if (!empty($realizedGains['byYear']))
+                        <div class="px-6 py-3 border-b border-gray-100 dark:border-gray-700 flex flex-wrap gap-6">
+                            @foreach ($realizedGains['byYear'] as $year => $gain)
+                                <div>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ $year }}</p>
+                                    <p class="font-mono font-semibold text-sm {{ $gain >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                        {{ $gain >= 0 ? '+' : '' }}${{ number_format($gain, 2) }}
+                                    </p>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    {{-- By asset --}}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Symbol</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Buy Date</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sell Date</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Qty</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Cost Basis</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Proceeds</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Gain / Loss</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Days Held</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
+                                @foreach ($realizedGains['lots'] as $lot)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                        <td class="px-6 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $lot['asset']->symbol }}</td>
+                                        <td class="px-6 py-3 text-right text-gray-500 dark:text-gray-400">{{ $lot['buy_date']->format('Y-m-d') }}</td>
+                                        <td class="px-6 py-3 text-right text-gray-500 dark:text-gray-400">{{ $lot['sell_date']->format('Y-m-d') }}</td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">
+                                            {{ rtrim(rtrim(number_format((float)$lot['quantity'], 8), '0'), '.') }}
+                                        </td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ number_format($lot['cost_basis'], 2) }}</td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ number_format($lot['proceeds'], 2) }}</td>
+                                        <td class="px-6 py-3 text-right font-mono font-semibold {{ $lot['gain'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                            {{ $lot['gain'] >= 0 ? '+' : '' }}${{ number_format($lot['gain'], 2) }}
+                                        </td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-500 dark:text-gray-400">
+                                            {{ number_format($lot['holding_days']) }}
+                                            @if ($lot['holding_days'] >= 365)
+                                                <span class="text-xs text-green-500 ml-1">LT</span>
+                                            @else
+                                                <span class="text-xs text-amber-500 ml-1">ST</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Rebalancing --}}
+            @if (!empty($rebalancing))
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Rebalancing</h3>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                            Target allocations set in
+                            <a href="{{ route('portfolios.edit', $portfolio) }}" class="text-indigo-500 hover:underline">portfolio settings</a>
+                        </p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Asset Class</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Current Value</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Current %</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Target %</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Drift</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
+                                @foreach ($rebalancing as $row)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                        <td class="px-6 py-3 font-medium text-gray-900 dark:text-gray-100">{{ $row['label'] }}</td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ number_format($row['current_val'], 2) }}</td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ $row['current_pct'] }}%</td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ $row['target_pct'] }}%</td>
+                                        <td class="px-6 py-3 text-right font-mono font-semibold {{ abs($row['current_pct'] - $row['target_pct']) < 2 ? 'text-gray-400' : ($row['current_pct'] > $row['target_pct'] ? 'text-red-500' : 'text-amber-500') }}">
+                                            {{ $row['current_pct'] >= $row['target_pct'] ? '+' : '' }}{{ number_format($row['current_pct'] - $row['target_pct'], 1) }}%
+                                        </td>
+                                        <td class="px-6 py-3 text-right font-mono font-semibold">
+                                            @if (abs($row['diff']) < 1)
+                                                <span class="text-green-500 text-xs">Balanced</span>
+                                            @elseif ($row['diff'] > 0)
+                                                <span class="text-green-600">Buy ${{ number_format($row['diff'], 2) }}</span>
+                                            @else
+                                                <span class="text-red-500">Sell ${{ number_format(abs($row['diff']), 2) }}</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+
             {{-- Dividend / Income --}}
             @if ($incomeByAsset->isNotEmpty())
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
@@ -233,63 +446,156 @@
     @if ($chartData->count() > 1)
         @push('scripts')
         <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const isDark = document.documentElement.classList.contains('dark');
-            const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-            const tickColor = isDark ? 'rgb(156,163,175)' : 'rgb(107,114,128)';
-            const chartData = @json($chartData);
-            new Chart(document.getElementById('portfolioChart'), {
-                type: 'line',
-                data: {
-                    labels: chartData.map(d => d.date),
-                    datasets: [
-                        {
-                            label: 'Market Value',
-                            data: chartData.map(d => d.value),
-                            borderColor: isDark ? 'rgb(129,140,248)' : 'rgb(99, 102, 241)',
-                            backgroundColor: isDark ? 'rgba(129,140,248,0.08)' : 'rgba(99, 102, 241, 0.08)',
-                            fill: true,
-                            tension: 0.3,
-                            pointRadius: chartData.length > 60 ? 0 : 3,
-                        },
-                        {
-                            label: 'Cost Basis',
-                            data: chartData.map(d => d.cost),
-                            borderColor: isDark ? 'rgba(156,163,175,0.6)' : 'rgb(156, 163, 175)',
-                            borderDash: [5, 5],
-                            fill: false,
-                            tension: 0.3,
-                            pointRadius: 0,
-                        },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: tickColor } },
-                        tooltip: {
-                            callbacks: {
-                                label: ctx => ' $' + ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2 }),
-                            },
-                        },
-                    },
-                    scales: {
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: tickColor },
-                        },
-                        y: {
-                            grid: { color: gridColor },
-                            ticks: {
-                                color: tickColor,
-                                callback: val => '$' + val.toLocaleString('en-US', { minimumFractionDigits: 0 }),
-                            },
-                        },
-                    },
-                },
+        (function () {
+            const isDark     = document.documentElement.classList.contains('dark');
+            const gridColor  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+            const labelColor = isDark ? '#9ca3af' : '#6b7280';
+            const allData    = @json($chartData);       // [{date, value, cost}]
+            const benchRaw   = @json($benchmarkData);   // {SPY: [...], BTC: [...]}
+            const allocData  = @json($allocation);
+
+            // ── Helpers ──────────────────────────────────────────────
+            function cutoffDate(range) {
+                const now = new Date();
+                const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+                switch (range) {
+                    case '5D':  return new Date(y, m, d - 5);
+                    case '1W':  return new Date(y, m, d - 7);
+                    case '1M':  return new Date(y, m - 1, d);
+                    case '3M':  return new Date(y, m - 3, d);
+                    case '6M':  return new Date(y, m - 6, d);
+                    case '1Y':  return new Date(y - 1, m, d);
+                    case 'YTD': return new Date(y, 0, 1);
+                    case '5Y':  return new Date(y - 5, m, d);
+                    case '10Y': return new Date(y - 10, m, d);
+                    default:    return null;
+                }
+            }
+
+            function filterByRange(data, range) {
+                const cut = cutoffDate(range);
+                return cut ? data.filter(r => new Date(r.date) >= cut) : data;
+            }
+
+            function activateBtn(containerSel, activeRange) {
+                document.querySelectorAll(containerSel + ' button').forEach(b => {
+                    const active = b.dataset.range === activeRange;
+                    b.classList.toggle('bg-indigo-600', active);
+                    b.classList.toggle('text-white', active);
+                    b.classList.toggle('dark:bg-indigo-500', active);
+                    b.classList.toggle('bg-gray-100', !active);
+                    b.classList.toggle('dark:bg-gray-700', !active);
+                    b.classList.toggle('text-gray-600', !active);
+                    b.classList.toggle('dark:text-gray-300', !active);
+                });
+            }
+
+            function apexBase() {
+                return {
+                    chart:   { background: 'transparent', toolbar: { show: false }, animations: { enabled: false } },
+                    theme:   { mode: isDark ? 'dark' : 'light' },
+                    grid:    { borderColor: gridColor, strokeDashArray: 3 },
+                    xaxis:   { type: 'datetime', labels: { style: { colors: labelColor }, datetimeUTC: false } },
+                    tooltip: { x: { format: 'MMM d, yyyy' }, theme: isDark ? 'dark' : 'light' },
+                    stroke:  { curve: 'smooth', width: 2 },
+                    legend:  { position: 'bottom', labels: { colors: labelColor } },
+                };
+            }
+
+            // ── Portfolio Value Chart ─────────────────────────────────
+            let portRange = '1Y';
+            const portChart = new ApexCharts(document.getElementById('portChart'), {
+                ...apexBase(),
+                chart:  { ...apexBase().chart, type: 'area', height: 288 },
+                series: [],
+                fill:   { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.02 } },
+                yaxis:  { labels: { style: { colors: labelColor }, formatter: v => '$' + v.toLocaleString('en-US', { maximumFractionDigits: 0 }) } },
             });
-        });
+            portChart.render();
+
+            function updatePortChart(range) {
+                const filtered = filterByRange(allData, range);
+                portChart.updateSeries([
+                    { name: 'Market Value', data: filtered.map(r => [new Date(r.date).getTime(), r.value]) },
+                    { name: 'Cost Basis',   data: filtered.map(r => [new Date(r.date).getTime(), r.cost]),
+                      type: 'line', stroke: { dashArray: 5 } },
+                ]);
+                activateBtn('#port-range-btns', range);
+            }
+
+            document.querySelectorAll('#port-range-btns button').forEach(b =>
+                b.addEventListener('click', () => { portRange = b.dataset.range; updatePortChart(portRange); })
+            );
+            updatePortChart(portRange);
+
+            // ── Benchmark Chart ───────────────────────────────────────
+            const benchEl = document.getElementById('portBenchChart');
+            if (benchEl && Object.keys(benchRaw).length > 0) {
+                let benchRange = '1Y';
+                const benchChart = new ApexCharts(benchEl, {
+                    ...apexBase(),
+                    chart:  { ...apexBase().chart, type: 'line', height: 256 },
+                    series: [],
+                    yaxis:  { labels: { style: { colors: labelColor }, formatter: v => v.toFixed(1) + '%' } },
+                    tooltip: { x: { format: 'MMM d, yyyy' }, y: { formatter: v => v.toFixed(2) + '%' }, theme: isDark ? 'dark' : 'light' },
+                });
+                benchChart.render();
+
+                function buildPortNorm(range) {
+                    const f = filterByRange(allData, range);
+                    if (!f.length) return [];
+                    const base = f[0].value;
+                    return f.map(r => [new Date(r.date).getTime(), parseFloat(((r.value / base - 1) * 100).toFixed(2))]);
+                }
+
+                function buildBenchNorm(ticker, range) {
+                    const raw = benchRaw[ticker] || [];
+                    const cut = cutoffDate(range);
+                    const f   = cut ? raw.filter(r => new Date(r.date) >= cut) : raw;
+                    if (!f.length) return [];
+                    const base = f[0].price;
+                    return f.map(r => [new Date(r.date).getTime(), parseFloat(((r.price / base - 1) * 100).toFixed(2))]);
+                }
+
+                function updateBenchChart(range) {
+                    const series = [{ name: 'This Portfolio', data: buildPortNorm(range) }];
+                    Object.keys(benchRaw).forEach(t => series.push({ name: t, data: buildBenchNorm(t, range) }));
+                    benchChart.updateSeries(series);
+                    activateBtn('#port-bench-range-btns', range);
+                }
+
+                document.querySelectorAll('#port-bench-range-btns button').forEach(b =>
+                    b.addEventListener('click', () => { benchRange = b.dataset.range; updateBenchChart(benchRange); })
+                );
+                updateBenchChart(benchRange);
+            }
+
+            // ── Allocation Donut ──────────────────────────────────────
+            const donutEl = document.getElementById('portAllocationDonut');
+            if (donutEl && allocData.total > 0) {
+                const symbols  = allocData.holdings.map(h => h.symbol);
+                const values   = allocData.holdings.map(h => h.value);
+                const allLabels = [...symbols];
+                const allValues = [...values];
+
+                if (allocData.manual_value > 0) {
+                    allLabels.push('Manual');
+                    allValues.push(allocData.manual_value);
+                }
+
+                const donutChart = new ApexCharts(donutEl, {
+                    chart:   { type: 'donut', height: 256, background: 'transparent', toolbar: { show: false } },
+                    theme:   { mode: isDark ? 'dark' : 'light' },
+                    series:  allValues,
+                    labels:  allLabels,
+                    legend:  { show: false },
+                    dataLabels: { enabled: false },
+                    tooltip: { y: { formatter: v => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2 }) } },
+                    plotOptions: { pie: { donut: { size: '65%' } } },
+                });
+                donutChart.render();
+            }
+        })();
         </script>
         @endpush
     @endif
