@@ -258,7 +258,7 @@
     @if ($chartData->isNotEmpty())
         @push('scripts')
         <script>
-        (function () {
+        document.addEventListener('DOMContentLoaded', function () {
             const isDark      = document.documentElement.classList.contains('dark');
             const gridColor   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
             const labelColor  = isDark ? '#9ca3af' : '#6b7280';
@@ -410,7 +410,7 @@
                 });
                 donutChart.render();
             }
-        })();
+        });
         </script>
         @endpush
     @endif
