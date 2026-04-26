@@ -26,6 +26,9 @@
                     <x-nav-link :href="route('watchlist.index')" :active="request()->routeIs('watchlist.*')">
                         {{ __('Watchlist') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('tax.summary')" :active="request()->routeIs('tax.*')">
+                        {{ __('Tax') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('about')" :active="request()->routeIs('about')">
                         {{ __('About') }}
                     </x-nav-link>
@@ -112,6 +115,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('watchlist.index')" :active="request()->routeIs('watchlist.*')">
                 {{ __('Watchlist') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('tax.summary')" :active="request()->routeIs('tax.*')">
+                {{ __('Tax') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('about')" :active="request()->routeIs('about')">
                 {{ __('About') }}

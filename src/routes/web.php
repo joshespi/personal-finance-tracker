@@ -6,6 +6,9 @@ use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AllTransactionsController;
+use App\Http\Controllers\ExportController;
+use App\Http\Controllers\JournalEntryController;
+use App\Http\Controllers\TaxSummaryController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ManualAssetController;
@@ -30,9 +33,20 @@ Route::get('/dashboard', DashboardController::class)
 Route::middleware('auth')->group(function () {
 
     Route::get('/transactions', AllTransactionsController::class)->name('transactions.all');
+    Route::get('/tax', TaxSummaryController::class)->name('tax.summary');
+    Route::get('/export/transactions', [ExportController::class, 'transactions'])->name('export.transactions');
+    Route::get('/export/realized-gains', [ExportController::class, 'realizedGains'])->name('export.realized-gains');
     Route::patch('assets/{asset}/reclassify', [AssetController::class, 'reclassify'])->name('assets.reclassify');
 
     Route::resource('portfolios', PortfolioController::class);
+
+    Route::prefix('portfolios/{portfolio}/journal')->name('portfolios.journal.')->group(function () {
+        Route::get('/', [JournalEntryController::class, 'index'])->name('index');
+        Route::post('/', [JournalEntryController::class, 'store'])->name('store');
+        Route::get('/{entry}/edit', [JournalEntryController::class, 'edit'])->name('edit');
+        Route::put('/{entry}', [JournalEntryController::class, 'update'])->name('update');
+        Route::delete('/{entry}', [JournalEntryController::class, 'destroy'])->name('destroy');
+    });
 
     Route::resource('portfolios.transactions', TransactionController::class)->shallow();
 

@@ -16,6 +16,10 @@
                    class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                     + Manual Asset
                 </a>
+                <a href="{{ route('portfolios.journal.index', $portfolio) }}"
+                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                    Journal
+                </a>
                 <a href="{{ route('portfolios.edit', $portfolio) }}"
                    class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                     Edit
@@ -178,20 +182,34 @@
 
             {{-- Holdings --}}
             @php
-                $holdingsRows = $holdings->map(fn ($h) => [
-                    'symbol'          => $h['asset']->symbol,
-                    'asset_type'      => $h['asset']->asset_type,
-                    'asset_id'        => $h['asset']->id,
-                    'quantity'        => (float) $h['quantity'],
-                    'avg_cost'        => (float) $h['avg_cost'],
-                    'total_cost'      => (float) $h['total_cost'],
-                    'current_price'   => $h['current_price'] !== null ? (float) $h['current_price'] : null,
-                    'current_value'   => $h['current_value'] !== null ? (float) $h['current_value'] : null,
-                    'unrealized_gain' => $h['unrealized_gain'] !== null ? (float) $h['unrealized_gain'] : null,
-                    'unrealized_pct'  => $h['unrealized_pct'] !== null ? (float) $h['unrealized_pct'] : null,
-                    'sort_value'      => (float) ($h['current_value'] ?? $h['total_cost']),
-                    'reclassify_url'  => route('assets.reclassify', $h['asset']),
-                ])->values()->all();
+                $incomeMap = $incomeByAsset->keyBy(fn ($i) => $i['asset']->id);
+                $holdingsRows = $holdings->map(function ($h) use ($incomeMap) {
+                    $income      = $incomeMap->get($h['asset']->id);
+                    $totalIncome = $income ? (float) $income['total_income'] : null;
+                    $yoc         = ($totalIncome !== null && (float) $h['total_cost'] > 0)
+                        ? round($totalIncome / (float) $h['total_cost'] * 100, 2)
+                        : null;
+                    $currYield   = ($totalIncome !== null && $h['current_value'] !== null && (float) $h['current_value'] > 0)
+                        ? round($totalIncome / (float) $h['current_value'] * 100, 2)
+                        : null;
+                    return [
+                        'symbol'          => $h['asset']->symbol,
+                        'asset_type'      => $h['asset']->asset_type,
+                        'asset_id'        => $h['asset']->id,
+                        'quantity'        => (float) $h['quantity'],
+                        'avg_cost'        => (float) $h['avg_cost'],
+                        'total_cost'      => (float) $h['total_cost'],
+                        'current_price'   => $h['current_price'] !== null ? (float) $h['current_price'] : null,
+                        'current_value'   => $h['current_value'] !== null ? (float) $h['current_value'] : null,
+                        'unrealized_gain' => $h['unrealized_gain'] !== null ? (float) $h['unrealized_gain'] : null,
+                        'unrealized_pct'  => $h['unrealized_pct'] !== null ? (float) $h['unrealized_pct'] : null,
+                        'sort_value'      => (float) ($h['current_value'] ?? $h['total_cost']),
+                        'total_income'    => $totalIncome,
+                        'yield_on_cost'   => $yoc,
+                        'current_yield'   => $currYield,
+                        'reclassify_url'  => route('assets.reclassify', $h['asset']),
+                    ];
+                })->values()->all();
                 $ccy = $portfolio->currency;
             @endphp
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg"
@@ -236,6 +254,12 @@
                                     <th @click="sort('unrealized_gain')" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
                                         Unrealized P&L<span x-text="arrow('unrealized_gain')"></span>
                                     </th>
+                                    <th @click="sort('total_income')" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
+                                        Income<span x-text="arrow('total_income')"></span>
+                                    </th>
+                                    <th @click="sort('yield_on_cost')" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
+                                        YOC<span x-text="arrow('yield_on_cost')"></span>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
@@ -272,6 +296,10 @@
                                             </span>
                                             <span x-show="h.unrealized_gain === null" class="text-gray-300 dark:text-gray-600">—</span>
                                         </td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300"
+                                            x-text="h.total_income !== null ? fmtMoney(h.total_income) : '—'"></td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300"
+                                            x-text="h.yield_on_cost !== null ? h.yield_on_cost.toFixed(2) + '%' : '—'"></td>
                                     </tr>
                                 </template>
                             </tbody>

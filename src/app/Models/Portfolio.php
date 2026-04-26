@@ -37,6 +37,11 @@ class Portfolio extends Model
         return $this->hasMany(PortfolioSnapshot::class);
     }
 
+    public function journalEntries(): HasMany
+    {
+        return $this->hasMany(JournalEntry::class)->orderByDesc('entry_date')->orderByDesc('id');
+    }
+
     /**
      * Compute holdings from transactions.
      * Requires transactions.asset.latestPrice and manualAssets.latestValuation to be loaded.

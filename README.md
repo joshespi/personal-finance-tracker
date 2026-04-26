@@ -116,8 +116,17 @@ Feature requests are welcome — describe the use case, not just the feature.
   - Annual summary (by-year realized gain)
 - **Time-Weighted Return (TWR)** — total and annualized, shown in the header stats
 - **Rebalancing suggestions** — set target stock/crypto/manual % in portfolio settings; the page shows current vs. target and buy/sell amounts
-- Dividend / income received by asset
+- **Dividend income** — total income received per asset; **Income** and **Yield on Cost (YOC)** columns in the holdings table
 - Manual assets (real estate, vehicles, etc.)
+- **Portfolio Journal** — timestamped, rich-text notes per portfolio; record your investment thesis, decisions, and observations
+
+### Tax Summary
+
+- Cross-portfolio view of all realized gains and losses, broken out by **tax year**
+- Each year shows **short-term** (held < 1 year) and **long-term** (held ≥ 1 year) totals separately
+- Lot-by-lot detail: symbol, portfolio, quantity, buy date, sell date, days held, cost basis, proceeds, gain/loss
+- All-years summary table for a quick multi-year overview
+- **Export to CSV** — download realized gains as a CSV ready to hand to an accountant
 
 ### All Transactions
 
@@ -125,6 +134,8 @@ Feature requests are welcome — describe the use case, not just the feature.
 - Filter by portfolio, symbol, transaction type, and date range
 - Sortable by Date, Portfolio, Symbol, Type, Quantity
 - Edit/delete links navigate to the per-portfolio transaction actions
+- **Export to CSV** — download full transaction history
+- **Import from CSV** — bulk-import transactions via a CSV template (download template from the transactions list)
 
 ### Watchlist
 
@@ -177,6 +188,7 @@ To add a cron entry for ongoing updates:
 | `ManualAsset` / `ManualValuation` | User-defined assets (e.g. real estate) with manual valuations                                                |
 | `PortfolioSnapshot`               | Periodic snapshots of portfolio value over time                                                              |
 | `BenchmarkPrice`                  | Daily close prices for benchmark tickers (SPY, BTC)                                                          |
+| `JournalEntry`                    | Rich-text timestamped note attached to a portfolio for recording investment decisions                        |
 | `WatchlistItem`                   | User-watched tickers with optional target price and notes                                                    |
 | `ActivityLog`                     | Audit log of user actions                                                                                    |
 | `LoginHistory`                    | Per-user login history (IP, user agent, timestamp)                                                           |
