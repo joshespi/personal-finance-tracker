@@ -459,14 +459,15 @@
 
             function apexBase(dark) {
                 return {
-                    chart:   { background: 'transparent', toolbar: { show: false }, animations: { enabled: false } },
-                    theme:   { mode: dark ? 'dark' : 'light' },
-                    grid:    { borderColor: gridColor, strokeDashArray: 3 },
-                    xaxis:   { type: 'datetime', labels: { style: { colors: labelColor }, datetimeUTC: false } },
-                    yaxis:   { labels: { style: { colors: labelColor }, formatter: fmtK } },
-                    tooltip: { x: { format: 'MMM d, yyyy' }, y: { formatter: fmtFull }, theme: dark ? 'dark' : 'light' },
-                    stroke:  { curve: 'smooth', width: 2 },
-                    legend:  { position: 'bottom', labels: { colors: labelColor } },
+                    chart:      { background: 'transparent', toolbar: { show: false }, animations: { enabled: false } },
+                    theme:      { mode: dark ? 'dark' : 'light' },
+                    grid:       { borderColor: gridColor, strokeDashArray: 3 },
+                    xaxis:      { type: 'datetime', labels: { style: { colors: labelColor }, datetimeUTC: false } },
+                    yaxis:      { labels: { style: { colors: labelColor }, formatter: fmtK } },
+                    tooltip:    { x: { format: 'MMM d, yyyy' }, y: { formatter: fmtFull }, theme: dark ? 'dark' : 'light' },
+                    stroke:     { curve: 'smooth', width: 2 },
+                    legend:     { position: 'bottom', labels: { colors: labelColor } },
+                    dataLabels: { enabled: false },
                 };
             }
 
