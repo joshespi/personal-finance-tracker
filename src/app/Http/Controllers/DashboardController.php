@@ -66,6 +66,20 @@ class DashboardController extends Controller
             ];
         });
 
+        $cashAccounts = $request->user()->cashAccounts()->get();
+        $totalCash = round($cashAccounts->sum(fn ($a) => $a->balance()), 2);
+
+        $totalAssets = round($summaries->sum('total_value') + $totalCash, 2);
+
+        $liabilities = $request->user()
+            ->liabilities()
+            ->with('latestBalance')
+            ->get();
+
+        $totalDebt = round($liabilities->sum(
+            fn ($l) => $l->latestBalance ? (float) $l->latestBalance->balance : 0
+        ), 2);
+
         $totals = [
             'cost_basis'   => round($summaries->sum('cost_basis'), 2),
             'market_value' => $summaries->contains(fn ($s) => $s['market_value'] !== null)
@@ -75,7 +89,9 @@ class DashboardController extends Controller
             'unrealized'   => $summaries->contains(fn ($s) => $s['unrealized'] !== null)
                 ? round($summaries->sum(fn ($s) => $s['unrealized'] ?? 0), 2)
                 : null,
-            'total_value'  => round($summaries->sum('total_value'), 2),
+            'total_value'  => $totalAssets,
+            'total_debt'   => $totalDebt,
+            'net_worth'    => round($totalAssets - $totalDebt, 2),
         ];
 
         // Aggregate holdings across all portfolios by asset symbol
@@ -115,7 +131,7 @@ class DashboardController extends Controller
         $allocation = $this->buildAllocation($allHoldings, $portfolios);
 
         return view('dashboard', compact(
-            'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'benchmarkData'
+            'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'benchmarkData', 'liabilities'
         ));
     }
 

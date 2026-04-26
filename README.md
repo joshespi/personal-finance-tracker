@@ -2,7 +2,7 @@
 
 **Live:** [portfolio.espifam.com](https://portfolio.espifam.com)
 
-A self-hosted Laravel application for tracking investment portfolios across stocks, crypto, and non-standard assets (real estate, vehicles, collectibles — anything with a value you want to timestamp and track). Supports transactions, asset price fetching via Finnhub, manual assets with custom valuations, periodic portfolio snapshots, an aggregated all-holdings view across all portfolios, linked portfolio-to-portfolio transfers, FIFO realized gain/loss tracking, watchlist, time-weighted return, rebalancing suggestions, benchmark comparison, ApexCharts-powered visualizations, and a full admin panel.
+A self-hosted Laravel application for tracking your full financial picture in one place — investments (stocks, crypto), manual/non-standard assets (real estate, vehicles, collectibles), debts (mortgages, credit cards, loans), cash accounts (checking, savings), and envelope-style budget categories. Get a real net worth number that spans everything you own and owe. Includes transactions, asset price fetching via Finnhub, manual assets with custom valuations, liabilities with balance history, cash accounts with a deposit/withdrawal ledger, monthly budget envelopes, portfolio snapshots, an aggregated all-holdings view, linked portfolio-to-portfolio transfers, FIFO realized gain/loss tracking, watchlist, time-weighted return, rebalancing suggestions, benchmark comparison, ApexCharts-powered visualizations, and a full admin panel.
 
 ## Stack
 
@@ -79,7 +79,7 @@ docker compose exec app npm run dev
 
 ## Why This Exists
 
-I couldn't find a portfolio tracker that was simple but covered all the asset types I actually own and wanted to track. Most apps handle stocks *or* crypto, sometimes both — and none of them let you track non-standard assets like a property, a card collection, or a vehicle. Everything you own lives on one balance sheet, so your tracker should too — including a real picture of your net worth.
+I couldn't find a personal finance app that was simple but covered everything I actually wanted to track. Most apps handle stocks *or* crypto, sometimes both — and none of them let you track non-standard assets (a property, a card collection, a vehicle) alongside the debts they're tied to. Everything you own and owe lives on one balance sheet, so your tracker should too — including a real picture of your net worth.
 
 We only ask for the minimum information needed to create an account. All asset data is entered manually and is not linked to any brokerage, exchange, or financial institution — it exists purely for personal tracking and visualization.
 
@@ -105,6 +105,7 @@ Feature requests are welcome — describe the use case, not just the feature.
 - **Asset allocation donut chart** — Stocks / Crypto / Manual Assets breakdown
 - **Sortable all-holdings table** — click any column header to sort; columns include Symbol, Type, Qty, Cost Basis, Price, Market Value, P&L, % of Total
 - **Inline asset reclassification** — click the Stock/Crypto badge in any holdings table to toggle an asset's type (e.g. mark ARKB as Crypto)
+- **Net Worth row** — shown automatically when you have any liabilities tracked: Total Assets · Total Debt · Net Worth (assets − liabilities)
 
 ### Portfolio page
 
@@ -119,6 +120,30 @@ Feature requests are welcome — describe the use case, not just the feature.
 - **Dividend income** — total income received per asset; **Income** and **Yield on Cost (YOC)** columns in the holdings table
 - Manual assets (real estate, vehicles, etc.)
 - **Portfolio Journal** — timestamped, rich-text notes per portfolio; record your investment thesis, decisions, and observations
+
+### Cash Accounts
+
+- Track checking, savings, cash, money market, CD, and other cash holdings
+- **Deposit/withdrawal ledger** — record every transaction with date, amount, and description; balance is computed from the ledger
+- Per-account balance and transaction history view; total cash tile on the index
+- Cash automatically rolls into the dashboard **Net Worth** calculation (Assets + Cash − Debt)
+
+### Budget Envelopes
+
+- Simple envelope-style budgeting: create one envelope per spending category (Groceries, Rent, Fun Money…)
+- **Fund / Spend ledger** — record allocations into the envelope and spending out of it; current balance = funds − spends
+- Optional **monthly target** per envelope; the index page shows a progress bar of spent vs. target for the current month
+- Custom color per envelope; sort order for arranging your list
+- Index totals: **Total in Envelopes**, **Spent This Month**, **Monthly Target**
+
+### Liabilities
+
+- Track debts alongside your assets for a true net worth picture
+- Liability types: **Mortgage**, **Credit Card**, **Auto Loan**, **Student Loan**, **Personal Loan**, **Other**
+- Optionally **link a liability to a manual asset** (mortgage on a property, auto loan on a vehicle) — surfaces "what's my equity in the house" naturally
+- Optional **interest rate** field for each liability
+- **Balance history** — record point-in-time balances (each statement, each appraisal); the latest balance feeds the dashboard
+- Dashboard automatically shows a **Net Worth tile** (Assets − Debt) once any liability is tracked
 
 ### Tax Summary
 
@@ -180,19 +205,22 @@ To add a cron entry for ongoing updates:
 
 ## Key Models
 
-| Model                             | Description                                                                                                  |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `Portfolio`                       | A named collection of assets belonging to a user                                                             |
-| `Transaction`                     | A buy/sell/transfer record for a tracked asset within a portfolio                                            |
-| `Asset` / `AssetPrice`            | Market-traded assets and their historical prices; `asset_type` can be changed inline from any holdings table |
-| `ManualAsset` / `ManualValuation` | User-defined assets (e.g. real estate) with manual valuations                                                |
-| `PortfolioSnapshot`               | Periodic snapshots of portfolio value over time                                                              |
-| `BenchmarkPrice`                  | Daily close prices for benchmark tickers (SPY, BTC)                                                          |
-| `JournalEntry`                    | Rich-text timestamped note attached to a portfolio for recording investment decisions                        |
-| `WatchlistItem`                   | User-watched tickers with optional target price and notes                                                    |
-| `ActivityLog`                     | Audit log of user actions                                                                                    |
-| `LoginHistory`                    | Per-user login history (IP, user agent, timestamp)                                                           |
-| `AppSetting`                      | Key-value application settings (e.g. `registration_open`)                                                    |
+| Model                              | Description                                                                                                 |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `Portfolio`                        | A named collection of assets belonging to a user                                                            |
+| `Transaction`                      | A buy/sell/transfer record for a tracked asset within a portfolio                                           |
+| `Asset` / `AssetPrice`             | Market-traded assets and their historical prices; `asset_type` can be changed inline from a holdings table  |
+| `ManualAsset` / `ManualValuation`  | User-defined assets (e.g. real estate) with manual valuations                                               |
+| `Liability` / `LiabilityBalance`   | Debts (mortgage, loan, credit card) with balance history; optionally linked to a `ManualAsset`              |
+| `CashAccount` / `CashTransaction`  | Cash holdings (checking, savings, etc.) with a deposit/withdrawal ledger; balance computed from the ledger  |
+| `Envelope` / `EnvelopeTransaction` | Budget envelope with a fund/spend ledger; optional monthly target tracked per category                      |
+| `PortfolioSnapshot`                | Periodic snapshots of portfolio value over time                                                             |
+| `BenchmarkPrice`                   | Daily close prices for benchmark tickers (SPY, BTC)                                                         |
+| `JournalEntry`                     | Rich-text timestamped note attached to a portfolio for recording investment decisions                       |
+| `WatchlistItem`                    | User-watched tickers with optional target price and notes                                                   |
+| `ActivityLog`                      | Audit log of user actions                                                                                   |
+| `LoginHistory`                     | Per-user login history (IP, user agent, timestamp)                                                          |
+| `AppSetting`                       | Key-value application settings (e.g. `registration_open`)                                                   |
 
 ## Transaction Types
 

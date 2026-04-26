@@ -26,6 +26,15 @@
                     <x-nav-link :href="route('watchlist.index')" :active="request()->routeIs('watchlist.*')">
                         {{ __('Watchlist') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('cash-accounts.index')" :active="request()->routeIs('cash-accounts.*')">
+                        {{ __('Cash') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('envelopes.index')" :active="request()->routeIs('envelopes.*')">
+                        {{ __('Budget') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('liabilities.index')" :active="request()->routeIs('liabilities.*')">
+                        {{ __('Liabilities') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('tax.summary')" :active="request()->routeIs('tax.*')">
                         {{ __('Tax') }}
                     </x-nav-link>
@@ -115,6 +124,15 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('watchlist.index')" :active="request()->routeIs('watchlist.*')">
                 {{ __('Watchlist') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('cash-accounts.index')" :active="request()->routeIs('cash-accounts.*')">
+                {{ __('Cash') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('envelopes.index')" :active="request()->routeIs('envelopes.*')">
+                {{ __('Budget') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('liabilities.index')" :active="request()->routeIs('liabilities.*')">
+                {{ __('Liabilities') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('tax.summary')" :active="request()->routeIs('tax.*')">
                 {{ __('Tax') }}

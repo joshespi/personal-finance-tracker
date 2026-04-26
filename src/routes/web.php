@@ -6,8 +6,14 @@ use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AllTransactionsController;
+use App\Http\Controllers\CashAccountController;
+use App\Http\Controllers\CashTransactionController;
+use App\Http\Controllers\EnvelopeController;
+use App\Http\Controllers\EnvelopeTransactionController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\JournalEntryController;
+use App\Http\Controllers\LiabilityBalanceController;
+use App\Http\Controllers\LiabilityController;
 use App\Http\Controllers\TaxSummaryController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\DashboardController;
@@ -64,6 +70,27 @@ Route::middleware('auth')->group(function () {
     Route::resource('manual-assets.valuations', ManualValuationController::class)
         ->shallow()
         ->only(['store', 'destroy']);
+
+    Route::resource('liabilities', LiabilityController::class);
+
+    Route::post('liabilities/{liability}/balances', [LiabilityBalanceController::class, 'store'])
+        ->name('liabilities.balances.store');
+    Route::delete('liability-balances/{balance}', [LiabilityBalanceController::class, 'destroy'])
+        ->name('liabilities.balances.destroy');
+
+    Route::resource('cash-accounts', CashAccountController::class);
+
+    Route::post('cash-accounts/{cashAccount}/transactions', [CashTransactionController::class, 'store'])
+        ->name('cash-accounts.transactions.store');
+    Route::delete('cash-transactions/{transaction}', [CashTransactionController::class, 'destroy'])
+        ->name('cash-accounts.transactions.destroy');
+
+    Route::resource('envelopes', EnvelopeController::class);
+
+    Route::post('envelopes/{envelope}/transactions', [EnvelopeTransactionController::class, 'store'])
+        ->name('envelopes.transactions.store');
+    Route::delete('envelope-transactions/{transaction}', [EnvelopeTransactionController::class, 'destroy'])
+        ->name('envelopes.transactions.destroy');
 
     // Watchlist
     Route::get('/watchlist', [WatchlistController::class, 'index'])->name('watchlist.index');

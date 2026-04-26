@@ -25,4 +25,9 @@ class ManualAsset extends Model
     {
         return $this->hasOne(ManualValuation::class)->latestOfMany('valued_at');
     }
+
+    public function liabilities(): HasMany
+    {
+        return $this->hasMany(Liability::class);
+    }
 }

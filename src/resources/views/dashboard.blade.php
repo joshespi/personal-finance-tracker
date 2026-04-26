@@ -62,6 +62,32 @@
                     </div>
                 </div>
 
+                @if ($totals['total_debt'] > 0)
+                    {{-- Net worth row --}}
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Assets</p>
+                            <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                ${{ number_format($totals['total_value'], 2) }}
+                            </p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                <a href="{{ route('liabilities.index') }}" class="hover:underline">Total Debt</a>
+                            </p>
+                            <p class="mt-1 text-2xl font-semibold font-mono text-red-600 dark:text-red-400">
+                                −${{ number_format($totals['total_debt'], 2) }}
+                            </p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4 ring-1 ring-indigo-500/20">
+                            <p class="text-xs text-indigo-600 dark:text-indigo-400 uppercase tracking-wide font-semibold">Net Worth</p>
+                            <p class="mt-1 text-2xl font-semibold font-mono {{ $totals['net_worth'] >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
+                                {{ $totals['net_worth'] < 0 ? '−' : '' }}${{ number_format(abs($totals['net_worth']), 2) }}
+                            </p>
+                        </div>
+                    </div>
+                @endif
+
                 @if ($chartData->isNotEmpty())
                     {{-- Portfolio value chart with time range toggles --}}
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
