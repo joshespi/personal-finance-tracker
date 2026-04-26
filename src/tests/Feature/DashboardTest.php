@@ -57,14 +57,35 @@ class DashboardTest extends TestCase
         $this->get(route('dashboard'))->assertRedirect(route('login'));
     }
 
-    public function test_dashboard_shows_empty_state_with_no_portfolios(): void
+    public function test_dashboard_shows_welcome_when_user_has_no_data(): void
     {
         $user = $this->makeUser();
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertOk();
-        $response->assertSee('No portfolios yet');
+        $response->assertSee('Welcome to your financial tracker');
+        $response->assertSee('Create a portfolio');
+        $response->assertSee('Add a cash account');
+    }
+
+    public function test_dashboard_shows_net_worth_when_user_has_only_cash(): void
+    {
+        $user = $this->makeUser();
+        $account = \App\Models\CashAccount::create([
+            'user_id'      => $user->id,
+            'name'         => 'Checking',
+            'account_type' => 'checking',
+            'currency'     => 'USD',
+        ]);
+        $account->transactions()->create(['type' => 'deposit', 'amount' => 1000, 'occurred_at' => '2026-04-26']);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertDontSee('Welcome to your financial tracker');
+        $response->assertSee('Net Worth');
+        $response->assertSee('$1,000.00');
     }
 
     public function test_dashboard_shows_portfolio_names(): void
