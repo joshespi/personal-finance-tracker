@@ -135,6 +135,7 @@ Feature requests are welcome — describe the use case, not just the feature.
 - Optional **monthly target** per envelope; the index page shows a progress bar of spent vs. target for the current month
 - Custom color per envelope; sort order for arranging your list
 - Index totals: **Total in Envelopes**, **Spent This Month**, **Monthly Target**
+- **Fund from a cash account** — when funding an envelope, optionally choose a cash account to pull from; creates a paired withdrawal in that account so the two ledgers stay consistent
 
 ### Liabilities
 

@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashAccount;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class EnvelopeTransactionController extends Controller
 {
@@ -14,15 +16,46 @@ class EnvelopeTransactionController extends Controller
         abort_unless($envelope->user_id === $request->user()->id, 403);
 
         $validated = $request->validate([
-            'type'        => ['required', 'in:fund,spend'],
-            'amount'      => ['required', 'numeric', 'gt:0'],
-            'description' => ['nullable', 'string', 'max:500'],
-            'occurred_at' => ['required', 'date'],
+            'type'            => ['required', 'in:fund,spend'],
+            'amount'          => ['required', 'numeric', 'gt:0'],
+            'description'     => ['nullable', 'string', 'max:500'],
+            'occurred_at'     => ['required', 'date'],
+            'cash_account_id' => ['nullable', 'integer', 'exists:cash_accounts,id'],
         ]);
 
-        $envelope->transactions()->create($validated);
+        $cashAccount = null;
+        if (! empty($validated['cash_account_id']) && $validated['type'] === 'fund') {
+            $cashAccount = CashAccount::find($validated['cash_account_id']);
+            abort_unless($cashAccount && $cashAccount->user_id === $request->user()->id, 403);
+        }
 
-        return redirect()->route('envelopes.show', $envelope)->with('success', 'Transaction recorded.');
+        $envelopeName = $envelope->name;
+        $userDesc     = $validated['description'] ?? null;
+
+        DB::transaction(function () use ($envelope, $validated, $cashAccount, $envelopeName, $userDesc) {
+            if ($cashAccount) {
+                $cashAccount->transactions()->create([
+                    'type'        => 'withdrawal',
+                    'amount'      => $validated['amount'],
+                    'occurred_at' => $validated['occurred_at'],
+                    'description' => 'Funded envelope: ' . $envelopeName
+                        . ($userDesc ? ' — ' . $userDesc : ''),
+                ]);
+            }
+
+            $envelope->transactions()->create([
+                'type'        => $validated['type'],
+                'amount'      => $validated['amount'],
+                'description' => $userDesc,
+                'occurred_at' => $validated['occurred_at'],
+            ]);
+        });
+
+        $msg = $cashAccount
+            ? "Funded from {$cashAccount->name} — paired transaction recorded."
+            : 'Transaction recorded.';
+
+        return redirect()->route('envelopes.show', $envelope)->with('success', $msg);
     }
 
     public function destroy(Request $request, EnvelopeTransaction $transaction): RedirectResponse

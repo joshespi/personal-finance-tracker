@@ -60,7 +60,9 @@ class EnvelopeController extends Controller
         $envelope->current_balance = $envelope->balance();
         $envelope->spent_this_month = $envelope->spentInMonth();
 
-        return view('envelopes.show', compact('envelope'));
+        $cashAccounts = $request->user()->cashAccounts()->orderBy('name')->get(['id', 'name']);
+
+        return view('envelopes.show', compact('envelope', 'cashAccounts'));
     }
 
     public function edit(Request $request, Envelope $envelope): View

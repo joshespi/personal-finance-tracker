@@ -76,15 +76,16 @@
                 </div>
                 <div class="p-6">
                     <form method="POST" action="{{ route('envelopes.transactions.store', $envelope) }}"
+                          x-data="{ type: '{{ old('type', 'fund') }}' }"
                           class="flex flex-wrap items-end gap-4">
                         @csrf
 
                         <div>
                             <x-input-label for="type" value="Type" />
-                            <select id="type" name="type"
+                            <select id="type" name="type" x-model="type"
                                     class="mt-1 block w-36 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                                <option value="fund" @selected(old('type') === 'fund')>Fund</option>
-                                <option value="spend" @selected(old('type') === 'spend')>Spend</option>
+                                <option value="fund">Fund</option>
+                                <option value="spend">Spend</option>
                             </select>
                             <x-input-error :messages="$errors->get('type')" class="mt-2" />
                         </div>
@@ -103,6 +104,20 @@
                             <x-input-error :messages="$errors->get('occurred_at')" class="mt-2" />
                         </div>
 
+                        @if ($cashAccounts->isNotEmpty())
+                            <div x-show="type === 'fund'" x-cloak>
+                                <x-input-label for="cash_account_id" value="From cash account (optional)" />
+                                <select id="cash_account_id" name="cash_account_id"
+                                        class="mt-1 block w-48 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option value="">— None —</option>
+                                    @foreach ($cashAccounts as $ca)
+                                        <option value="{{ $ca->id }}" @selected((string)old('cash_account_id') === (string)$ca->id)>{{ $ca->name }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('cash_account_id')" class="mt-2" />
+                            </div>
+                        @endif
+
                         <div class="flex-1 min-w-48">
                             <x-input-label for="description" value="Description (optional)" />
                             <x-text-input id="description" name="description" type="text" class="mt-1 block w-full"
@@ -114,6 +129,9 @@
                             <x-primary-button>Record</x-primary-button>
                         </div>
                     </form>
+                    @if ($cashAccounts->isNotEmpty())
+                        <p class="px-6 pb-4 -mt-2 text-xs text-gray-400 dark:text-gray-500">Choosing a cash account will create a paired withdrawal there.</p>
+                    @endif
                 </div>
             </div>
 

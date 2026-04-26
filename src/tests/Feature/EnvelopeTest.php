@@ -198,6 +198,112 @@ class EnvelopeTest extends TestCase
         $this->assertDatabaseMissing('envelope_transactions', ['id' => $tx->id]);
     }
 
+    public function test_funding_from_cash_account_creates_paired_withdrawal(): void
+    {
+        $user     = $this->makeUser();
+        $envelope = $this->makeEnvelope($user);
+        $account  = \App\Models\CashAccount::create([
+            'user_id'      => $user->id,
+            'name'         => 'Checking',
+            'account_type' => 'checking',
+            'currency'     => 'USD',
+        ]);
+        $account->transactions()->create(['type' => 'deposit', 'amount' => 1000, 'occurred_at' => '2026-04-01']);
+
+        $this->actingAs($user)
+            ->post(route('envelopes.transactions.store', $envelope), [
+                'type'            => 'fund',
+                'amount'          => 200,
+                'occurred_at'     => '2026-04-26',
+                'cash_account_id' => $account->id,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('envelope_transactions', [
+            'envelope_id' => $envelope->id,
+            'type'        => 'fund',
+            'amount'      => 200,
+        ]);
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $account->id,
+            'type'            => 'withdrawal',
+            'amount'          => 200,
+        ]);
+        $this->assertEquals(800.0, $account->fresh()->balance());
+        $this->assertEquals(200.0, $envelope->fresh()->balance());
+    }
+
+    public function test_funding_without_cash_account_only_creates_envelope_transaction(): void
+    {
+        $user     = $this->makeUser();
+        $envelope = $this->makeEnvelope($user);
+        $account  = \App\Models\CashAccount::create([
+            'user_id'      => $user->id,
+            'name'         => 'Checking',
+            'account_type' => 'checking',
+            'currency'     => 'USD',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('envelopes.transactions.store', $envelope), [
+                'type'        => 'fund',
+                'amount'      => 200,
+                'occurred_at' => '2026-04-26',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('cash_transactions', ['cash_account_id' => $account->id]);
+        $this->assertEquals(200.0, $envelope->fresh()->balance());
+    }
+
+    public function test_cannot_fund_from_other_users_cash_account(): void
+    {
+        $user     = $this->makeUser();
+        $other    = $this->makeUser();
+        $envelope = $this->makeEnvelope($user);
+        $account  = \App\Models\CashAccount::create([
+            'user_id'      => $other->id,
+            'name'         => 'Other Checking',
+            'account_type' => 'checking',
+            'currency'     => 'USD',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('envelopes.transactions.store', $envelope), [
+                'type'            => 'fund',
+                'amount'          => 200,
+                'occurred_at'     => '2026-04-26',
+                'cash_account_id' => $account->id,
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('envelope_transactions', ['envelope_id' => $envelope->id]);
+    }
+
+    public function test_cash_account_id_ignored_for_spend_transactions(): void
+    {
+        $user     = $this->makeUser();
+        $envelope = $this->makeEnvelope($user);
+        $account  = \App\Models\CashAccount::create([
+            'user_id'      => $user->id,
+            'name'         => 'Checking',
+            'account_type' => 'checking',
+            'currency'     => 'USD',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('envelopes.transactions.store', $envelope), [
+                'type'            => 'spend',
+                'amount'          => 50,
+                'occurred_at'     => '2026-04-26',
+                'cash_account_id' => $account->id,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('cash_transactions', ['cash_account_id' => $account->id]);
+        $this->assertDatabaseHas('envelope_transactions', ['envelope_id' => $envelope->id, 'type' => 'spend']);
+    }
+
     public function test_cascade_delete_transactions_when_envelope_deleted(): void
     {
         $user     = $this->makeUser();
