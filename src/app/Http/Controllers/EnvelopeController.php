@@ -11,20 +11,29 @@ class EnvelopeController extends Controller
 {
     public function index(Request $request): View
     {
+        $startOfMonth = now()->startOfMonth();
+        $endOfMonth   = now()->endOfMonth();
+
         $envelopes = $request->user()
             ->envelopes()
+            ->withSum(['transactions as funds_total' => fn ($q) => $q->where('type', 'fund')], 'amount')
+            ->withSum(['transactions as spends_total' => fn ($q) => $q->where('type', 'spend')], 'amount')
+            ->withSum([
+                'transactions as month_spend_total' => fn ($q) => $q
+                    ->where('type', 'spend')
+                    ->whereBetween('occurred_at', [$startOfMonth, $endOfMonth]),
+            ], 'amount')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get()
-            ->map(function ($e) {
-                $e->current_balance = $e->balance();
-                $e->spent_this_month = $e->spentInMonth();
-                return $e;
+            ->each(function ($e) {
+                $e->current_balance  = (float) ($e->funds_total ?? 0) - (float) ($e->spends_total ?? 0);
+                $e->spent_this_month = (float) ($e->month_spend_total ?? 0);
             });
 
-        $totalBalance      = $envelopes->sum('current_balance');
+        $totalBalance       = $envelopes->sum('current_balance');
         $totalMonthlyTarget = $envelopes->sum(fn ($e) => (float) ($e->monthly_target ?? 0));
-        $totalSpentMonth   = $envelopes->sum('spent_this_month');
+        $totalSpentMonth    = $envelopes->sum('spent_this_month');
 
         return view('envelopes.index', compact('envelopes', 'totalBalance', 'totalMonthlyTarget', 'totalSpentMonth'));
     }

@@ -66,19 +66,19 @@ class DashboardController extends Controller
             ];
         });
 
-        $cashAccounts = $request->user()->cashAccounts()->get();
-        $totalCash = round($cashAccounts->sum(fn ($a) => $a->balance()), 2);
+        $totalCash = round((float) \App\Models\CashTransaction::query()
+            ->join('cash_accounts', 'cash_accounts.id', '=', 'cash_transactions.cash_account_id')
+            ->where('cash_accounts.user_id', $request->user()->id)
+            ->selectRaw("COALESCE(SUM(CASE WHEN cash_transactions.type = 'deposit' THEN cash_transactions.amount ELSE -cash_transactions.amount END), 0) AS bal")
+            ->value('bal'), 2);
 
         $totalAssets = round($summaries->sum('total_value') + $totalCash, 2);
 
-        $liabilities = $request->user()
+        $totalDebt = round((float) $request->user()
             ->liabilities()
             ->with('latestBalance')
-            ->get();
-
-        $totalDebt = round($liabilities->sum(
-            fn ($l) => $l->latestBalance ? (float) $l->latestBalance->balance : 0
-        ), 2);
+            ->get()
+            ->sum(fn ($l) => $l->latestBalance ? (float) $l->latestBalance->balance : 0), 2);
 
         $totals = [
             'cost_basis'   => round($summaries->sum('cost_basis'), 2),
@@ -131,7 +131,7 @@ class DashboardController extends Controller
         $allocation = $this->buildAllocation($allHoldings, $portfolios);
 
         return view('dashboard', compact(
-            'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'benchmarkData', 'liabilities'
+            'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'benchmarkData'
         ));
     }
 

@@ -18,9 +18,4 @@ class CashTransaction extends Model
     {
         return $this->belongsTo(CashAccount::class);
     }
-
-    public function signedAmount(): float
-    {
-        return (float) $this->amount * ($this->type === 'deposit' ? 1 : -1);
-    }
 }

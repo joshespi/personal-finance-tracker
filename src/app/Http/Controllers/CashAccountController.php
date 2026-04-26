@@ -22,11 +22,12 @@ class CashAccountController extends Controller
     {
         $accounts = $request->user()
             ->cashAccounts()
+            ->withSum(['transactions as deposits_total' => fn ($q) => $q->where('type', 'deposit')], 'amount')
+            ->withSum(['transactions as withdrawals_total' => fn ($q) => $q->where('type', 'withdrawal')], 'amount')
             ->orderBy('name')
             ->get()
-            ->map(function ($a) {
-                $a->current_balance = $a->balance();
-                return $a;
+            ->each(function ($a) {
+                $a->current_balance = (float) ($a->deposits_total ?? 0) - (float) ($a->withdrawals_total ?? 0);
             });
 
         $totalCash = $accounts->sum('current_balance');
