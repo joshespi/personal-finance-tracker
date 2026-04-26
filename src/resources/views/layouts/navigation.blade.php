@@ -13,34 +13,58 @@
                         <span class="font-semibold text-gray-800 dark:text-gray-200 text-sm hidden sm:block">{{ config('app.name') }}</span>
                     </a>
                 </div>
+                @php
+                    $portfoliosActive = request()->routeIs('portfolios.*')
+                        || request()->routeIs('manual-assets.*')
+                        || request()->routeIs('transactions.*')
+                        || request()->routeIs('watchlist.*')
+                        || request()->routeIs('tax.*');
+                    $moneyActive = request()->routeIs('cash-accounts.*')
+                        || request()->routeIs('envelopes.*')
+                        || request()->routeIs('liabilities.*');
+
+                    $triggerBase = 'inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 focus:outline-none transition duration-150 ease-in-out';
+                    $triggerActive = $triggerBase . ' border-indigo-400 text-gray-900 dark:text-gray-100';
+                    $triggerInactive = $triggerBase . ' border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600';
+                @endphp
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('portfolios.index')" :active="request()->routeIs('portfolios.*') || request()->routeIs('manual-assets.*')">
-                        {{ __('Portfolios') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('transactions.all')" :active="request()->routeIs('transactions.all')">
-                        {{ __('Transactions') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('watchlist.index')" :active="request()->routeIs('watchlist.*')">
-                        {{ __('Watchlist') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('cash-accounts.index')" :active="request()->routeIs('cash-accounts.*')">
-                        {{ __('Cash') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('envelopes.index')" :active="request()->routeIs('envelopes.*')">
-                        {{ __('Budget') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('liabilities.index')" :active="request()->routeIs('liabilities.*')">
-                        {{ __('Liabilities') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('tax.summary')" :active="request()->routeIs('tax.*')">
-                        {{ __('Tax') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('about')" :active="request()->routeIs('about')">
-                        {{ __('About') }}
-                    </x-nav-link>
+
+                    <x-dropdown align="left" width="48">
+                        <x-slot name="trigger">
+                            <button type="button" class="{{ $portfoliosActive ? $triggerActive : $triggerInactive }}">
+                                {{ __('Portfolios') }}
+                                <svg class="ms-1 h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                        </x-slot>
+                        <x-slot name="content">
+                            <x-dropdown-link :href="route('portfolios.index')">{{ __('Portfolios') }}</x-dropdown-link>
+                            <x-dropdown-link :href="route('transactions.all')">{{ __('Transactions') }}</x-dropdown-link>
+                            <x-dropdown-link :href="route('watchlist.index')">{{ __('Watchlist') }}</x-dropdown-link>
+                            <x-dropdown-link :href="route('tax.summary')">{{ __('Tax Summary') }}</x-dropdown-link>
+                        </x-slot>
+                    </x-dropdown>
+
+                    <x-dropdown align="left" width="48">
+                        <x-slot name="trigger">
+                            <button type="button" class="{{ $moneyActive ? $triggerActive : $triggerInactive }}">
+                                {{ __('Money') }}
+                                <svg class="ms-1 h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                        </x-slot>
+                        <x-slot name="content">
+                            <x-dropdown-link :href="route('cash-accounts.index')">{{ __('Cash Accounts') }}</x-dropdown-link>
+                            <x-dropdown-link :href="route('envelopes.index')">{{ __('Budget Envelopes') }}</x-dropdown-link>
+                            <x-dropdown-link :href="route('liabilities.index')">{{ __('Liabilities') }}</x-dropdown-link>
+                        </x-slot>
+                    </x-dropdown>
+
                     @if (Auth::user()->is_admin)
                         <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
                             {{ __('Admin') }}
@@ -116,6 +140,8 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+
+            <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Portfolios') }}</p>
             <x-responsive-nav-link :href="route('portfolios.index')" :active="request()->routeIs('portfolios.*') || request()->routeIs('manual-assets.*')">
                 {{ __('Portfolios') }}
             </x-responsive-nav-link>
@@ -125,22 +151,23 @@
             <x-responsive-nav-link :href="route('watchlist.index')" :active="request()->routeIs('watchlist.*')">
                 {{ __('Watchlist') }}
             </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('tax.summary')" :active="request()->routeIs('tax.*')">
+                {{ __('Tax Summary') }}
+            </x-responsive-nav-link>
+
+            <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Money') }}</p>
             <x-responsive-nav-link :href="route('cash-accounts.index')" :active="request()->routeIs('cash-accounts.*')">
-                {{ __('Cash') }}
+                {{ __('Cash Accounts') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('envelopes.index')" :active="request()->routeIs('envelopes.*')">
-                {{ __('Budget') }}
+                {{ __('Budget Envelopes') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('liabilities.index')" :active="request()->routeIs('liabilities.*')">
                 {{ __('Liabilities') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('tax.summary')" :active="request()->routeIs('tax.*')">
-                {{ __('Tax') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('about')" :active="request()->routeIs('about')">
-                {{ __('About') }}
-            </x-responsive-nav-link>
+
             @if (Auth::user()->is_admin)
+                <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Admin') }}</p>
                 <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
                     {{ __('Admin') }}
                 </x-responsive-nav-link>
