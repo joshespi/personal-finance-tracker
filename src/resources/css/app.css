@@ -1,3 +1,62 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Trix editor dark mode — Trix ships light-only styles */
+.dark trix-toolbar .trix-button-row {
+    background: #374151;
+    border-color: #4b5563;
+}
+.dark trix-toolbar .trix-button-group {
+    border-color: #4b5563;
+    background: #374151;
+}
+.dark trix-toolbar .trix-button {
+    color: #f3f4f6;
+    border-color: #4b5563;
+    background: transparent;
+}
+.dark trix-toolbar .trix-button:not(:disabled):hover {
+    background: #4b5563;
+}
+.dark trix-toolbar .trix-button.trix-active {
+    background: #4b5563;
+}
+.dark trix-toolbar .trix-button--icon::before {
+    filter: invert(1) brightness(1.4);
+}
+.dark trix-toolbar .trix-button--icon:disabled::before {
+    opacity: 0.3;
+}
+.dark trix-toolbar .trix-dialog {
+    background: #1f2937;
+    border-color: #4b5563;
+    color: #f3f4f6;
+    box-shadow: 0 0.3em 1em rgba(0, 0, 0, 0.5);
+}
+.dark trix-toolbar .trix-input--dialog {
+    background: #374151;
+    color: #f3f4f6;
+    border-color: #4b5563;
+}
+.dark trix-toolbar .trix-button--dialog {
+    color: #f3f4f6;
+}
+.dark trix-editor {
+    color: #f3f4f6;
+    caret-color: #f3f4f6;
+}
+.dark trix-editor::placeholder {
+    color: #9ca3af;
+}
+.dark trix-editor a {
+    color: #818cf8;
+}
+.dark trix-editor blockquote {
+    border-color: #4b5563;
+    color: #d1d5db;
+}
+.dark trix-editor pre {
+    background: #111827;
+    color: #e5e7eb;
+}
