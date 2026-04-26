@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Asset extends Model
 {
+    use HasFactory;
+
     protected $fillable = ['symbol', 'name', 'asset_type', 'exchange', 'coingecko_id', 'polygon_ticker'];
 
     public function transactions(): HasMany

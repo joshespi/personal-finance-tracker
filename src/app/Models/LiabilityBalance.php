@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LiabilityBalance extends Model
 {
+    use HasFactory;
+
     protected $fillable = ['liability_id', 'balance', 'notes', 'recorded_at'];
 
     protected $casts = [

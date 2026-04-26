@@ -6,23 +6,10 @@ use App\Models\Asset;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class PortfolioTransferTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function makeUser(): User
-    {
-        return User::factory()->create();
-    }
-
-    private function makePortfolio(User $user, string $name = 'Portfolio'): Portfolio
-    {
-        return Portfolio::create(['user_id' => $user->id, 'name' => $name, 'currency' => 'USD']);
-    }
-
     private function transferPayload(Portfolio $from, Portfolio $to, array $overrides = []): array
     {
         return array_merge([
@@ -46,54 +33,47 @@ class PortfolioTransferTest extends TestCase
 
     public function test_store_requires_auth(): void
     {
-        // CSRF is disabled globally in TestCase; auth middleware still runs
         $this->post(route('transfers.store'), [])->assertRedirect(route('login'));
     }
 
     public function test_create_page_shows_form_with_portfolios(): void
     {
-        $user = $this->makeUser();
-        $this->makePortfolio($user, 'Exchange');
-        $this->makePortfolio($user, 'Cold Wallet');
+        $user = User::factory()->create();
+        Portfolio::factory()->for($user)->create(['name' => 'Exchange']);
+        Portfolio::factory()->for($user)->create(['name' => 'Cold Wallet']);
 
-        $response = $this->actingAs($user)->get(route('transfers.create'));
-
-        $response->assertOk();
-        $response->assertSee('Exchange');
-        $response->assertSee('Cold Wallet');
+        $this->actingAs($user)->get(route('transfers.create'))
+            ->assertOk()
+            ->assertSee('Exchange')
+            ->assertSee('Cold Wallet');
     }
 
     public function test_store_creates_linked_transfer_pair(): void
     {
-        $user = $this->makeUser();
-        $from = $this->makePortfolio($user, 'Exchange');
-        $to   = $this->makePortfolio($user, 'Cold Wallet');
+        $user = User::factory()->create();
+        $from = Portfolio::factory()->for($user)->create();
+        $to   = Portfolio::factory()->for($user)->create();
 
-        $response = $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($from, $to));
-
-        $response->assertRedirect(route('dashboard'));
-        $response->assertSessionHas('success');
+        $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($from, $to))
+            ->assertRedirect(route('dashboard'))
+            ->assertSessionHas('success');
 
         $this->assertDatabaseCount('transactions', 2);
 
         $out = Transaction::where('type', 'transfer_out')->first();
         $in  = Transaction::where('type', 'transfer_in')->first();
 
-        $this->assertNotNull($out);
-        $this->assertNotNull($in);
         $this->assertEquals($from->id, $out->portfolio_id);
         $this->assertEquals($to->id, $in->portfolio_id);
-
-        // transfer_in links back to transfer_out; transfer_out has no link
         $this->assertEquals($out->id, $in->linked_transfer_id);
         $this->assertNull($out->linked_transfer_id);
     }
 
     public function test_store_uppercases_symbol(): void
     {
-        $user = $this->makeUser();
-        $from = $this->makePortfolio($user, 'A');
-        $to   = $this->makePortfolio($user, 'B');
+        $user = User::factory()->create();
+        $from = Portfolio::factory()->for($user)->create();
+        $to   = Portfolio::factory()->for($user)->create();
 
         $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($from, $to, [
             'symbol'     => 'eth',
@@ -105,10 +85,10 @@ class PortfolioTransferTest extends TestCase
 
     public function test_store_reuses_existing_asset(): void
     {
-        $user  = $this->makeUser();
-        $from  = $this->makePortfolio($user, 'A');
-        $to    = $this->makePortfolio($user, 'B');
-        Asset::create(['symbol' => 'BTC', 'name' => 'Bitcoin', 'asset_type' => 'crypto']);
+        $user = User::factory()->create();
+        $from = Portfolio::factory()->for($user)->create();
+        $to   = Portfolio::factory()->for($user)->create();
+        Asset::factory()->crypto()->create(['symbol' => 'BTC', 'name' => 'Bitcoin']);
 
         $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($from, $to));
 
@@ -117,64 +97,61 @@ class PortfolioTransferTest extends TestCase
 
     public function test_store_rejects_same_portfolio(): void
     {
-        $user      = $this->makeUser();
-        $portfolio = $this->makePortfolio($user);
+        $portfolio = Portfolio::factory()->create();
 
-        $response = $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($portfolio, $portfolio));
+        $this->actingAs($portfolio->user)
+            ->post(route('transfers.store'), $this->transferPayload($portfolio, $portfolio))
+            ->assertSessionHasErrors('to_portfolio_id');
 
-        $response->assertSessionHasErrors('to_portfolio_id');
         $this->assertDatabaseCount('transactions', 0);
     }
 
     public function test_store_rejects_another_users_portfolio(): void
     {
-        $user    = $this->makeUser();
-        $other   = $this->makeUser();
-        $from    = $this->makePortfolio($user);
-        $foreign = $this->makePortfolio($other);
+        $user    = User::factory()->create();
+        $from    = Portfolio::factory()->for($user)->create();
+        $foreign = Portfolio::factory()->create();
 
-        $response = $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($from, $foreign));
+        $this->actingAs($user)
+            ->post(route('transfers.store'), $this->transferPayload($from, $foreign))
+            ->assertSessionHasErrors('to_portfolio_id');
 
-        $response->assertSessionHasErrors('to_portfolio_id');
         $this->assertDatabaseCount('transactions', 0);
     }
 
     public function test_store_validates_required_fields(): void
     {
-        $user = $this->makeUser();
+        $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->post(route('transfers.store'), []);
-
-        $response->assertSessionHasErrors([
-            'from_portfolio_id',
-            'to_portfolio_id',
-            'symbol',
-            'asset_type',
-            'quantity',
-            'price_per_unit',
-            'currency',
-            'transacted_at',
-        ]);
+        $this->actingAs($user)->post(route('transfers.store'), [])
+            ->assertSessionHasErrors([
+                'from_portfolio_id',
+                'to_portfolio_id',
+                'symbol',
+                'asset_type',
+                'quantity',
+                'price_per_unit',
+                'currency',
+                'transacted_at',
+            ]);
     }
 
     public function test_store_validates_positive_quantity(): void
     {
-        $user = $this->makeUser();
-        $from = $this->makePortfolio($user, 'A');
-        $to   = $this->makePortfolio($user, 'B');
+        $user = User::factory()->create();
+        $from = Portfolio::factory()->for($user)->create();
+        $to   = Portfolio::factory()->for($user)->create();
 
-        $response = $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($from, $to, [
-            'quantity' => '-1',
-        ]));
-
-        $response->assertSessionHasErrors('quantity');
+        $this->actingAs($user)
+            ->post(route('transfers.store'), $this->transferPayload($from, $to, ['quantity' => '-1']))
+            ->assertSessionHasErrors('quantity');
     }
 
     public function test_linked_relations_point_to_correct_portfolios(): void
     {
-        $user = $this->makeUser();
-        $from = $this->makePortfolio($user, 'Exchange');
-        $to   = $this->makePortfolio($user, 'Cold Wallet');
+        $user = User::factory()->create();
+        $from = Portfolio::factory()->for($user)->create();
+        $to   = Portfolio::factory()->for($user)->create();
 
         $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($from, $to));
 

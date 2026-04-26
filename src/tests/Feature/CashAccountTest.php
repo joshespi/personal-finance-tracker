@@ -3,29 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\CashAccount;
+use App\Models\CashTransaction;
+use App\Models\Liability;
+use App\Models\LiabilityBalance;
+use App\Models\Portfolio;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class CashAccountTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function makeUser(): User
-    {
-        return User::factory()->create();
-    }
-
-    private function makeAccount(User $user, string $name = 'Checking'): CashAccount
-    {
-        return CashAccount::create([
-            'user_id'      => $user->id,
-            'name'         => $name,
-            'account_type' => 'checking',
-            'currency'     => 'USD',
-        ]);
-    }
-
     public function test_index_requires_auth(): void
     {
         $this->get(route('cash-accounts.index'))->assertRedirect(route('login'));
@@ -33,7 +19,7 @@ class CashAccountTest extends TestCase
 
     public function test_index_returns_ok_when_empty(): void
     {
-        $user = $this->makeUser();
+        $user = User::factory()->create();
 
         $this->actingAs($user)
             ->get(route('cash-accounts.index'))
@@ -43,7 +29,7 @@ class CashAccountTest extends TestCase
 
     public function test_create_account(): void
     {
-        $user = $this->makeUser();
+        $user = User::factory()->create();
 
         $this->actingAs($user)
             ->post(route('cash-accounts.store'), [
@@ -61,7 +47,7 @@ class CashAccountTest extends TestCase
 
     public function test_validation_rejects_invalid_account_type(): void
     {
-        $user = $this->makeUser();
+        $user = User::factory()->create();
 
         $this->actingAs($user)
             ->post(route('cash-accounts.store'), [
@@ -74,9 +60,8 @@ class CashAccountTest extends TestCase
 
     public function test_show_forbidden_for_other_user(): void
     {
-        $user    = $this->makeUser();
-        $other   = $this->makeUser();
-        $account = $this->makeAccount($user);
+        $account = CashAccount::factory()->create();
+        $other   = User::factory()->create();
 
         $this->actingAs($other)
             ->get(route('cash-accounts.show', $account))
@@ -85,10 +70,9 @@ class CashAccountTest extends TestCase
 
     public function test_update_account(): void
     {
-        $user    = $this->makeUser();
-        $account = $this->makeAccount($user);
+        $account = CashAccount::factory()->create();
 
-        $this->actingAs($user)
+        $this->actingAs($account->user)
             ->put(route('cash-accounts.update', $account), [
                 'name'         => 'Renamed',
                 'account_type' => 'savings',
@@ -101,10 +85,9 @@ class CashAccountTest extends TestCase
 
     public function test_delete_account(): void
     {
-        $user    = $this->makeUser();
-        $account = $this->makeAccount($user);
+        $account = CashAccount::factory()->create();
 
-        $this->actingAs($user)
+        $this->actingAs($account->user)
             ->delete(route('cash-accounts.destroy', $account))
             ->assertRedirect(route('cash-accounts.index'));
 
@@ -113,10 +96,9 @@ class CashAccountTest extends TestCase
 
     public function test_record_deposit(): void
     {
-        $user    = $this->makeUser();
-        $account = $this->makeAccount($user);
+        $account = CashAccount::factory()->create();
 
-        $this->actingAs($user)
+        $this->actingAs($account->user)
             ->post(route('cash-accounts.transactions.store', $account), [
                 'type'        => 'deposit',
                 'amount'      => 1000,
@@ -136,22 +118,19 @@ class CashAccountTest extends TestCase
 
     public function test_balance_reflects_deposits_minus_withdrawals(): void
     {
-        $user    = $this->makeUser();
-        $account = $this->makeAccount($user);
-
-        $account->transactions()->create(['type' => 'deposit', 'amount' => 1000, 'occurred_at' => '2026-04-01']);
-        $account->transactions()->create(['type' => 'withdrawal', 'amount' => 250, 'occurred_at' => '2026-04-10']);
-        $account->transactions()->create(['type' => 'deposit', 'amount' => 50, 'occurred_at' => '2026-04-15']);
+        $account = CashAccount::factory()->create();
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create(['amount' => 1000]);
+        CashTransaction::factory()->for($account, 'cashAccount')->withdrawal()->create(['amount' => 250]);
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create(['amount' => 50]);
 
         $this->assertEquals(800.0, $account->balance());
     }
 
     public function test_transaction_validation_rejects_zero_amount(): void
     {
-        $user    = $this->makeUser();
-        $account = $this->makeAccount($user);
+        $account = CashAccount::factory()->create();
 
-        $this->actingAs($user)
+        $this->actingAs($account->user)
             ->post(route('cash-accounts.transactions.store', $account), [
                 'type'        => 'deposit',
                 'amount'      => 0,
@@ -162,9 +141,8 @@ class CashAccountTest extends TestCase
 
     public function test_transaction_forbidden_for_other_user(): void
     {
-        $user    = $this->makeUser();
-        $other   = $this->makeUser();
-        $account = $this->makeAccount($user);
+        $account = CashAccount::factory()->create();
+        $other   = User::factory()->create();
 
         $this->actingAs($other)
             ->post(route('cash-accounts.transactions.store', $account), [
@@ -177,11 +155,10 @@ class CashAccountTest extends TestCase
 
     public function test_delete_transaction(): void
     {
-        $user    = $this->makeUser();
-        $account = $this->makeAccount($user);
-        $tx      = $account->transactions()->create(['type' => 'deposit', 'amount' => 500, 'occurred_at' => '2026-04-26']);
+        $account = CashAccount::factory()->create();
+        $tx      = CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create(['amount' => 500]);
 
-        $this->actingAs($user)
+        $this->actingAs($account->user)
             ->delete(route('cash-accounts.transactions.destroy', $tx))
             ->assertRedirect(route('cash-accounts.show', $account));
 
@@ -190,9 +167,8 @@ class CashAccountTest extends TestCase
 
     public function test_cascade_delete_transactions_when_account_deleted(): void
     {
-        $user    = $this->makeUser();
-        $account = $this->makeAccount($user);
-        $account->transactions()->create(['type' => 'deposit', 'amount' => 100, 'occurred_at' => '2026-04-26']);
+        $account = CashAccount::factory()->create();
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create();
 
         $account->delete();
 
@@ -201,24 +177,19 @@ class CashAccountTest extends TestCase
 
     public function test_dashboard_includes_cash_in_net_worth(): void
     {
-        $user = $this->makeUser();
-        \App\Models\Portfolio::create(['user_id' => $user->id, 'name' => 'P', 'currency' => 'USD']);
+        $user = User::factory()->create();
+        Portfolio::factory()->for($user)->create();
 
-        $account = $this->makeAccount($user);
-        $account->transactions()->create(['type' => 'deposit', 'amount' => 5000, 'occurred_at' => '2026-04-26']);
+        $account = CashAccount::factory()->for($user)->create();
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create(['amount' => 5000]);
 
-        $liability = \App\Models\Liability::create([
-            'user_id'        => $user->id,
-            'name'           => 'Card',
-            'liability_type' => 'credit_card',
-            'currency'       => 'USD',
-        ]);
-        $liability->balances()->create(['balance' => 1000, 'recorded_at' => now()]);
+        $liability = Liability::factory()->for($user)->create();
+        LiabilityBalance::factory()->for($liability)->create(['balance' => 1000]);
 
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Net Worth')
-            ->assertSee('$4,000.00'); // 5000 cash - 1000 debt
+            ->assertSee('$4,000.00');
     }
 }

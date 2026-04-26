@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Liability extends Model
 {
+    use HasFactory;
+
     protected $fillable = ['user_id', 'manual_asset_id', 'name', 'liability_type', 'interest_rate', 'notes', 'currency'];
 
     protected $casts = [

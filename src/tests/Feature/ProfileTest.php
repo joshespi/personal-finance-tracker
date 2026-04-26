@@ -3,36 +3,28 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
 {
-    use RefreshDatabase;
-
     public function test_profile_page_is_displayed(): void
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->get('/profile');
-
-        $response->assertOk();
+        $this->actingAs($user)
+            ->get('/profile')
+            ->assertOk();
     }
 
     public function test_profile_information_can_be_updated(): void
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
+        $this->actingAs($user)
             ->patch('/profile', [
-                'name' => 'Test User',
+                'name'  => 'Test User',
                 'email' => 'test@example.com',
-            ]);
-
-        $response
+            ])
             ->assertSessionHasNoErrors()
             ->assertRedirect('/profile');
 
@@ -47,14 +39,11 @@ class ProfileTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
+        $this->actingAs($user)
             ->patch('/profile', [
-                'name' => 'Test User',
+                'name'  => 'Test User',
                 'email' => $user->email,
-            ]);
-
-        $response
+            ])
             ->assertSessionHasNoErrors()
             ->assertRedirect('/profile');
 
@@ -65,13 +54,8 @@ class ProfileTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->delete('/profile', [
-                'password' => 'password',
-            ]);
-
-        $response
+        $this->actingAs($user)
+            ->delete('/profile', ['password' => 'password'])
             ->assertSessionHasNoErrors()
             ->assertRedirect('/');
 
@@ -83,14 +67,9 @@ class ProfileTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
+        $this->actingAs($user)
             ->from('/profile')
-            ->delete('/profile', [
-                'password' => 'wrong-password',
-            ]);
-
-        $response
+            ->delete('/profile', ['password' => 'wrong-password'])
             ->assertSessionHasErrorsIn('userDeletion', 'password')
             ->assertRedirect('/profile');
 

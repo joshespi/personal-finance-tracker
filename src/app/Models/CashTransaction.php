@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CashTransaction extends Model
 {
+    use HasFactory;
+
     protected $fillable = ['cash_account_id', 'type', 'amount', 'description', 'occurred_at'];
 
     protected $casts = [

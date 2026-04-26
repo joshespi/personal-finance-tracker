@@ -3,36 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Liability;
+use App\Models\LiabilityBalance;
 use App\Models\ManualAsset;
 use App\Models\Portfolio;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class LiabilityTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function makeUser(): User
-    {
-        return User::factory()->create();
-    }
-
-    private function makePortfolio(User $user): Portfolio
-    {
-        return Portfolio::create(['user_id' => $user->id, 'name' => 'Test', 'currency' => 'USD']);
-    }
-
-    private function makeManualAsset(Portfolio $portfolio, string $name = 'House'): ManualAsset
-    {
-        return ManualAsset::create([
-            'portfolio_id' => $portfolio->id,
-            'name'         => $name,
-            'asset_class'  => 'real_estate',
-            'currency'     => 'USD',
-        ]);
-    }
-
     public function test_index_requires_auth(): void
     {
         $this->get(route('liabilities.index'))->assertRedirect(route('login'));
@@ -40,7 +18,7 @@ class LiabilityTest extends TestCase
 
     public function test_index_returns_ok_when_empty(): void
     {
-        $user = $this->makeUser();
+        $user = User::factory()->create();
 
         $this->actingAs($user)
             ->get(route('liabilities.index'))
@@ -50,7 +28,7 @@ class LiabilityTest extends TestCase
 
     public function test_create_liability(): void
     {
-        $user = $this->makeUser();
+        $user = User::factory()->create();
 
         $this->actingAs($user)
             ->post(route('liabilities.store'), [
@@ -70,11 +48,10 @@ class LiabilityTest extends TestCase
 
     public function test_create_liability_linked_to_manual_asset(): void
     {
-        $user      = $this->makeUser();
-        $portfolio = $this->makePortfolio($user);
-        $asset     = $this->makeManualAsset($portfolio);
+        $portfolio = Portfolio::factory()->create();
+        $asset     = ManualAsset::factory()->for($portfolio)->create();
 
-        $this->actingAs($user)
+        $this->actingAs($portfolio->user)
             ->post(route('liabilities.store'), [
                 'name'            => 'Mortgage',
                 'liability_type'  => 'mortgage',
@@ -91,10 +68,9 @@ class LiabilityTest extends TestCase
 
     public function test_cannot_link_to_other_users_manual_asset(): void
     {
-        $user      = $this->makeUser();
-        $other     = $this->makeUser();
-        $portfolio = $this->makePortfolio($other);
-        $asset     = $this->makeManualAsset($portfolio);
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->create();
+        $asset     = ManualAsset::factory()->for($portfolio)->create();
 
         $this->actingAs($user)
             ->post(route('liabilities.store'), [
@@ -110,7 +86,7 @@ class LiabilityTest extends TestCase
 
     public function test_validation_rejects_invalid_type(): void
     {
-        $user = $this->makeUser();
+        $user = User::factory()->create();
 
         $this->actingAs($user)
             ->post(route('liabilities.store'), [
@@ -123,14 +99,8 @@ class LiabilityTest extends TestCase
 
     public function test_show_forbidden_for_other_user(): void
     {
-        $user      = $this->makeUser();
-        $other     = $this->makeUser();
-        $liability = Liability::create([
-            'user_id'        => $user->id,
-            'name'           => 'Loan',
-            'liability_type' => 'personal_loan',
-            'currency'       => 'USD',
-        ]);
+        $liability = Liability::factory()->create();
+        $other     = User::factory()->create();
 
         $this->actingAs($other)
             ->get(route('liabilities.show', $liability))
@@ -139,15 +109,9 @@ class LiabilityTest extends TestCase
 
     public function test_update_liability(): void
     {
-        $user      = $this->makeUser();
-        $liability = Liability::create([
-            'user_id'        => $user->id,
-            'name'           => 'Old Name',
-            'liability_type' => 'other',
-            'currency'       => 'USD',
-        ]);
+        $liability = Liability::factory()->create(['name' => 'Old Name', 'liability_type' => 'other']);
 
-        $this->actingAs($user)
+        $this->actingAs($liability->user)
             ->put(route('liabilities.update', $liability), [
                 'name'           => 'New Name',
                 'liability_type' => 'auto_loan',
@@ -160,15 +124,9 @@ class LiabilityTest extends TestCase
 
     public function test_delete_liability(): void
     {
-        $user      = $this->makeUser();
-        $liability = Liability::create([
-            'user_id'        => $user->id,
-            'name'           => 'Loan',
-            'liability_type' => 'student_loan',
-            'currency'       => 'USD',
-        ]);
+        $liability = Liability::factory()->create();
 
-        $this->actingAs($user)
+        $this->actingAs($liability->user)
             ->delete(route('liabilities.destroy', $liability))
             ->assertRedirect(route('liabilities.index'));
 
@@ -177,15 +135,9 @@ class LiabilityTest extends TestCase
 
     public function test_record_balance(): void
     {
-        $user      = $this->makeUser();
-        $liability = Liability::create([
-            'user_id'        => $user->id,
-            'name'           => 'Loan',
-            'liability_type' => 'mortgage',
-            'currency'       => 'USD',
-        ]);
+        $liability = Liability::factory()->create(['liability_type' => 'mortgage']);
 
-        $this->actingAs($user)
+        $this->actingAs($liability->user)
             ->post(route('liabilities.balances.store', $liability), [
                 'balance'     => 245000,
                 'recorded_at' => '2026-04-26',
@@ -200,14 +152,8 @@ class LiabilityTest extends TestCase
 
     public function test_balance_forbidden_for_other_user(): void
     {
-        $user      = $this->makeUser();
-        $other     = $this->makeUser();
-        $liability = Liability::create([
-            'user_id'        => $user->id,
-            'name'           => 'Loan',
-            'liability_type' => 'mortgage',
-            'currency'       => 'USD',
-        ]);
+        $liability = Liability::factory()->create();
+        $other     = User::factory()->create();
 
         $this->actingAs($other)
             ->post(route('liabilities.balances.store', $liability), [
@@ -219,19 +165,10 @@ class LiabilityTest extends TestCase
 
     public function test_delete_balance(): void
     {
-        $user      = $this->makeUser();
-        $liability = Liability::create([
-            'user_id'        => $user->id,
-            'name'           => 'Loan',
-            'liability_type' => 'mortgage',
-            'currency'       => 'USD',
-        ]);
-        $balance = $liability->balances()->create([
-            'balance'     => 100000,
-            'recorded_at' => now(),
-        ]);
+        $liability = Liability::factory()->create();
+        $balance   = LiabilityBalance::factory()->for($liability)->create(['balance' => 100000]);
 
-        $this->actingAs($user)
+        $this->actingAs($liability->user)
             ->delete(route('liabilities.balances.destroy', $balance))
             ->assertRedirect(route('liabilities.show', $liability));
 
@@ -240,17 +177,8 @@ class LiabilityTest extends TestCase
 
     public function test_cascade_delete_balances_when_liability_deleted(): void
     {
-        $user      = $this->makeUser();
-        $liability = Liability::create([
-            'user_id'        => $user->id,
-            'name'           => 'Loan',
-            'liability_type' => 'mortgage',
-            'currency'       => 'USD',
-        ]);
-        $liability->balances()->create([
-            'balance'     => 100,
-            'recorded_at' => now(),
-        ]);
+        $liability = Liability::factory()->create();
+        LiabilityBalance::factory()->for($liability)->create();
 
         $liability->delete();
 
@@ -259,18 +187,10 @@ class LiabilityTest extends TestCase
 
     public function test_dashboard_shows_net_worth_tile_when_debt_exists(): void
     {
-        $user = $this->makeUser();
-        $this->makePortfolio($user);
-        $liability = Liability::create([
-            'user_id'        => $user->id,
-            'name'           => 'Loan',
-            'liability_type' => 'mortgage',
-            'currency'       => 'USD',
-        ]);
-        $liability->balances()->create([
-            'balance'     => 250000,
-            'recorded_at' => now(),
-        ]);
+        $user = User::factory()->create();
+        Portfolio::factory()->for($user)->create();
+        $liability = Liability::factory()->for($user)->create();
+        LiabilityBalance::factory()->for($liability)->create(['balance' => 250000]);
 
         $this->actingAs($user)
             ->get(route('dashboard'))
@@ -280,8 +200,8 @@ class LiabilityTest extends TestCase
 
     public function test_dashboard_hides_net_worth_tile_when_no_debt(): void
     {
-        $user = $this->makeUser();
-        $this->makePortfolio($user);
+        $user = User::factory()->create();
+        Portfolio::factory()->for($user)->create();
 
         $this->actingAs($user)
             ->get(route('dashboard'))

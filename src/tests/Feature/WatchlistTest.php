@@ -6,18 +6,10 @@ use App\Models\Asset;
 use App\Models\AssetPrice;
 use App\Models\User;
 use App\Models\WatchlistItem;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class WatchlistTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function makeUser(): User
-    {
-        return User::factory()->create();
-    }
-
     public function test_watchlist_requires_auth(): void
     {
         $this->get(route('watchlist.index'))->assertRedirect(route('login'));
@@ -25,7 +17,7 @@ class WatchlistTest extends TestCase
 
     public function test_watchlist_shows_empty_state(): void
     {
-        $user = $this->makeUser();
+        $user = User::factory()->create();
 
         $this->actingAs($user)->get(route('watchlist.index'))
             ->assertOk()
@@ -34,7 +26,7 @@ class WatchlistTest extends TestCase
 
     public function test_can_add_to_watchlist(): void
     {
-        $user = $this->makeUser();
+        $user = User::factory()->create();
 
         $this->actingAs($user)->post(route('watchlist.store'), [
             'symbol'       => 'aapl',
@@ -52,12 +44,11 @@ class WatchlistTest extends TestCase
 
     public function test_watchlist_shows_item_with_current_price(): void
     {
-        $user  = $this->makeUser();
-        $asset = Asset::create(['symbol' => 'TSLA', 'name' => 'Tesla', 'asset_type' => 'stock']);
-        AssetPrice::create(['asset_id' => $asset->id, 'price' => 250.00, 'currency' => 'USD', 'recorded_at' => now()]);
+        $user  = User::factory()->create();
+        $asset = Asset::factory()->stock()->create(['symbol' => 'TSLA', 'name' => 'Tesla']);
+        AssetPrice::factory()->for($asset)->create(['price' => 250.00]);
 
-        WatchlistItem::create([
-            'user_id'      => $user->id,
+        WatchlistItem::factory()->for($user)->create([
             'symbol'       => 'TSLA',
             'asset_type'   => 'stock',
             'target_price' => 200.00,
@@ -70,14 +61,9 @@ class WatchlistTest extends TestCase
 
     public function test_can_remove_from_watchlist(): void
     {
-        $user = $this->makeUser();
-        $item = WatchlistItem::create([
-            'user_id'    => $user->id,
-            'symbol'     => 'MSFT',
-            'asset_type' => 'stock',
-        ]);
+        $item = WatchlistItem::factory()->create(['symbol' => 'MSFT']);
 
-        $this->actingAs($user)->delete(route('watchlist.destroy', $item))
+        $this->actingAs($item->user)->delete(route('watchlist.destroy', $item))
             ->assertRedirect(route('watchlist.index'));
 
         $this->assertDatabaseMissing('watchlist_items', ['id' => $item->id]);
@@ -85,14 +71,8 @@ class WatchlistTest extends TestCase
 
     public function test_cannot_remove_another_users_watchlist_item(): void
     {
-        $owner = $this->makeUser();
-        $other = $this->makeUser();
-
-        $item = WatchlistItem::create([
-            'user_id'    => $owner->id,
-            'symbol'     => 'AAPL',
-            'asset_type' => 'stock',
-        ]);
+        $item  = WatchlistItem::factory()->create(['symbol' => 'AAPL']);
+        $other = User::factory()->create();
 
         $this->actingAs($other)->delete(route('watchlist.destroy', $item))
             ->assertForbidden();
@@ -100,7 +80,7 @@ class WatchlistTest extends TestCase
 
     public function test_adding_duplicate_symbol_updates_existing(): void
     {
-        $user = $this->makeUser();
+        $user = User::factory()->create();
 
         $this->actingAs($user)->post(route('watchlist.store'), [
             'symbol'     => 'NVDA',

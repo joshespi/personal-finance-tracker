@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AssetPrice extends Model
 {
+    use HasFactory;
+
     protected $fillable = ['asset_id', 'price', 'currency', 'recorded_at'];
 
     protected $casts = [

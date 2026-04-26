@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Transaction extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'portfolio_id', 'asset_id', 'type', 'quantity',
         'price_per_unit', 'fees', 'currency', 'notes', 'transacted_at',

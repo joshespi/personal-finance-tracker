@@ -4,14 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\Asset;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class TickerSearchTest extends TestCase
 {
-    use RefreshDatabase;
-
     public function test_ticker_search_requires_auth(): void
     {
         $this->get(route('tickers.search', ['q' => 'AAPL']))->assertRedirect(route('login'));
@@ -29,16 +26,15 @@ class TickerSearchTest extends TestCase
     public function test_returns_local_assets_first(): void
     {
         $user = User::factory()->create();
-        Asset::create(['symbol' => 'AAPL', 'name' => 'Apple Inc', 'asset_type' => 'stock']);
-        Asset::create(['symbol' => 'AMZN', 'name' => 'Amazon',    'asset_type' => 'stock']);
+        Asset::factory()->stock()->create(['symbol' => 'AAPL', 'name' => 'Apple Inc']);
+        Asset::factory()->stock()->create(['symbol' => 'AMZN', 'name' => 'Amazon']);
 
-        Http::fake(); // prevent external calls
+        Http::fake();
 
         $response = $this->actingAs($user)->get(route('tickers.search', ['q' => 'A', 'type' => 'stock']));
 
         $response->assertOk();
-        $data = $response->json();
-        $symbols = collect($data)->pluck('symbol')->all();
+        $symbols = collect($response->json())->pluck('symbol')->all();
 
         $this->assertContains('AAPL', $symbols);
     }
@@ -46,7 +42,7 @@ class TickerSearchTest extends TestCase
     public function test_local_results_have_required_fields(): void
     {
         $user = User::factory()->create();
-        Asset::create(['symbol' => 'MSFT', 'name' => 'Microsoft', 'asset_type' => 'stock']);
+        Asset::factory()->stock()->create(['symbol' => 'MSFT', 'name' => 'Microsoft']);
 
         Http::fake();
 
@@ -63,16 +59,15 @@ class TickerSearchTest extends TestCase
     public function test_crypto_search_filters_by_type(): void
     {
         $user = User::factory()->create();
-        Asset::create(['symbol' => 'BTC', 'name' => 'Bitcoin', 'asset_type' => 'crypto']);
-        Asset::create(['symbol' => 'BTG', 'name' => 'BT Group', 'asset_type' => 'stock']);
+        Asset::factory()->crypto()->create(['symbol' => 'BTC', 'name' => 'Bitcoin']);
+        Asset::factory()->stock()->create(['symbol' => 'BTG', 'name' => 'BT Group']);
 
         Http::fake();
 
         $response = $this->actingAs($user)->get(route('tickers.search', ['q' => 'BT', 'type' => 'crypto']));
         $response->assertOk();
 
-        $data    = $response->json();
-        $symbols = collect($data)->pluck('symbol')->all();
+        $symbols = collect($response->json())->pluck('symbol')->all();
         $this->assertContains('BTC', $symbols);
         $this->assertNotContains('BTG', $symbols);
     }
