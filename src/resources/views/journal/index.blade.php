@@ -1,4 +1,5 @@
 <x-app-layout>
+    @vite('resources/js/editor.js')
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <div>

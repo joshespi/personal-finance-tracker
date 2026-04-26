@@ -1,6 +1,4 @@
 import './bootstrap';
-import 'trix';
-import 'trix/dist/trix.css';
 
 import Alpine from 'alpinejs';
 window.Alpine = Alpine;
@@ -57,6 +55,3 @@ Alpine.data('holdingsSort', (rows) => ({
 }));
 
 Alpine.start();
-
-import ApexCharts from 'apexcharts';
-window.ApexCharts = ApexCharts;

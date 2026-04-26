@@ -332,6 +332,7 @@
     </div>
 
     @if ($chartData->isNotEmpty())
+        @vite('resources/js/apex.js')
         @push('scripts')
         <script>
         document.addEventListener('DOMContentLoaded', function () {

@@ -500,6 +500,7 @@
     </div>
 
     @if ($chartData->count() > 1)
+        @vite('resources/js/apex.js')
         @push('scripts')
         <script>
         document.addEventListener('DOMContentLoaded', function () {
