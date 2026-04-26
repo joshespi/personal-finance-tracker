@@ -1,6 +1,8 @@
 # Portfolio Tracker
 
-A Laravel application for tracking investment portfolios. Supports transactions, asset price fetching via Finnhub, manual assets with custom valuations, periodic portfolio snapshots, an aggregated all-holdings view across all portfolios, linked portfolio-to-portfolio transfers, FIFO realized gain/loss tracking, watchlist, time-weighted return, rebalancing suggestions, benchmark comparison, ApexCharts-powered visualizations, and a full admin panel.
+**Live:** [portfolio.espifam.com](https://portfolio.espifam.com)
+
+A self-hosted Laravel application for tracking investment portfolios across stocks, crypto, and non-standard assets (real estate, vehicles, collectibles — anything with a value you want to timestamp and track). Supports transactions, asset price fetching via Finnhub, manual assets with custom valuations, periodic portfolio snapshots, an aggregated all-holdings view across all portfolios, linked portfolio-to-portfolio transfers, FIFO realized gain/loss tracking, watchlist, time-weighted return, rebalancing suggestions, benchmark comparison, ApexCharts-powered visualizations, and a full admin panel.
 
 ## Stack
 
@@ -74,6 +76,22 @@ docker compose exec app composer require <package>
 # Build frontend assets (watch mode)
 docker compose exec app npm run dev
 ```
+
+## Why This Exists
+
+I couldn't find a portfolio tracker that was simple but covered all the asset types I actually own and wanted to track. Most apps handle stocks *or* crypto, sometimes both — and none of them let you track non-standard assets like a property, a card collection, or a vehicle. Everything you own lives on one balance sheet, so your tracker should too — including a real picture of your net worth.
+
+We only ask for the minimum information needed to create an account. All asset data is entered manually and is not linked to any brokerage, exchange, or financial institution — it exists purely for personal tracking and visualization.
+
+## Issues & Feature Requests
+
+Found a bug or have an idea? [Open an issue on GitHub](https://github.com/joshespi/portfolio-tracker/issues). Please include:
+
+- What you expected to happen
+- What actually happened (screenshots welcome)
+- Steps to reproduce if it's a bug
+
+Feature requests are welcome — describe the use case, not just the feature.
 
 ## Features
 
