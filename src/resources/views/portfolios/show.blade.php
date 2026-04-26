@@ -177,7 +177,25 @@
             @endif
 
             {{-- Holdings --}}
-            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
+            @php
+                $holdingsRows = $holdings->map(fn ($h) => [
+                    'symbol'          => $h['asset']->symbol,
+                    'asset_type'      => $h['asset']->asset_type,
+                    'asset_id'        => $h['asset']->id,
+                    'quantity'        => (float) $h['quantity'],
+                    'avg_cost'        => (float) $h['avg_cost'],
+                    'total_cost'      => (float) $h['total_cost'],
+                    'current_price'   => $h['current_price'] !== null ? (float) $h['current_price'] : null,
+                    'current_value'   => $h['current_value'] !== null ? (float) $h['current_value'] : null,
+                    'unrealized_gain' => $h['unrealized_gain'] !== null ? (float) $h['unrealized_gain'] : null,
+                    'unrealized_pct'  => $h['unrealized_pct'] !== null ? (float) $h['unrealized_pct'] : null,
+                    'sort_value'      => (float) ($h['current_value'] ?? $h['total_cost']),
+                    'reclassify_url'  => route('assets.reclassify', $h['asset']),
+                ])->values()->all();
+                $ccy = $portfolio->currency;
+            @endphp
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg"
+                 x-data="holdingsSort({{ json_encode($holdingsRows) }})">
                 <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Holdings</h3>
                     <a href="{{ route('portfolios.transactions.index', $portfolio) }}"
@@ -194,58 +212,68 @@
                         <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
                             <thead class="bg-gray-50 dark:bg-gray-700">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Symbol</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quantity</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg Cost</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cost Basis</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current Price</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Market Value</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Unrealized P&L</th>
+                                    <th @click="sort('symbol')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
+                                        Symbol<span x-text="arrow('symbol')"></span>
+                                    </th>
+                                    <th @click="sort('asset_type')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
+                                        Type<span x-text="arrow('asset_type')"></span>
+                                    </th>
+                                    <th @click="sort('quantity')" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
+                                        Quantity<span x-text="arrow('quantity')"></span>
+                                    </th>
+                                    <th @click="sort('avg_cost')" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
+                                        Avg Cost<span x-text="arrow('avg_cost')"></span>
+                                    </th>
+                                    <th @click="sort('total_cost')" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
+                                        Cost Basis<span x-text="arrow('total_cost')"></span>
+                                    </th>
+                                    <th @click="sort('current_price')" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
+                                        Current Price<span x-text="arrow('current_price')"></span>
+                                    </th>
+                                    <th @click="sort('sort_value')" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
+                                        Market Value<span x-text="arrow('sort_value')"></span>
+                                    </th>
+                                    <th @click="sort('unrealized_gain')" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
+                                        Unrealized P&L<span x-text="arrow('unrealized_gain')"></span>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-                                @foreach ($holdings as $h)
+                                <template x-for="h in sorted" :key="h.asset_id">
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td class="px-6 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $h['asset']->symbol }}</td>
-                                        <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ ucfirst($h['asset']->asset_type) }}</td>
-                                        <td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-100">
-                                            {{ rtrim(rtrim(number_format((float)$h['quantity'], 8), '0'), '.') }}
+                                        <td class="px-6 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100" x-text="h.symbol"></td>
+                                        <td class="px-6 py-3">
+                                            <form :action="h.reclassify_url" method="POST">
+                                                <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="_method" value="PATCH">
+                                                <input type="hidden" name="asset_type" :value="h.asset_type === 'crypto' ? 'stock' : 'crypto'">
+                                                <button type="submit"
+                                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition hover:opacity-75"
+                                                        :class="h.asset_type === 'crypto'
+                                                            ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
+                                                            : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'"
+                                                        :title="'Click to reclassify as ' + (h.asset_type === 'crypto' ? 'Stock' : 'Crypto')"
+                                                        x-text="h.asset_type === 'crypto' ? 'Crypto' : 'Stock'">
+                                                </button>
+                                            </form>
                                         </td>
-                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">
-                                            {{ $portfolio->currency }} {{ number_format((float)$h['avg_cost'], 4) }}
-                                        </td>
-                                        <td class="px-6 py-3 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">
-                                            {{ $portfolio->currency }} {{ number_format((float)$h['total_cost'], 2) }}
-                                        </td>
-                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">
-                                            @if ($h['current_price'] !== null)
-                                                {{ $portfolio->currency }} {{ number_format($h['current_price'], $h['asset']->asset_type === 'crypto' ? 4 : 2) }}
-                                            @else
-                                                <span class="text-gray-300 dark:text-gray-600">—</span>
-                                            @endif
-                                        </td>
-                                        <td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-100">
-                                            @if ($h['current_value'] !== null)
-                                                {{ $portfolio->currency }} {{ number_format($h['current_value'], 2) }}
-                                            @else
-                                                <span class="text-gray-300 dark:text-gray-600">—</span>
-                                            @endif
-                                        </td>
-                                        <td class="px-6 py-3 text-right font-mono">
-                                            @if ($h['unrealized_gain'] !== null)
-                                                <span class="{{ $h['unrealized_gain'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                                    {{ $h['unrealized_gain'] >= 0 ? '+' : '' }}{{ number_format($h['unrealized_gain'], 2) }}
-                                                    @if ($h['unrealized_pct'] !== null)
-                                                        <span class="text-xs">({{ $h['unrealized_pct'] >= 0 ? '+' : '' }}{{ $h['unrealized_pct'] }}%)</span>
-                                                    @endif
-                                                </span>
-                                            @else
-                                                <span class="text-gray-300 dark:text-gray-600">—</span>
-                                            @endif
+                                        <td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-100" x-text="fmtQty(h.quantity)"></td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300" x-text="'{{ $ccy }} ' + fmtPrice(h.avg_cost).replace('$','')"></td>
+                                        <td class="px-6 py-3 text-right font-mono font-semibold text-gray-900 dark:text-gray-100" x-text="'{{ $ccy }} ' + fmtMoney(h.total_cost).replace('$','')"></td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300"
+                                            x-text="h.current_price !== null ? '{{ $ccy }} ' + fmtPrice(h.current_price).replace('$','') : '—'"></td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-100"
+                                            x-text="h.current_value !== null ? '{{ $ccy }} ' + fmtMoney(h.current_value).replace('$','') : '—'"></td>
+                                        <td class="px-6 py-3 text-right font-mono" :class="plClass(h.unrealized_gain)">
+                                            <span x-show="h.unrealized_gain !== null">
+                                                <span x-text="plFmt(h.unrealized_gain)"></span>
+                                                <span x-show="h.unrealized_pct !== null" class="text-xs"
+                                                      x-text="' (' + (h.unrealized_pct >= 0 ? '+' : '') + h.unrealized_pct?.toFixed(2) + '%)'"></span>
+                                            </span>
+                                            <span x-show="h.unrealized_gain === null" class="text-gray-300 dark:text-gray-600">—</span>
                                         </td>
                                     </tr>
-                                @endforeach
+                                </template>
                             </tbody>
                         </table>
                     </div>
@@ -490,13 +518,27 @@
                 });
             }
 
+            function fmtK(v) {
+                const abs = Math.abs(v);
+                if (abs >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
+                if (abs >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K';
+                return '$' + v.toFixed(0);
+            }
+
+            function fmtFull(v) {
+                const abs = Math.abs(v);
+                const str = abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return (v < 0 ? '-$' : '$') + str;
+            }
+
             function apexBase() {
                 return {
                     chart:   { background: 'transparent', toolbar: { show: false }, animations: { enabled: false } },
                     theme:   { mode: isDark ? 'dark' : 'light' },
                     grid:    { borderColor: gridColor, strokeDashArray: 3 },
                     xaxis:   { type: 'datetime', labels: { style: { colors: labelColor }, datetimeUTC: false } },
-                    tooltip: { x: { format: 'MMM d, yyyy' }, theme: isDark ? 'dark' : 'light' },
+                    yaxis:   { labels: { style: { colors: labelColor }, formatter: fmtK } },
+                    tooltip: { x: { format: 'MMM d, yyyy' }, y: { formatter: fmtFull }, theme: isDark ? 'dark' : 'light' },
                     stroke:  { curve: 'smooth', width: 2 },
                     legend:  { position: 'bottom', labels: { colors: labelColor } },
                 };
@@ -509,7 +551,6 @@
                 chart:  { ...apexBase().chart, type: 'area', height: 288 },
                 series: [],
                 fill:   { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.02 } },
-                yaxis:  { labels: { style: { colors: labelColor }, formatter: v => '$' + v.toLocaleString('en-US', { maximumFractionDigits: 0 }) } },
             });
             portChart.render();
 

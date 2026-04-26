@@ -1,6 +1,6 @@
 # Portfolio Tracker
 
-A Laravel application for tracking investment portfolios. Supports transactions, asset price fetching via Finnhub, manual assets with custom valuations, periodic portfolio snapshots, an aggregated all-holdings view across all portfolios, linked portfolio-to-portfolio transfers, FIFO realized gain/loss tracking, watchlist, time-weighted return, rebalancing suggestions, benchmark comparison, and ApexCharts-powered visualizations.
+A Laravel application for tracking investment portfolios. Supports transactions, asset price fetching via Finnhub, manual assets with custom valuations, periodic portfolio snapshots, an aggregated all-holdings view across all portfolios, linked portfolio-to-portfolio transfers, FIFO realized gain/loss tracking, watchlist, time-weighted return, rebalancing suggestions, benchmark comparison, ApexCharts-powered visualizations, and a full admin panel.
 
 ## Stack
 
@@ -80,22 +80,33 @@ docker compose exec app npm run dev
 ### Dashboard
 
 - Total cost basis, market value, unrealized P&L, and total assets across all portfolios
+- **Summary tiles update with range** — selecting a time range updates the P&L tile to show period gain/loss (e.g. "1Y Gain/Loss") rather than all-time unrealized
 - **Portfolio value chart** (ApexCharts area chart) with time range toggles: 5D · 1W · 1M · 3M · 6M · 1Y · YTD · 5Y · 10Y · All
+- **Manual assets toggle** — hide/show manual assets in the chart; preference saved in `localStorage`
 - **Benchmark comparison chart** normalized to 100% — compare your portfolio return against SPY (S&P 500) and BTC
 - **Asset allocation donut chart** — Stocks / Crypto / Manual Assets breakdown
-- Aggregated holdings table across all portfolios with % of total
+- **Sortable all-holdings table** — click any column header to sort; columns include Symbol, Type, Qty, Cost Basis, Price, Market Value, P&L, % of Total
+- **Inline asset reclassification** — click the Stock/Crypto badge in any holdings table to toggle an asset's type (e.g. mark ARKB as Crypto)
 
 ### Portfolio page
 
 - Per-portfolio value history chart with the same time range toggle set
 - Benchmark comparison overlay on the same period
 - **Holdings allocation donut** — per-ticker breakdown
+- **Sortable holdings table** — click any column header to sort; inline reclassification badge on each row
 - **FIFO Realized Gains/Losses** — closed lot-by-lot detail with buy date, sell date, cost basis, proceeds, gain/loss, days held, and short/long term indicator (LT ≥ 365 days)
   - Annual summary (by-year realized gain)
 - **Time-Weighted Return (TWR)** — total and annualized, shown in the header stats
 - **Rebalancing suggestions** — set target stock/crypto/manual % in portfolio settings; the page shows current vs. target and buy/sell amounts
 - Dividend / income received by asset
 - Manual assets (real estate, vehicles, etc.)
+
+### All Transactions
+
+- Cross-portfolio transaction log (nav: **Transactions**)
+- Filter by portfolio, symbol, transaction type, and date range
+- Sortable by Date, Portfolio, Symbol, Type, Quantity
+- Edit/delete links navigate to the per-portfolio transaction actions
 
 ### Watchlist
 
@@ -107,6 +118,14 @@ docker compose exec app npm run dev
 
 - On the "Add Transaction" and "Add to Watchlist" forms, the symbol field queries local assets first, then falls back to Finnhub search (stocks) or CoinGecko search (crypto)
 - Keyboard-navigable dropdown; selecting a result auto-fills asset type
+
+### Admin Panel
+
+- **Dashboard** — aggregate stats: total users, portfolios, transactions, holdings value, watchlist items, login events, activity log entries
+- **User management** — view, edit, delete users; verified/unverified badge; user detail shows login history and portfolio count
+- **Impersonation** — start/stop impersonating any user; amber banner shown while impersonating; action logged to activity log
+- **Activity log** — filterable log of all user actions (portfolio created/updated/deleted, transactions, watchlist, login, impersonation events)
+- **Settings** — enable/disable new user registration
 
 ## Scheduled Commands
 
@@ -132,15 +151,18 @@ To add a cron entry for ongoing updates:
 
 ## Key Models
 
-| Model                             | Description                                                          |
-| --------------------------------- | -------------------------------------------------------------------- |
-| `Portfolio`                       | A named collection of assets belonging to a user                     |
-| `Transaction`                     | A buy/sell/transfer record for a tracked asset within a portfolio    |
-| `Asset` / `AssetPrice`            | Market-traded assets and their historical prices                     |
-| `ManualAsset` / `ManualValuation` | User-defined assets (e.g. real estate) with manual valuations        |
-| `PortfolioSnapshot`               | Periodic snapshots of portfolio value over time                      |
-| `BenchmarkPrice`                  | Daily close prices for benchmark tickers (SPY, BTC)                  |
-| `WatchlistItem`                   | User-watched tickers with optional target price and notes            |
+| Model                             | Description                                                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `Portfolio`                       | A named collection of assets belonging to a user                                                             |
+| `Transaction`                     | A buy/sell/transfer record for a tracked asset within a portfolio                                            |
+| `Asset` / `AssetPrice`            | Market-traded assets and their historical prices; `asset_type` can be changed inline from any holdings table |
+| `ManualAsset` / `ManualValuation` | User-defined assets (e.g. real estate) with manual valuations                                                |
+| `PortfolioSnapshot`               | Periodic snapshots of portfolio value over time                                                              |
+| `BenchmarkPrice`                  | Daily close prices for benchmark tickers (SPY, BTC)                                                          |
+| `WatchlistItem`                   | User-watched tickers with optional target price and notes                                                    |
+| `ActivityLog`                     | Audit log of user actions                                                                                    |
+| `LoginHistory`                    | Per-user login history (IP, user agent, timestamp)                                                           |
+| `AppSetting`                      | Key-value application settings (e.g. `registration_open`)                                                    |
 
 ## Transaction Types
 

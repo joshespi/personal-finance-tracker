@@ -17,8 +17,11 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('portfolios.index')" :active="request()->routeIs('portfolios.*') || request()->routeIs('transactions.*') || request()->routeIs('manual-assets.*')">
+                    <x-nav-link :href="route('portfolios.index')" :active="request()->routeIs('portfolios.*') || request()->routeIs('manual-assets.*')">
                         {{ __('Portfolios') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('transactions.all')" :active="request()->routeIs('transactions.all')">
+                        {{ __('Transactions') }}
                     </x-nav-link>
                     <x-nav-link :href="route('watchlist.index')" :active="request()->routeIs('watchlist.*')">
                         {{ __('Watchlist') }}
@@ -98,8 +101,11 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('portfolios.index')" :active="request()->routeIs('portfolios.*')">
+            <x-responsive-nav-link :href="route('portfolios.index')" :active="request()->routeIs('portfolios.*') || request()->routeIs('manual-assets.*')">
                 {{ __('Portfolios') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('transactions.all')" :active="request()->routeIs('transactions.all')">
+                {{ __('Transactions') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('watchlist.index')" :active="request()->routeIs('watchlist.*')">
                 {{ __('Watchlist') }}

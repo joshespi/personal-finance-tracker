@@ -22,12 +22,16 @@ class DashboardController extends Controller
             ->get(['portfolio_id', 'recorded_on', 'market_value', 'manual_value', 'cost_basis'])
             ->groupBy(fn ($s) => $s->recorded_on->toDateString())
             ->map(fn ($group) => [
-                'value' => round($group->sum(fn ($s) => (float) $s->market_value + (float) $s->manual_value), 2),
-                'cost'  => round($group->sum(fn ($s) => (float) $s->cost_basis), 2),
+                'value'        => round($group->sum(fn ($s) => (float) $s->market_value + (float) $s->manual_value), 2),
+                'market_value' => round($group->sum(fn ($s) => (float) $s->market_value), 2),
+                'cost'         => round($group->sum(fn ($s) => (float) $s->cost_basis), 2),
             ])
             ->sortKeys();
 
         $chartData = $rawSnapshots->map(fn ($v, $date) => ['date' => $date, 'value' => $v['value'], 'cost' => $v['cost']])
+            ->values();
+
+        $chartDataExManual = $rawSnapshots->map(fn ($v, $date) => ['date' => $date, 'value' => $v['market_value'], 'cost' => $v['cost']])
             ->values();
 
         // Benchmark data (SPY and BTC) — all time, aligned to chart dates
@@ -111,7 +115,7 @@ class DashboardController extends Controller
         $allocation = $this->buildAllocation($allHoldings, $portfolios);
 
         return view('dashboard', compact(
-            'summaries', 'totals', 'chartData', 'allHoldings', 'allocation', 'benchmarkData'
+            'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'benchmarkData'
         ));
     }
 
