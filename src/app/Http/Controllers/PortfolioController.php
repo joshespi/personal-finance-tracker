@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
-use App\Models\BenchmarkPrice;
 use App\Models\Portfolio;
+use App\Services\BenchmarkService;
 use App\Services\RealizedGainService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -76,8 +76,7 @@ class PortfolioController extends Controller
         // Time-weighted return
         $twr = (new RealizedGainService())->computeTwr($portfolio);
 
-        // Benchmark data for overlay
-        $benchmarkData = $this->buildBenchmarkData();
+        $benchmarkData = (new BenchmarkService())->all();
 
         // Asset allocation for donut
         $allocation = $this->buildAllocation($holdings, $portfolio);
@@ -136,38 +135,15 @@ class PortfolioController extends Controller
         return redirect()->route('portfolios.index')->with('success', 'Portfolio deleted.');
     }
 
-    private function buildBenchmarkData(): array
-    {
-        $tickers = ['SPY', 'BTC'];
-        $result  = [];
-
-        foreach ($tickers as $ticker) {
-            $prices = BenchmarkPrice::where('ticker', $ticker)
-                ->orderBy('recorded_on')
-                ->get(['recorded_on', 'close_price'])
-                ->map(fn ($p) => ['date' => $p->recorded_on->toDateString(), 'price' => (float) $p->close_price])
-                ->values()
-                ->all();
-
-            if (! empty($prices)) {
-                $result[$ticker] = $prices;
-            }
-        }
-
-        return $result;
-    }
-
     private function buildAllocation($holdings, Portfolio $portfolio): array
     {
         $byHolding = $holdings->map(fn ($h) => [
             'symbol' => $h['asset']->symbol,
-            'value'  => round($h['current_value'] ?? $h['total_cost'], 2),
+            'value'  => round($h['effective_value'], 2),
             'type'   => $h['asset']->asset_type,
         ])->sortByDesc('value')->values();
 
-        $manualValue = $portfolio->manualAssets->sum(
-            fn ($ma) => $ma->latestValuation ? (float) $ma->latestValuation->value : 0
-        );
+        $manualValue = $portfolio->manualAssets->sum(fn ($ma) => $ma->currentValue());
 
         $total = $byHolding->sum('value') + $manualValue;
 
@@ -191,13 +167,9 @@ class PortfolioController extends Controller
             return [];
         }
 
-        $stockValue = $holdings->where(fn ($h) => $h['asset']->asset_type === 'stock')
-            ->sum(fn ($h) => $h['current_value'] ?? $h['total_cost']);
-        $cryptoValue = $holdings->where(fn ($h) => $h['asset']->asset_type === 'crypto')
-            ->sum(fn ($h) => $h['current_value'] ?? $h['total_cost']);
-        $manualValue = $portfolio->manualAssets->sum(
-            fn ($ma) => $ma->latestValuation ? (float) $ma->latestValuation->value : 0
-        );
+        $stockValue  = $holdings->where(fn ($h) => $h['asset']->asset_type === 'stock')->sum('effective_value');
+        $cryptoValue = $holdings->where(fn ($h) => $h['asset']->asset_type === 'crypto')->sum('effective_value');
+        $manualValue = $portfolio->manualAssets->sum(fn ($ma) => $ma->currentValue());
 
         $current = [
             'stock'  => round($stockValue, 2),

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\BenchmarkPrice;
 use App\Models\PortfolioSnapshot;
+use App\Services\BenchmarkService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -34,8 +34,7 @@ class DashboardController extends Controller
         $chartDataExManual = $rawSnapshots->map(fn ($v, $date) => ['date' => $date, 'value' => $v['market_value'], 'cost' => $v['cost']])
             ->values();
 
-        // Benchmark data (SPY and BTC) — all time, aligned to chart dates
-        $benchmarkData = $this->buildBenchmarkData();
+        $benchmarkData = (new BenchmarkService())->all();
 
         // Compute per-portfolio holdings once and reuse
         $portfolioHoldings = $portfolios->map(fn ($p) => [
@@ -50,9 +49,7 @@ class DashboardController extends Controller
             $costBasis    = $holdings->sum('total_cost');
             $marketValue  = $holdings->filter(fn ($h) => $h['current_value'] !== null)->sum('current_value');
             $unpricedCost = $holdings->filter(fn ($h) => $h['current_value'] === null)->sum('total_cost');
-            $manualValue  = $portfolio->manualAssets->sum(
-                fn ($ma) => $ma->latestValuation ? (float) $ma->latestValuation->value : 0
-            );
+            $manualValue  = $portfolio->manualAssets->sum(fn ($ma) => $ma->currentValue());
             $unrealized = $holdings->filter(fn ($h) => $h['unrealized_gain'] !== null)->sum('unrealized_gain');
             $hasPrice   = $holdings->contains(fn ($h) => $h['current_value'] !== null);
 
@@ -66,19 +63,9 @@ class DashboardController extends Controller
             ];
         });
 
-        $totalCash = round((float) \App\Models\CashTransaction::query()
-            ->join('cash_accounts', 'cash_accounts.id', '=', 'cash_transactions.cash_account_id')
-            ->where('cash_accounts.user_id', $request->user()->id)
-            ->selectRaw("COALESCE(SUM(CASE WHEN cash_transactions.type = 'deposit' THEN cash_transactions.amount ELSE -cash_transactions.amount END), 0) AS bal")
-            ->value('bal'), 2);
-
+        $totalCash   = round($request->user()->totalCash(), 2);
         $totalAssets = round($summaries->sum('total_value') + $totalCash, 2);
-
-        $totalDebt = round((float) $request->user()
-            ->liabilities()
-            ->with('latestBalance')
-            ->get()
-            ->sum(fn ($l) => $l->latestBalance ? (float) $l->latestBalance->balance : 0), 2);
+        $totalDebt   = round($request->user()->totalDebt(), 2);
 
         $totals = [
             'cost_basis'   => round($summaries->sum('cost_basis'), 2),
@@ -112,18 +99,18 @@ class DashboardController extends Controller
                     'total_cost'      => $totalCost,
                     'current_price'   => $price,
                     'current_value'   => $value,
+                    'effective_value' => $value ?? $totalCost,
                     'unrealized_gain' => $unrealized,
                 ];
             })
             ->filter(fn ($h) => $h['quantity'] > 0)
-            ->sortByDesc(fn ($h) => $h['current_value'] ?? $h['total_cost'])
+            ->sortByDesc('effective_value')
             ->values();
 
-        $allHoldingsTotal = $allHoldings->sum(fn ($h) => $h['current_value'] ?? $h['total_cost']);
+        $allHoldingsTotal = $allHoldings->sum('effective_value');
 
         $allHoldings = $allHoldings->map(function ($h) use ($allHoldingsTotal) {
-            $effective = $h['current_value'] ?? $h['total_cost'];
-            $h['pct']  = $allHoldingsTotal > 0 ? round($effective / $allHoldingsTotal * 100, 2) : 0;
+            $h['pct'] = $allHoldingsTotal > 0 ? round($h['effective_value'] / $allHoldingsTotal * 100, 2) : 0;
             return $h;
         });
 
@@ -135,44 +122,22 @@ class DashboardController extends Controller
         ));
     }
 
-    private function buildBenchmarkData(): array
-    {
-        $tickers = ['SPY', 'BTC'];
-        $result  = [];
-
-        foreach ($tickers as $ticker) {
-            $prices = BenchmarkPrice::where('ticker', $ticker)
-                ->orderBy('recorded_on')
-                ->get(['recorded_on', 'close_price'])
-                ->map(fn ($p) => ['date' => $p->recorded_on->toDateString(), 'price' => (float) $p->close_price])
-                ->values()
-                ->all();
-
-            if (! empty($prices)) {
-                $result[$ticker] = $prices;
-            }
-        }
-
-        return $result;
-    }
-
     private function buildAllocation($allHoldings, $portfolios): array
     {
         $stockValue  = 0.0;
         $cryptoValue = 0.0;
 
         foreach ($allHoldings as $h) {
-            $val = $h['current_value'] ?? $h['total_cost'];
             if ($h['asset']->asset_type === 'crypto') {
-                $cryptoValue += $val;
+                $cryptoValue += $h['effective_value'];
             } else {
-                $stockValue += $val;
+                $stockValue += $h['effective_value'];
             }
         }
 
-        $manualValue = $portfolios->sum(function ($p) {
-            return $p->manualAssets->sum(fn ($ma) => $ma->latestValuation ? (float) $ma->latestValuation->value : 0);
-        });
+        $manualValue = $portfolios->sum(
+            fn ($p) => $p->manualAssets->sum(fn ($ma) => $ma->currentValue())
+        );
 
         $total = $stockValue + $cryptoValue + $manualValue;
 

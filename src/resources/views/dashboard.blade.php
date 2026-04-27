@@ -134,7 +134,7 @@
                                 @endforeach
                             </div>
                         </div>
-                        <div id="dashChart" class="h-64"></div>
+                        <div class="h-64 relative"><canvas id="dashChart"></canvas></div>
                     </div>
 
                     {{-- Benchmark comparison toggle (shows when benchmark data exists) --}}
@@ -156,7 +156,7 @@
                                     @endforeach
                                 </div>
                             </div>
-                            <div id="benchmarkChart" class="h-64"></div>
+                            <div class="h-64 relative"><canvas id="benchmarkChart"></canvas></div>
                         </div>
                     @endif
                 @endif
@@ -166,7 +166,7 @@
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
                         <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Asset Allocation</h3>
                         <div class="flex flex-col sm:flex-row items-center gap-8">
-                            <div id="allocationDonut" class="w-64 h-64 shrink-0"></div>
+                            <div class="w-64 h-64 shrink-0 relative"><canvas id="allocationDonut"></canvas></div>
                             <div class="space-y-2 text-sm">
                                 @php
                                     $allocColors = ['#6366f1','#f97316','#10b981'];
@@ -202,7 +202,7 @@
                             'current_value'   => $h['current_value'] !== null ? (float) $h['current_value'] : null,
                             'unrealized_gain' => $h['unrealized_gain'] !== null ? (float) $h['unrealized_gain'] : null,
                             'pct'             => (float) $h['pct'],
-                            'sort_value'      => (float) ($h['current_value'] ?? $h['total_cost']),
+                            'sort_value'      => (float) $h['effective_value'],
                             'reclassify_url'  => route('assets.reclassify', $h['asset']),
                         ])->values()->all();
                     @endphp
@@ -332,7 +332,7 @@
     </div>
 
     @if ($chartData->isNotEmpty())
-        @vite('resources/js/apex.js')
+        @vite('resources/js/chartjs.js')
         @push('scripts')
         <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -457,39 +457,56 @@
                 }
             }
 
-            function apexBase(dark) {
+            function timeSeriesScales(yFormatter) {
                 return {
-                    chart:      { background: 'transparent', toolbar: { show: false }, animations: { enabled: false } },
-                    theme:      { mode: dark ? 'dark' : 'light' },
-                    grid:       { borderColor: gridColor, strokeDashArray: 3 },
-                    xaxis:      { type: 'datetime', labels: { style: { colors: labelColor }, datetimeUTC: false } },
-                    yaxis:      { labels: { style: { colors: labelColor }, formatter: fmtK } },
-                    tooltip:    { x: { format: 'MMM d, yyyy' }, y: { formatter: fmtFull }, theme: dark ? 'dark' : 'light' },
-                    stroke:     { curve: 'smooth', width: 2 },
-                    legend:     { position: 'bottom', labels: { colors: labelColor } },
-                    dataLabels: { enabled: false },
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', tooltipFormat: 'MMM d, yyyy' },
+                        grid: { color: gridColor },
+                        ticks: { color: labelColor },
+                    },
+                    y: {
+                        grid: { color: gridColor },
+                        ticks: { color: labelColor, callback: yFormatter },
+                    },
                 };
+            }
+
+            function legendOpts() {
+                return { display: true, position: 'bottom', labels: { color: labelColor } };
+            }
+
+            function pointFromRow(r, key) {
+                return { x: new Date(r.date).getTime(), y: r[key] };
             }
 
             // ── Portfolio Value Chart ─────────────────────────────────
             let dashRange = '1Y';
-            const dashEl  = document.getElementById('dashChart');
-
-            const dashChart = new ApexCharts(dashEl, {
-                ...apexBase(isDark),
-                chart:  { ...apexBase(isDark).chart, type: 'area', height: 256 },
-                series: [],
-                fill:   { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.02 } },
+            const dashChart = new Chart(document.getElementById('dashChart'), {
+                type: 'line',
+                data: {
+                    datasets: [
+                        { label: 'Portfolio Value', data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 0 },
+                        { label: 'Cost Basis',      data: [], borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: timeSeriesScales(fmtK),
+                    plugins: {
+                        legend: legendOpts(),
+                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtFull(ctx.parsed.y)}` } },
+                    },
+                },
             });
-            dashChart.render();
 
             function updateDashChart(range) {
                 const filtered = filterByRange(allData, range);
-                dashChart.updateSeries([
-                    { name: 'Portfolio Value', data: filtered.map(r => [new Date(r.date).getTime(), r.value]) },
-                    { name: 'Cost Basis',      data: filtered.map(r => [new Date(r.date).getTime(), r.cost]),
-                      type: 'line', stroke: { dashArray: 5 } },
-                ]);
+                dashChart.data.datasets[0].data = filtered.map(r => pointFromRow(r, 'value'));
+                dashChart.data.datasets[1].data = filtered.map(r => pointFromRow(r, 'cost'));
+                dashChart.update();
                 activateBtn('#dash-range-btns', range);
                 updateTiles(filtered, range);
             }
@@ -503,20 +520,13 @@
             const benchEl = document.getElementById('benchmarkChart');
             if (benchEl && Object.keys(benchRaw).length > 0) {
                 let benchRange = '1Y';
-                const benchChart = new ApexCharts(benchEl, {
-                    ...apexBase(isDark),
-                    chart:   { ...apexBase(isDark).chart, type: 'line', height: 256 },
-                    series:  [],
-                    yaxis:   { labels: { style: { colors: labelColor }, formatter: v => v.toFixed(1) + '%' } },
-                    tooltip: { x: { format: 'MMM d, yyyy' }, y: { formatter: v => v.toFixed(2) + '%' }, theme: isDark ? 'dark' : 'light' },
-                });
-                benchChart.render();
+                const benchColors = { 'My Portfolio': '#6366f1', SPY: '#10b981', BTC: '#f59e0b' };
 
                 function normalize(data) {
                     if (!data || data.length === 0) return [];
                     const base = data[0].price;
                     if (!base) return [];
-                    return data.map(r => [new Date(r.date).getTime(), parseFloat(((r.price / base - 1) * 100).toFixed(2))]);
+                    return data.map(r => ({ x: new Date(r.date).getTime(), y: parseFloat(((r.price / base - 1) * 100).toFixed(2)) }));
                 }
 
                 function buildPortfolioNorm(range) {
@@ -524,7 +534,7 @@
                     const filtered = cut ? allData.filter(r => new Date(r.date) >= cut) : allData;
                     if (!filtered.length) return [];
                     const base = filtered[0].value;
-                    return filtered.map(r => [new Date(r.date).getTime(), parseFloat(((r.value / base - 1) * 100).toFixed(2))]);
+                    return filtered.map(r => ({ x: new Date(r.date).getTime(), y: parseFloat(((r.value / base - 1) * 100).toFixed(2)) }));
                 }
 
                 function buildBenchNorm(ticker, range) {
@@ -534,10 +544,34 @@
                     return normalize(filtered);
                 }
 
+                const benchChart = new Chart(benchEl, {
+                    type: 'line',
+                    data: { datasets: [] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: timeSeriesScales(v => v.toFixed(1) + '%'),
+                        plugins: {
+                            legend: legendOpts(),
+                            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%` } },
+                        },
+                    },
+                });
+
                 function updateBenchChart(range) {
-                    const series = [{ name: 'My Portfolio', data: buildPortfolioNorm(range) }];
-                    Object.keys(benchRaw).forEach(t => series.push({ name: t, data: buildBenchNorm(t, range) }));
-                    benchChart.updateSeries(series);
+                    const datasets = [{ label: 'My Portfolio', data: buildPortfolioNorm(range), borderColor: benchColors['My Portfolio'], fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 }];
+                    Object.keys(benchRaw).forEach(t => datasets.push({
+                        label: t,
+                        data: buildBenchNorm(t, range),
+                        borderColor: benchColors[t] || '#9ca3af',
+                        fill: false,
+                        tension: 0.3,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                    }));
+                    benchChart.data.datasets = datasets;
+                    benchChart.update();
                     activateBtn('#bench-range-btns', range);
                 }
 
@@ -550,18 +584,25 @@
             // ── Allocation Donut ──────────────────────────────────────
             const donutEl = document.getElementById('allocationDonut');
             if (donutEl && allocData.total > 0) {
-                const donutChart = new ApexCharts(donutEl, {
-                    chart:       { type: 'donut', height: 256, background: 'transparent', toolbar: { show: false } },
-                    theme:       { mode: isDark ? 'dark' : 'light' },
-                    series:      allocData.values,
-                    labels:      allocData.labels,
-                    colors:      ['#6366f1', '#f97316', '#10b981'],
-                    legend:      { show: false },
-                    dataLabels:  { enabled: true, formatter: val => val.toFixed(1) + '%' },
-                    tooltip:     { y: { formatter: v => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2 }) } },
-                    plotOptions: { pie: { donut: { size: '65%' } } },
+                new Chart(donutEl, {
+                    type: 'pie',
+                    data: {
+                        labels: allocData.labels,
+                        datasets: [{ data: allocData.values, backgroundColor: ['#6366f1', '#f97316', '#10b981'], borderWidth: 0 }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => `${ctx.label}: $${ctx.parsed.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+                                },
+                            },
+                        },
+                    },
                 });
-                donutChart.render();
             }
         });
         </script>

@@ -33,8 +33,7 @@
 
                     <div>
                         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Body</label>
-                        <input id="edit-body" type="hidden" name="body" value="{{ old('body', $entry->body) }}">
-                        <trix-editor input="edit-body" class="trix-content rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 text-sm min-h-[140px]"></trix-editor>
+                        <textarea name="body" class="markdown-editor">{{ old('body', $entry->body) }}</textarea>
                         @error('body')
                             <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                         @enderror

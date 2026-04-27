@@ -33,4 +33,9 @@ class ManualAsset extends Model
     {
         return $this->hasMany(Liability::class);
     }
+
+    public function currentValue(): float
+    {
+        return $this->latestValuation ? (float) $this->latestValuation->value : 0.0;
+    }
 }

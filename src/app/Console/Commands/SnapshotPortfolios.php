@@ -25,11 +25,8 @@ class SnapshotPortfolios extends Command
             $holdings = $portfolio->computeHoldings();
 
             $costBasis   = $holdings->sum('total_cost');
-            // For unpriced assets, fall back to cost basis so the chart stays meaningful
-            $marketValue = $holdings->sum(fn ($h) => $h['current_value'] ?? $h['total_cost']);
-            $manualValue = $portfolio->manualAssets->sum(
-                fn ($ma) => $ma->latestValuation ? (float) $ma->latestValuation->value : 0
-            );
+            $marketValue = $holdings->sum('effective_value');
+            $manualValue = $portfolio->manualAssets->sum(fn ($ma) => $ma->currentValue());
 
             PortfolioSnapshot::updateOrCreate(
                 ['portfolio_id' => $portfolio->id, 'recorded_on' => $today],

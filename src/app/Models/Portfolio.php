@@ -93,6 +93,7 @@ class Portfolio extends Model
                     'total_cost'      => round($totalCost, 2),
                     'current_price'   => $latestPrice,
                     'current_value'   => $currentValue,
+                    'effective_value' => $currentValue ?? round($totalCost, 2),
                     'unrealized_gain' => $unrealizedGain,
                     'unrealized_pct'  => $unrealizedPct,
                 ];

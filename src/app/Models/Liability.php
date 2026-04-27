@@ -37,4 +37,9 @@ class Liability extends Model
     {
         return $this->hasOne(LiabilityBalance::class)->latestOfMany('recorded_at');
     }
+
+    public function currentBalance(): float
+    {
+        return $this->latestBalance ? (float) $this->latestBalance->balance : 0.0;
+    }
 }

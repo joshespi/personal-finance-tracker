@@ -116,7 +116,7 @@
                             @endforeach
                         </div>
                     </div>
-                    <div id="portChart" class="h-72"></div>
+                    <div class="h-72 relative"><canvas id="portChart"></canvas></div>
                 </div>
 
                 {{-- Benchmark comparison --}}
@@ -138,7 +138,7 @@
                                 @endforeach
                             </div>
                         </div>
-                        <div id="portBenchChart" class="h-64"></div>
+                        <div class="h-64 relative"><canvas id="portBenchChart"></canvas></div>
                     </div>
                 @endif
             @endif
@@ -148,7 +148,7 @@
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Allocation</h3>
                     <div class="flex flex-col sm:flex-row items-center gap-8">
-                        <div id="portAllocationDonut" class="w-64 h-64 shrink-0"></div>
+                        <div class="w-64 h-64 shrink-0 relative"><canvas id="portAllocationDonut"></canvas></div>
                         <div class="space-y-2 text-sm w-full max-w-sm">
                             @foreach ($allocation['holdings'] as $h)
                                 <div class="flex items-center justify-between">
@@ -500,7 +500,7 @@
     </div>
 
     @if ($chartData->count() > 1)
-        @vite('resources/js/apex.js')
+        @vite('resources/js/chartjs.js')
         @push('scripts')
         <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -560,37 +560,56 @@
                 return (v < 0 ? '-$' : '$') + str;
             }
 
-            function apexBase() {
+            function timeSeriesScales(yFormatter) {
                 return {
-                    chart:      { background: 'transparent', toolbar: { show: false }, animations: { enabled: false } },
-                    theme:      { mode: isDark ? 'dark' : 'light' },
-                    grid:       { borderColor: gridColor, strokeDashArray: 3 },
-                    xaxis:      { type: 'datetime', labels: { style: { colors: labelColor }, datetimeUTC: false } },
-                    yaxis:      { labels: { style: { colors: labelColor }, formatter: fmtK } },
-                    tooltip:    { x: { format: 'MMM d, yyyy' }, y: { formatter: fmtFull }, theme: isDark ? 'dark' : 'light' },
-                    stroke:     { curve: 'smooth', width: 2 },
-                    legend:     { position: 'bottom', labels: { colors: labelColor } },
-                    dataLabels: { enabled: false },
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', tooltipFormat: 'MMM d, yyyy' },
+                        grid: { color: gridColor },
+                        ticks: { color: labelColor },
+                    },
+                    y: {
+                        grid: { color: gridColor },
+                        ticks: { color: labelColor, callback: yFormatter },
+                    },
                 };
+            }
+
+            function legendOpts() {
+                return { display: true, position: 'bottom', labels: { color: labelColor } };
+            }
+
+            function pointFromRow(r, key) {
+                return { x: new Date(r.date).getTime(), y: r[key] };
             }
 
             // ── Portfolio Value Chart ─────────────────────────────────
             let portRange = '1Y';
-            const portChart = new ApexCharts(document.getElementById('portChart'), {
-                ...apexBase(),
-                chart:  { ...apexBase().chart, type: 'area', height: 288 },
-                series: [],
-                fill:   { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.02 } },
+            const portChart = new Chart(document.getElementById('portChart'), {
+                type: 'line',
+                data: {
+                    datasets: [
+                        { label: 'Market Value', data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 0 },
+                        { label: 'Cost Basis',   data: [], borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: timeSeriesScales(fmtK),
+                    plugins: {
+                        legend: legendOpts(),
+                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtFull(ctx.parsed.y)}` } },
+                    },
+                },
             });
-            portChart.render();
 
             function updatePortChart(range) {
                 const filtered = filterByRange(allData, range);
-                portChart.updateSeries([
-                    { name: 'Market Value', data: filtered.map(r => [new Date(r.date).getTime(), r.value]) },
-                    { name: 'Cost Basis',   data: filtered.map(r => [new Date(r.date).getTime(), r.cost]),
-                      type: 'line', stroke: { dashArray: 5 } },
-                ]);
+                portChart.data.datasets[0].data = filtered.map(r => pointFromRow(r, 'value'));
+                portChart.data.datasets[1].data = filtered.map(r => pointFromRow(r, 'cost'));
+                portChart.update();
                 activateBtn('#port-range-btns', range);
             }
 
@@ -603,20 +622,13 @@
             const benchEl = document.getElementById('portBenchChart');
             if (benchEl && Object.keys(benchRaw).length > 0) {
                 let benchRange = '1Y';
-                const benchChart = new ApexCharts(benchEl, {
-                    ...apexBase(),
-                    chart:  { ...apexBase().chart, type: 'line', height: 256 },
-                    series: [],
-                    yaxis:  { labels: { style: { colors: labelColor }, formatter: v => v.toFixed(1) + '%' } },
-                    tooltip: { x: { format: 'MMM d, yyyy' }, y: { formatter: v => v.toFixed(2) + '%' }, theme: isDark ? 'dark' : 'light' },
-                });
-                benchChart.render();
+                const benchColors = { 'This Portfolio': '#6366f1', SPY: '#10b981', BTC: '#f59e0b' };
 
                 function buildPortNorm(range) {
                     const f = filterByRange(allData, range);
                     if (!f.length) return [];
                     const base = f[0].value;
-                    return f.map(r => [new Date(r.date).getTime(), parseFloat(((r.value / base - 1) * 100).toFixed(2))]);
+                    return f.map(r => ({ x: new Date(r.date).getTime(), y: parseFloat(((r.value / base - 1) * 100).toFixed(2)) }));
                 }
 
                 function buildBenchNorm(ticker, range) {
@@ -625,13 +637,37 @@
                     const f   = cut ? raw.filter(r => new Date(r.date) >= cut) : raw;
                     if (!f.length) return [];
                     const base = f[0].price;
-                    return f.map(r => [new Date(r.date).getTime(), parseFloat(((r.price / base - 1) * 100).toFixed(2))]);
+                    return f.map(r => ({ x: new Date(r.date).getTime(), y: parseFloat(((r.price / base - 1) * 100).toFixed(2)) }));
                 }
 
+                const benchChart = new Chart(benchEl, {
+                    type: 'line',
+                    data: { datasets: [] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: timeSeriesScales(v => v.toFixed(1) + '%'),
+                        plugins: {
+                            legend: legendOpts(),
+                            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%` } },
+                        },
+                    },
+                });
+
                 function updateBenchChart(range) {
-                    const series = [{ name: 'This Portfolio', data: buildPortNorm(range) }];
-                    Object.keys(benchRaw).forEach(t => series.push({ name: t, data: buildBenchNorm(t, range) }));
-                    benchChart.updateSeries(series);
+                    const datasets = [{ label: 'This Portfolio', data: buildPortNorm(range), borderColor: benchColors['This Portfolio'], fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 }];
+                    Object.keys(benchRaw).forEach(t => datasets.push({
+                        label: t,
+                        data: buildBenchNorm(t, range),
+                        borderColor: benchColors[t] || '#9ca3af',
+                        fill: false,
+                        tension: 0.3,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                    }));
+                    benchChart.data.datasets = datasets;
+                    benchChart.update();
                     activateBtn('#port-bench-range-btns', range);
                 }
 
@@ -641,30 +677,33 @@
                 updateBenchChart(benchRange);
             }
 
-            // ── Allocation Donut ──────────────────────────────────────
+            // ── Allocation Pie ────────────────────────────────────────
             const donutEl = document.getElementById('portAllocationDonut');
             if (donutEl && allocData.total > 0) {
-                const symbols  = allocData.holdings.map(h => h.symbol);
-                const values   = allocData.holdings.map(h => h.value);
-                const allLabels = [...symbols];
-                const allValues = [...values];
+                const allLabels = allocData.holdings.map(h => h.symbol);
+                const allValues = allocData.holdings.map(h => h.value);
 
                 if (allocData.manual_value > 0) {
                     allLabels.push('Manual');
                     allValues.push(allocData.manual_value);
                 }
 
-                const donutChart = new ApexCharts(donutEl, {
-                    chart:   { type: 'donut', height: 256, background: 'transparent', toolbar: { show: false } },
-                    theme:   { mode: isDark ? 'dark' : 'light' },
-                    series:  allValues,
-                    labels:  allLabels,
-                    legend:  { show: false },
-                    dataLabels: { enabled: false },
-                    tooltip: { y: { formatter: v => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2 }) } },
-                    plotOptions: { pie: { donut: { size: '65%' } } },
+                new Chart(donutEl, {
+                    type: 'pie',
+                    data: { labels: allLabels, datasets: [{ data: allValues, borderWidth: 0 }] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => `${ctx.label}: $${ctx.parsed.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+                                },
+                            },
+                        },
+                    },
                 });
-                donutChart.render();
             }
         });
         </script>
