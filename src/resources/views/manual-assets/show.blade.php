@@ -47,6 +47,42 @@
                 </div>
             @endif
 
+            @if ($manualAsset->cost_basis !== null || $manualAsset->latestValuation)
+                @php
+                    $cost   = $manualAsset->cost_basis !== null ? (float) $manualAsset->cost_basis : null;
+                    $value  = $manualAsset->latestValuation ? (float) $manualAsset->latestValuation->value : null;
+                    $pl     = $manualAsset->profitLoss();
+                    $plPct  = ($pl !== null && $cost > 0) ? ($pl / $cost) * 100 : null;
+                @endphp
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Cost Basis</p>
+                        <p class="mt-1 font-mono text-lg text-gray-900 dark:text-gray-100">
+                            {{ $cost !== null ? number_format($cost, 2) : '—' }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Current Value</p>
+                        <p class="mt-1 font-mono text-lg text-gray-900 dark:text-gray-100">
+                            {{ $value !== null ? number_format($value, 2) : '—' }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Profit / Loss</p>
+                        @if ($pl !== null)
+                            <p class="mt-1 font-mono text-lg font-semibold {{ $pl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                {{ $pl >= 0 ? '+' : '' }}{{ number_format($pl, 2) }}
+                                @if ($plPct !== null)
+                                    <span class="text-xs">({{ $pl >= 0 ? '+' : '' }}{{ number_format($plPct, 2) }}%)</span>
+                                @endif
+                            </p>
+                        @else
+                            <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">Add cost basis and a valuation to see P/L.</p>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             {{-- Add Valuation --}}
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
                 <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">

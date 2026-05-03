@@ -45,6 +45,7 @@ class ManualAssetController extends Controller
             'name'        => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string', 'max:1000'],
             'asset_class' => ['required', 'in:' . implode(',', array_keys(self::ASSET_CLASSES))],
+            'cost_basis'  => ['nullable', 'numeric', 'min:0'],
             'currency'    => ['required', 'string', 'size:3'],
         ]);
 
@@ -89,6 +90,7 @@ class ManualAssetController extends Controller
             'name'        => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string', 'max:1000'],
             'asset_class' => ['required', 'in:' . implode(',', array_keys(self::ASSET_CLASSES))],
+            'cost_basis'  => ['nullable', 'numeric', 'min:0'],
             'currency'    => ['required', 'string', 'size:3'],
         ]);
 

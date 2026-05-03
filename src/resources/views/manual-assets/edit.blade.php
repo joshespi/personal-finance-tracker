@@ -36,6 +36,14 @@
                     </div>
 
                     <div>
+                        <x-input-label for="cost_basis" value="Cost Basis (optional)" />
+                        <x-text-input id="cost_basis" name="cost_basis" type="number" class="mt-1 block w-48"
+                                      :value="old('cost_basis', $manualAsset->cost_basis)" min="0" step="any" placeholder="200000.00" />
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">What you paid. Used to calculate profit/loss vs current valuation.</p>
+                        <x-input-error :messages="$errors->get('cost_basis')" class="mt-2" />
+                    </div>
+
+                    <div>
                         <x-input-label for="description" value="Description (optional)" />
                         <textarea id="description" name="description"
                                   class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
