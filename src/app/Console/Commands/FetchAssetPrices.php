@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 class FetchAssetPrices extends Command
 {
     protected $signature = 'assets:fetch-prices';
-    protected $description = 'Fetch latest prices for all tracked assets from CoinGecko (crypto) and Finnhub (stocks + real_estate)';
+    protected $description = 'Fetch latest prices for all tracked assets from CoinGecko (crypto) and Finnhub (stocks)';
 
     public function handle(): int
     {
@@ -24,7 +24,7 @@ class FetchAssetPrices extends Command
         }
 
         $cryptos = $assets->where('asset_type', 'crypto');
-        $stocks  = $assets->whereIn('asset_type', ['stock', 'real_estate']);
+        $stocks  = $assets->where('asset_type', 'stock');
 
         $this->info('Fetching prices...');
 

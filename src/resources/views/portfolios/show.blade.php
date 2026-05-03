@@ -151,18 +151,10 @@
                         <div class="w-64 h-64 shrink-0 relative"><canvas id="portAllocationDonut"></canvas></div>
                         <div class="space-y-2 text-sm w-full max-w-sm">
                             @foreach ($allocation['holdings'] as $h)
-                                @php
-                                    $legendColor = match ($h['type']) {
-                                        'crypto'      => 'text-orange-500',
-                                        'real_estate' => 'text-emerald-500',
-                                        default       => 'text-blue-500',
-                                    };
-                                    $legendLabel = $h['type'] === 'real_estate' ? 'Real Estate' : ucfirst($h['type']);
-                                @endphp
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-2">
                                         <span class="font-mono font-semibold text-gray-900 dark:text-gray-100 w-16">{{ $h['symbol'] }}</span>
-                                        <span class="text-xs {{ $legendColor }}">{{ $legendLabel }}</span>
+                                        <span class="text-xs {{ $h['type'] === 'crypto' ? 'text-orange-500' : 'text-blue-500' }}">{{ ucfirst($h['type']) }}</span>
                                     </div>
                                     <div class="flex items-center gap-4 text-right">
                                         <span class="font-mono text-gray-900 dark:text-gray-100">${{ number_format($h['value'], 2) }}</span>
@@ -275,22 +267,18 @@
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                         <td class="px-6 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100" x-text="h.symbol"></td>
                                         <td class="px-6 py-3">
-                                            <form :action="h.reclassify_url" method="POST" class="inline">
+                                            <form :action="h.reclassify_url" method="POST">
                                                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="_method" value="PATCH">
-                                                <select name="asset_type"
-                                                        @change="$el.form.submit()"
-                                                        title="Reclassify"
-                                                        class="text-xs font-medium border-0 rounded px-2 py-0.5 cursor-pointer focus:ring-1 focus:ring-indigo-500"
+                                                <input type="hidden" name="asset_type" :value="h.asset_type === 'crypto' ? 'stock' : 'crypto'">
+                                                <button type="submit"
+                                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition hover:opacity-75"
                                                         :class="h.asset_type === 'crypto'
                                                             ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
-                                                            : (h.asset_type === 'real_estate'
-                                                                ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                                                                : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300')">
-                                                    <option value="stock"       :selected="h.asset_type === 'stock'">Stock</option>
-                                                    <option value="crypto"      :selected="h.asset_type === 'crypto'">Crypto</option>
-                                                    <option value="real_estate" :selected="h.asset_type === 'real_estate'">Real Estate</option>
-                                                </select>
+                                                            : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'"
+                                                        :title="'Click to reclassify as ' + (h.asset_type === 'crypto' ? 'Stock' : 'Crypto')"
+                                                        x-text="h.asset_type === 'crypto' ? 'Crypto' : 'Stock'">
+                                                </button>
                                             </form>
                                         </td>
                                         <td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-100" x-text="fmtQty(h.quantity)"></td>

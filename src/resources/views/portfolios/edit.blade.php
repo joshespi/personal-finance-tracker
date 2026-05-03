@@ -38,7 +38,7 @@
                     <div>
                         <x-input-label value="Target Allocation (optional, must sum to 100)" />
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">Used to show rebalancing suggestions on your portfolio page. Leave at 0 to disable.</p>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-1">
+                        <div class="grid grid-cols-3 gap-4 mt-1">
                             <div>
                                 <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Stocks %</label>
                                 <x-text-input name="target_stock_pct" type="number" class="mt-1 block w-full"
@@ -49,12 +49,6 @@
                                 <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Crypto %</label>
                                 <x-text-input name="target_crypto_pct" type="number" class="mt-1 block w-full"
                                               :value="old('target_crypto_pct', $portfolio->target_crypto_pct)"
-                                              min="0" max="100" step="1" />
-                            </div>
-                            <div>
-                                <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Real Estate %</label>
-                                <x-text-input name="target_real_estate_pct" type="number" class="mt-1 block w-full"
-                                              :value="old('target_real_estate_pct', $portfolio->target_real_estate_pct)"
                                               min="0" max="100" step="1" />
                             </div>
                             <div>

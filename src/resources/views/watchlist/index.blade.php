@@ -56,7 +56,6 @@
                                 class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">
                             <option value="stock">Stock</option>
                             <option value="crypto">Crypto</option>
-                            <option value="real_estate">Real Estate</option>
                         </select>
                     </div>
 
@@ -104,16 +103,11 @@
                                         <td class="px-5 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $item->symbol }}</td>
                                         <td class="px-5 py-3 text-gray-700 dark:text-gray-300 max-w-xs truncate">{{ $item->asset_name }}</td>
                                         <td class="px-5 py-3">
-                                            @php
-                                                $typeClass = match ($item->asset_type) {
-                                                    'crypto'      => 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300',
-                                                    'real_estate' => 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300',
-                                                    default       => 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
-                                                };
-                                                $typeLabel = $item->asset_type === 'real_estate' ? 'Real Estate' : ucfirst($item->asset_type);
-                                            @endphp
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $typeClass }}">
-                                                {{ $typeLabel }}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                                                {{ $item->asset_type === 'crypto'
+                                                    ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
+                                                    : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' }}">
+                                                {{ ucfirst($item->asset_type) }}
                                             </span>
                                         </td>
                                         <td class="px-5 py-3 text-right font-mono text-gray-900 dark:text-gray-100">

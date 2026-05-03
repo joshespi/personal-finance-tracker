@@ -19,6 +19,7 @@ class TickerSearchController extends Controller
             return response()->json([]);
         }
 
+        // Search local assets first (already in the database)
         $local = Asset::where('symbol', 'like', strtoupper($query) . '%')
             ->where('asset_type', $assetType)
             ->limit(5)
@@ -36,7 +37,7 @@ class TickerSearchController extends Controller
 
         $remote = match ($assetType) {
             'crypto' => $this->searchCrypto($query),
-            default  => $this->searchStock($query, $assetType),
+            default  => $this->searchStock($query),
         };
 
         // Merge local + remote, deduplicate by symbol, limit to 8
@@ -48,7 +49,7 @@ class TickerSearchController extends Controller
         return response()->json($combined);
     }
 
-    private function searchStock(string $query, string $resultType = 'stock'): array
+    private function searchStock(string $query): array
     {
         $apiKey = config('services.finnhub.key');
         if (! $apiKey) {
@@ -71,7 +72,7 @@ class TickerSearchController extends Controller
                 ->map(fn ($r) => [
                     'symbol' => $r['symbol'],
                     'name'   => $r['description'],
-                    'type'   => $resultType,
+                    'type'   => 'stock',
                     'source' => 'finnhub',
                 ])
                 ->values()
