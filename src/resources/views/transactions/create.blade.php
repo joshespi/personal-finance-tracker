@@ -40,7 +40,7 @@
                                         <span class="font-mono font-semibold text-gray-900 dark:text-gray-100" x-text="r.symbol"></span>
                                         <span class="ml-2 text-gray-500 dark:text-gray-400 truncate" x-text="r.name"></span>
                                         <span class="ml-1 text-xs px-1 rounded"
-                                              :class="r.type === 'crypto' ? 'text-orange-500' : 'text-blue-500'"
+                                              :class="r.type === 'crypto' ? 'text-orange-500' : (r.type === 'real_estate' ? 'text-emerald-500' : 'text-blue-500')"
                                               x-text="r.type"></span>
                                     </div>
                                 </template>
@@ -55,6 +55,7 @@
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                                 <option value="stock" @selected(old('asset_type') === 'stock')>Stock</option>
                                 <option value="crypto" @selected(old('asset_type') === 'crypto')>Crypto</option>
+                                <option value="real_estate" @selected(old('asset_type') === 'real_estate')>Real Estate</option>
                             </select>
                             <x-input-error :messages="$errors->get('asset_type')" class="mt-2" />
                         </div>
