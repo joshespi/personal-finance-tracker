@@ -12,7 +12,20 @@ class ManualAsset extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['portfolio_id', 'name', 'description', 'asset_class', 'currency'];
+    protected $fillable = ['portfolio_id', 'name', 'description', 'asset_class', 'cost_basis', 'currency'];
+
+    protected $casts = [
+        'cost_basis' => 'decimal:2',
+    ];
+
+    public function profitLoss(): ?float
+    {
+        if ($this->cost_basis === null || ! $this->latestValuation) {
+            return null;
+        }
+
+        return (float) $this->latestValuation->value - (float) $this->cost_basis;
+    }
 
     public function portfolio(): BelongsTo
     {
