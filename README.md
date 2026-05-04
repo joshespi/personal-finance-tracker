@@ -61,6 +61,21 @@ Laravel app for tracking investments, manual assets, liabilities, cash, and budg
 
    App is at [http://localhost:8080](http://localhost:8080).
 
+5. (Dev only) Seed demo data:
+
+   ```bash
+   docker compose exec app php artisan db:seed
+   ```
+
+   Creates two login-able accounts plus a populated portfolio, manual asset + mortgage, cash accounts, and envelopes:
+
+   | Email                | Password | Role    |
+   | -------------------- | -------- | ------- |
+   | `demo@example.com`   | password | regular |
+   | `admin@example.com`  | password | admin   |
+
+   The seeder is idempotent — running it again won't duplicate rows. Skip in production.
+
 ## Composer install (dev vs prod)
 
 ```bash
@@ -105,3 +120,12 @@ Cron entry for the scheduler:
 | ----------- | --------- |
 | Nginx (app) | 8080      |
 | MariaDB     | 3307      |
+
+## Logging
+
+Logs ship to two destinations by default (`LOG_STACK=single,stderr`):
+
+- `src/storage/logs/laravel.log` — file on disk inside the container.
+- Container stderr — visible via `docker compose logs -f app`. Useful when the file leg fails (perm issues, missing dir, full disk) so errors aren't silent.
+
+PHP fatals from FPM workers are also routed to container stderr via `docker/php/zzz-laravel.conf` (`php_admin_value[error_log] = /proc/self/fd/2`). To flip debug mode without rebuilding, edit `APP_DEBUG` in the repo-root `.env` and `docker compose up -d --force-recreate app`.
