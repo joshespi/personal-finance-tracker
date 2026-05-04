@@ -124,28 +124,31 @@ class DashboardController extends Controller
 
     private function buildAllocation($allHoldings, $portfolios): array
     {
-        $stockValue  = 0.0;
-        $cryptoValue = 0.0;
+        $stockValue      = 0.0;
+        $cryptoValue     = 0.0;
+        $realEstateValue = 0.0;
 
         foreach ($allHoldings as $h) {
-            if ($h['asset']->asset_type === 'crypto') {
-                $cryptoValue += $h['effective_value'];
-            } else {
-                $stockValue += $h['effective_value'];
-            }
+            $val = $h['effective_value'];
+            match ($h['asset']->asset_type) {
+                'crypto'      => $cryptoValue     += $val,
+                'real_estate' => $realEstateValue += $val,
+                default       => $stockValue      += $val,
+            };
         }
 
         $manualValue = $portfolios->sum(
             fn ($p) => $p->manualAssets->sum(fn ($ma) => $ma->currentValue())
         );
 
-        $total = $stockValue + $cryptoValue + $manualValue;
+        $total = $stockValue + $cryptoValue + $realEstateValue + $manualValue;
 
         return [
-            'labels' => ['Stocks', 'Crypto', 'Manual Assets'],
+            'labels' => ['Stocks', 'Crypto', 'Real Estate', 'Manual Assets'],
             'values' => [
                 round($stockValue, 2),
                 round($cryptoValue, 2),
+                round($realEstateValue, 2),
                 round($manualValue, 2),
             ],
             'total'  => round($total, 2),

@@ -105,18 +105,20 @@ class PortfolioController extends Controller
             'name'               => ['required', 'string', 'max:100'],
             'description'        => ['nullable', 'string', 'max:1000'],
             'currency'           => ['required', 'string', 'size:3'],
-            'target_stock_pct'   => ['nullable', 'integer', 'min:0', 'max:100'],
-            'target_crypto_pct'  => ['nullable', 'integer', 'min:0', 'max:100'],
-            'target_manual_pct'  => ['nullable', 'integer', 'min:0', 'max:100'],
+            'target_stock_pct'       => ['nullable', 'integer', 'min:0', 'max:100'],
+            'target_crypto_pct'      => ['nullable', 'integer', 'min:0', 'max:100'],
+            'target_real_estate_pct' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'target_manual_pct'      => ['nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
         $portfolio->update([
-            'name'               => $validated['name'],
-            'description'        => $validated['description'] ?? null,
-            'currency'           => $validated['currency'],
-            'target_stock_pct'   => $validated['target_stock_pct'] ?? 0,
-            'target_crypto_pct'  => $validated['target_crypto_pct'] ?? 0,
-            'target_manual_pct'  => $validated['target_manual_pct'] ?? 0,
+            'name'                   => $validated['name'],
+            'description'            => $validated['description'] ?? null,
+            'currency'               => $validated['currency'],
+            'target_stock_pct'       => $validated['target_stock_pct'] ?? 0,
+            'target_crypto_pct'      => $validated['target_crypto_pct'] ?? 0,
+            'target_real_estate_pct' => $validated['target_real_estate_pct'] ?? 0,
+            'target_manual_pct'      => $validated['target_manual_pct'] ?? 0,
         ]);
 
         ActivityLog::record('portfolio.updated', $portfolio, ['name' => $portfolio->name]);
@@ -157,9 +159,10 @@ class PortfolioController extends Controller
     private function buildRebalancing($holdings, Portfolio $portfolio): array
     {
         $targets = [
-            'stock'  => $portfolio->target_stock_pct,
-            'crypto' => $portfolio->target_crypto_pct,
-            'manual' => $portfolio->target_manual_pct,
+            'stock'       => $portfolio->target_stock_pct,
+            'crypto'      => $portfolio->target_crypto_pct,
+            'real_estate' => $portfolio->target_real_estate_pct,
+            'manual'      => $portfolio->target_manual_pct,
         ];
 
         $totalTargetPct = array_sum($targets);
@@ -167,14 +170,16 @@ class PortfolioController extends Controller
             return [];
         }
 
-        $stockValue  = $holdings->where(fn ($h) => $h['asset']->asset_type === 'stock')->sum('effective_value');
-        $cryptoValue = $holdings->where(fn ($h) => $h['asset']->asset_type === 'crypto')->sum('effective_value');
-        $manualValue = $portfolio->manualAssets->sum(fn ($ma) => $ma->currentValue());
+        $stockValue      = $holdings->where(fn ($h) => $h['asset']->asset_type === 'stock')->sum('effective_value');
+        $cryptoValue     = $holdings->where(fn ($h) => $h['asset']->asset_type === 'crypto')->sum('effective_value');
+        $realEstateValue = $holdings->where(fn ($h) => $h['asset']->asset_type === 'real_estate')->sum('effective_value');
+        $manualValue     = $portfolio->manualAssets->sum(fn ($ma) => $ma->currentValue());
 
         $current = [
-            'stock'  => round($stockValue, 2),
-            'crypto' => round($cryptoValue, 2),
-            'manual' => round($manualValue, 2),
+            'stock'       => round($stockValue, 2),
+            'crypto'      => round($cryptoValue, 2),
+            'real_estate' => round($realEstateValue, 2),
+            'manual'      => round($manualValue, 2),
         ];
 
         $total = array_sum($current);
@@ -184,13 +189,20 @@ class PortfolioController extends Controller
 
         $currentPct = array_map(fn ($v) => round($v / $total * 100, 1), $current);
 
+        $labels = [
+            'stock'       => 'Stocks',
+            'crypto'      => 'Crypto',
+            'real_estate' => 'Real Estate',
+            'manual'      => 'Manual Assets',
+        ];
+
         $rows = [];
-        foreach (['stock', 'crypto', 'manual'] as $type) {
+        foreach (array_keys($targets) as $type) {
             $targetValue = round($total * $targets[$type] / 100, 2);
             $diff        = round($targetValue - $current[$type], 2);
             $rows[]      = [
                 'type'         => $type,
-                'label'        => ucfirst($type === 'manual' ? 'Manual Assets' : $type . 's'),
+                'label'        => $labels[$type],
                 'current_pct'  => $currentPct[$type],
                 'target_pct'   => $targets[$type],
                 'current_val'  => $current[$type],
