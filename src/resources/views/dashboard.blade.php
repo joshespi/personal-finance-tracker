@@ -169,7 +169,7 @@
                             <div class="w-64 h-64 shrink-0 relative"><canvas id="allocationDonut"></canvas></div>
                             <div class="space-y-2 text-sm">
                                 @php
-                                    $allocColors = ['#6366f1','#f97316','#10b981'];
+                                    $allocColors = ['#6366f1','#f97316','#8b5cf6','#10b981'];
                                 @endphp
                                 @foreach ($allocation['labels'] as $i => $label)
                                     @php $val = $allocation['values'][$i]; @endphp
@@ -592,7 +592,7 @@
                     type: 'pie',
                     data: {
                         labels: allocData.labels,
-                        datasets: [{ data: allocData.values, backgroundColor: ['#6366f1', '#f97316', '#10b981'], borderWidth: 0 }],
+                        datasets: [{ data: allocData.values, backgroundColor: ['#6366f1', '#f97316', '#8b5cf6', '#10b981'], borderWidth: 0 }],
                     },
                     options: {
                         responsive: true,
