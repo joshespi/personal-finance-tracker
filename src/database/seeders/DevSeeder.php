@@ -56,10 +56,11 @@ class DevSeeder extends Seeder
         );
 
         $assets = [
-            ['symbol' => 'AAPL', 'name' => 'Apple Inc.',         'type' => 'stock',  'price' => 185.00],
-            ['symbol' => 'MSFT', 'name' => 'Microsoft Corp.',    'type' => 'stock',  'price' => 415.00],
-            ['symbol' => 'VOO',  'name' => 'Vanguard S&P 500',   'type' => 'stock',  'price' => 530.00],
-            ['symbol' => 'BTC',  'name' => 'Bitcoin',            'type' => 'crypto', 'price' => 68000.00],
+            ['symbol' => 'AAPL', 'name' => 'Apple Inc.',            'type' => 'stock',        'price' => 185.00],
+            ['symbol' => 'MSFT', 'name' => 'Microsoft Corp.',       'type' => 'stock',        'price' => 415.00],
+            ['symbol' => 'VOO',  'name' => 'Vanguard S&P 500',      'type' => 'stock',        'price' => 530.00],
+            ['symbol' => 'BTC',  'name' => 'Bitcoin',               'type' => 'crypto',       'price' => 68000.00],
+            ['symbol' => 'VNQ',  'name' => 'Vanguard Real Estate',  'type' => 'real_estate',  'price' => 85.00],
         ];
 
         $today = CarbonImmutable::now();
