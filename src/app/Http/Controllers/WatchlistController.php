@@ -49,7 +49,7 @@ class WatchlistController extends Controller
     {
         $validated = $request->validate([
             'symbol'       => ['required', 'string', 'max:20'],
-            'asset_type'   => ['required', 'in:stock,crypto,real_estate'],
+            'asset_type'   => ['required', 'in:stock,crypto'],
             'target_price' => ['nullable', 'numeric', 'gt:0'],
             'notes'        => ['nullable', 'string', 'max:500'],
         ]);

@@ -56,7 +56,6 @@
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                                 <option value="crypto" @selected(old('asset_type', 'crypto') === 'crypto')>Crypto</option>
                                 <option value="stock"  @selected(old('asset_type') === 'stock')>Stock</option>
-                                <option value="real_estate" @selected(old('asset_type') === 'real_estate')>Real Estate</option>
                             </select>
                             <x-input-error :messages="$errors->get('asset_type')" class="mt-2" />
                         </div>

@@ -79,7 +79,7 @@ class TransactionController extends Controller
 
         $validated = $request->validate([
             'symbol'         => ['required', 'string', 'max:20'],
-            'asset_type'     => ['required', 'in:stock,crypto,real_estate'],
+            'asset_type'     => ['required', 'in:stock,crypto'],
             'type'           => ['required', 'in:' . implode(',', array_keys(self::TYPES))],
             'quantity'       => ['required', 'numeric', 'gt:0'],
             'price_per_unit' => ['required', 'numeric', 'gte:0'],
