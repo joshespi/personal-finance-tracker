@@ -33,6 +33,12 @@ Laravel app for tracking investments, manual assets, liabilities, cash, and budg
    DB_DATABASE=laravel
    DB_USERNAME=laravel
    DB_PASSWORD=secret
+
+   # Logging / debug — forwarded into the app container by docker-compose.yml
+   APP_DEBUG=true
+   LOG_CHANNEL=stack
+   LOG_STACK=single,stderr
+   LOG_LEVEL=debug
    ```
 
 2. First-time build:
