@@ -17,7 +17,6 @@ use App\Models\Transaction;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DevSeeder extends Seeder
 {
@@ -27,7 +26,7 @@ class DevSeeder extends Seeder
             ['email' => 'demo@example.com'],
             [
                 'name'              => 'Demo User',
-                'password'          => Hash::make('password'),
+                'password'          => 'password',
                 'email_verified_at' => now(),
             ],
         );
@@ -36,7 +35,7 @@ class DevSeeder extends Seeder
             ['email' => 'admin@example.com'],
             [
                 'name'              => 'Admin User',
-                'password'          => Hash::make('password'),
+                'password'          => 'password',
                 'email_verified_at' => now(),
                 'is_admin'          => true,
             ],
