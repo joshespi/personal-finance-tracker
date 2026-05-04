@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Asset;
+use App\Models\AssetPrice;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use App\Models\User;
@@ -89,6 +90,10 @@ class RealEstateAssetTypeTest extends TestCase
             'price_per_unit' => 90,
             'transacted_at'  => '2026-05-01',
         ]);
+
+        // Price is required so allocation['total'] > 0 and the legend/chart block renders.
+        // Without this the @if block is skipped and color-array bugs hide in tests.
+        AssetPrice::factory()->for($vnq)->create(['price' => 90]);
 
         $this->actingAs($user)
             ->get(route('dashboard'))
