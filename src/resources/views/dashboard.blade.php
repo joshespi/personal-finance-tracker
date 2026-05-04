@@ -168,14 +168,11 @@
                         <div class="flex flex-col sm:flex-row items-center gap-8">
                             <div class="w-64 h-64 shrink-0 relative"><canvas id="allocationDonut"></canvas></div>
                             <div class="space-y-2 text-sm">
-                                @php
-                                    $allocColors = ['#6366f1','#f97316','#8b5cf6','#10b981'];
-                                @endphp
                                 @foreach ($allocation['labels'] as $i => $label)
                                     @php $val = $allocation['values'][$i]; @endphp
                                     @if ($val > 0)
                                         <div class="flex items-center gap-3">
-                                            <span class="w-3 h-3 rounded-full shrink-0" style="background:{{ $allocColors[$i] }}"></span>
+                                            <span class="w-3 h-3 rounded-full shrink-0" style="background:{{ $allocation['colors'][$i] }}"></span>
                                             <span class="text-gray-700 dark:text-gray-300 w-28">{{ $label }}</span>
                                             <span class="font-mono text-gray-900 dark:text-gray-100">${{ number_format($val, 2) }}</span>
                                             <span class="text-gray-400 dark:text-gray-500">
@@ -592,7 +589,7 @@
                     type: 'pie',
                     data: {
                         labels: allocData.labels,
-                        datasets: [{ data: allocData.values, backgroundColor: ['#6366f1', '#f97316', '#8b5cf6', '#10b981'], borderWidth: 0 }],
+                        datasets: [{ data: allocData.values, backgroundColor: allocData.colors, borderWidth: 0 }],
                     },
                     options: {
                         responsive: true,

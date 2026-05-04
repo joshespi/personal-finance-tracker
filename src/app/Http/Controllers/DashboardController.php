@@ -145,6 +145,7 @@ class DashboardController extends Controller
 
         return [
             'labels' => ['Stocks', 'Crypto', 'Real Estate', 'Manual Assets'],
+            'colors' => ['#6366f1', '#f97316', '#8b5cf6', '#10b981'],
             'values' => [
                 round($stockValue, 2),
                 round($cryptoValue, 2),
