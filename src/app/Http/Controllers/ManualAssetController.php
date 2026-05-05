@@ -60,7 +60,8 @@ class ManualAssetController extends Controller
 
         $manualAsset->load([
             'portfolio',
-            'valuations' => fn ($q) => $q->orderByDesc('valued_at'),
+            'valuations'            => fn ($q) => $q->orderByDesc('valued_at'),
+            'liabilities.latestBalance',
         ]);
 
         return view('manual-assets.show', [

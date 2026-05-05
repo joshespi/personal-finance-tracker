@@ -83,6 +83,34 @@
                 </div>
             @endif
 
+            {{-- Linked Liabilities --}}
+            @if ($manualAsset->liabilities->isNotEmpty())
+                @php
+                    $totalDebt = $manualAsset->liabilities->sum(fn ($l) => $l->currentBalance());
+                    $equity    = $manualAsset->latestValuation ? (float) $manualAsset->latestValuation->value - $totalDebt : null;
+                @endphp
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">Linked Liabilities</h3>
+                    <div class="space-y-2">
+                        @foreach ($manualAsset->liabilities as $liability)
+                            <div class="flex items-center justify-between text-sm">
+                                <a href="{{ route('liabilities.show', $liability) }}"
+                                   class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $liability->name }}</a>
+                                <span class="font-mono text-gray-900 dark:text-gray-100">{{ number_format($liability->currentBalance(), 2) }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                    @if ($equity !== null)
+                        <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Equity</span>
+                            <span class="font-mono font-semibold {{ $equity >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                {{ number_format($equity, 2) }}
+                            </span>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
             {{-- Add Valuation --}}
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
                 <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">

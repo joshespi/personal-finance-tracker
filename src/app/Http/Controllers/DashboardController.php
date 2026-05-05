@@ -137,20 +137,28 @@ class DashboardController extends Controller
             };
         }
 
-        $manualValue = $portfolios->sum(
-            fn ($p) => $p->manualAssets->sum(fn ($ma) => $ma->currentValue())
-        );
+        $otherManualValue = 0.0;
+        foreach ($portfolios as $p) {
+            foreach ($p->manualAssets as $ma) {
+                $val = $ma->currentValue();
+                if ($ma->asset_class === 'real_estate') {
+                    $realEstateValue += $val;
+                } else {
+                    $otherManualValue += $val;
+                }
+            }
+        }
 
-        $total = $stockValue + $cryptoValue + $realEstateValue + $manualValue;
+        $total = $stockValue + $cryptoValue + $realEstateValue + $otherManualValue;
 
         return [
-            'labels' => ['Stocks', 'Crypto', 'Real Estate', 'Manual Assets'],
+            'labels' => ['Stocks', 'Crypto', 'Real Estate', 'Other Assets'],
             'colors' => ['#6366f1', '#f97316', '#8b5cf6', '#10b981'],
             'values' => [
                 round($stockValue, 2),
                 round($cryptoValue, 2),
                 round($realEstateValue, 2),
-                round($manualValue, 2),
+                round($otherManualValue, 2),
             ],
             'total'  => round($total, 2),
         ];

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Liability;
+use App\Models\LiabilityBalance;
 use App\Models\ManualAsset;
 use App\Models\ManualValuation;
 use App\Models\Portfolio;
@@ -101,6 +103,37 @@ class ManualAssetTest extends TestCase
         ManualValuation::factory()->for($asset)->create(['value' => 250000]);
 
         $this->assertSame(50000.0, $asset->fresh()->profitLoss());
+    }
+
+    public function test_show_page_displays_linked_liability_and_equity(): void
+    {
+        $asset     = ManualAsset::factory()->create(['asset_class' => 'real_estate']);
+        $liability = Liability::factory()->for($asset->portfolio->user)->create([
+            'name'            => 'Home Mortgage',
+            'liability_type'  => 'mortgage',
+            'manual_asset_id' => $asset->id,
+            'currency'        => 'USD',
+        ]);
+        LiabilityBalance::factory()->for($liability)->create(['balance' => 300000]);
+        ManualValuation::factory()->for($asset)->create(['value' => 500000]);
+
+        $this->actingAs($asset->portfolio->user)
+            ->get(route('manual-assets.show', $asset))
+            ->assertOk()
+            ->assertSee('Home Mortgage')
+            ->assertSee('300,000.00')
+            ->assertSee('Equity')
+            ->assertSee('200,000.00');
+    }
+
+    public function test_show_page_hides_liability_section_when_none_linked(): void
+    {
+        $asset = ManualAsset::factory()->create();
+
+        $this->actingAs($asset->portfolio->user)
+            ->get(route('manual-assets.show', $asset))
+            ->assertOk()
+            ->assertDontSee('Linked Liabilities');
     }
 
     public function test_show_page_displays_profit_loss(): void

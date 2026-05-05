@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Asset;
 use App\Models\AssetPrice;
+use App\Models\ManualAsset;
+use App\Models\ManualValuation;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use App\Models\User;
@@ -117,6 +119,40 @@ class RealEstateAssetTypeTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame(20, $portfolio->fresh()->target_real_estate_pct);
+    }
+
+    public function test_real_estate_manual_asset_rolls_into_real_estate_allocation_bucket(): void
+    {
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+        $asset     = ManualAsset::factory()->for($portfolio)->create(['asset_class' => 'real_estate']);
+        ManualValuation::factory()->for($asset)->create(['value' => 500000]);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertOk();
+        $allocation = $response->viewData('allocation');
+        $reIdx      = array_search('Real Estate', $allocation['labels']);
+        $otherIdx   = array_search('Other Assets', $allocation['labels']);
+        $this->assertSame(500000.0, $allocation['values'][$reIdx]);
+        $this->assertSame(0.0, $allocation['values'][$otherIdx]);
+    }
+
+    public function test_non_real_estate_manual_asset_stays_in_other_assets_bucket(): void
+    {
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+        $asset     = ManualAsset::factory()->for($portfolio)->create(['asset_class' => 'vehicle']);
+        ManualValuation::factory()->for($asset)->create(['value' => 25000]);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertOk();
+        $allocation = $response->viewData('allocation');
+        $reIdx    = array_search('Real Estate', $allocation['labels']);
+        $otherIdx = array_search('Other Assets', $allocation['labels']);
+        $this->assertSame(0.0, $allocation['values'][$reIdx]);
+        $this->assertSame(25000.0, $allocation['values'][$otherIdx]);
     }
 
     public function test_rebalancing_includes_real_estate_row(): void
