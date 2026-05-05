@@ -121,6 +121,14 @@ Cron entry for the scheduler:
 | Nginx (app) | 8080      |
 | MariaDB     | 3307      |
 
+## Tests
+
+Run the suite:
+
+```bash
+docker compose exec app php artisan test
+```
+
 ## Logging
 
 Logs ship to two destinations by default (`LOG_STACK=single,stderr`):

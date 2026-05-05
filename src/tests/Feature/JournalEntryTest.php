@@ -48,11 +48,12 @@ class JournalEntryTest extends TestCase
             ])
             ->assertRedirect(route('portfolios.journal.index', $portfolio));
 
-        $this->assertDatabaseHas('journal_entries', [
-            'portfolio_id' => $portfolio->id,
-            'title'        => 'Why I bought AAPL',
-            'entry_date'   => '2024-06-01',
-        ]);
+        $entry = JournalEntry::where('portfolio_id', $portfolio->id)
+            ->where('title', 'Why I bought AAPL')
+            ->first();
+
+        $this->assertNotNull($entry);
+        $this->assertSame('2024-06-01', $entry->entry_date->format('Y-m-d'));
     }
 
     public function test_create_entry_without_title(): void

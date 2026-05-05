@@ -77,7 +77,7 @@ class DevSeeder extends Seeder
 
             // Three buys, spread across the last year, cheaper further back.
             for ($n = 0; $n < 3; $n++) {
-                $date  = $today->subMonths(($n * 4) + $i)->toDateString();
+                $date  = $today->subMonths(($n * 4) + $i)->startOfDay()->toDateTimeString();
                 $price = round($row['price'] * (0.7 + ($n * 0.1)), 2);
                 $qty   = $row['type'] === 'crypto' ? 0.05 : 5;
 
@@ -116,11 +116,11 @@ class DevSeeder extends Seeder
         );
 
         ManualValuation::updateOrCreate(
-            ['manual_asset_id' => $home->id, 'valued_at' => CarbonImmutable::now()->subYear()->toDateString()],
+            ['manual_asset_id' => $home->id, 'valued_at' => CarbonImmutable::now()->subYear()->startOfDay()->toDateTimeString()],
             ['value' => 380000, 'notes' => 'Purchase appraisal'],
         );
         ManualValuation::updateOrCreate(
-            ['manual_asset_id' => $home->id, 'valued_at' => CarbonImmutable::now()->toDateString()],
+            ['manual_asset_id' => $home->id, 'valued_at' => CarbonImmutable::now()->startOfDay()->toDateTimeString()],
             ['value' => 410000, 'notes' => 'Recent estimate'],
         );
 
@@ -177,23 +177,23 @@ class DevSeeder extends Seeder
             $date = CarbonImmutable::now()->subMonths($month)->startOfMonth();
 
             CashTransaction::firstOrCreate(
-                ['cash_account_id' => $checking->id, 'occurred_at' => $date->addDays(0)->toDateString(), 'description' => 'Paycheck'],
+                ['cash_account_id' => $checking->id, 'occurred_at' => $date->addDays(0)->startOfDay()->toDateTimeString(), 'description' => 'Paycheck'],
                 ['type' => 'deposit', 'amount' => 4200],
             );
             CashTransaction::firstOrCreate(
-                ['cash_account_id' => $checking->id, 'occurred_at' => $date->addDays(14)->toDateString(), 'description' => 'Paycheck'],
+                ['cash_account_id' => $checking->id, 'occurred_at' => $date->addDays(14)->startOfDay()->toDateTimeString(), 'description' => 'Paycheck'],
                 ['type' => 'deposit', 'amount' => 4200],
             );
             CashTransaction::firstOrCreate(
-                ['cash_account_id' => $checking->id, 'occurred_at' => $date->addDays(2)->toDateString(), 'description' => 'Rent'],
+                ['cash_account_id' => $checking->id, 'occurred_at' => $date->addDays(2)->startOfDay()->toDateTimeString(), 'description' => 'Rent'],
                 ['type' => 'withdrawal', 'amount' => 1850],
             );
             CashTransaction::firstOrCreate(
-                ['cash_account_id' => $checking->id, 'occurred_at' => $date->addDays(20)->toDateString(), 'description' => 'Groceries + dining'],
+                ['cash_account_id' => $checking->id, 'occurred_at' => $date->addDays(20)->startOfDay()->toDateTimeString(), 'description' => 'Groceries + dining'],
                 ['type' => 'withdrawal', 'amount' => 950],
             );
             CashTransaction::firstOrCreate(
-                ['cash_account_id' => $savings->id, 'occurred_at' => $date->addDays(15)->toDateString(), 'description' => 'Transfer to savings'],
+                ['cash_account_id' => $savings->id, 'occurred_at' => $date->addDays(15)->startOfDay()->toDateTimeString(), 'description' => 'Transfer to savings'],
                 ['type' => 'deposit', 'amount' => 1000],
             );
         }
@@ -221,11 +221,11 @@ class DevSeeder extends Seeder
                 $date = CarbonImmutable::now()->subMonths($month)->startOfMonth();
 
                 EnvelopeTransaction::firstOrCreate(
-                    ['envelope_id' => $env->id, 'occurred_at' => $date->toDateString(), 'type' => 'fund'],
+                    ['envelope_id' => $env->id, 'occurred_at' => $date->startOfDay()->toDateTimeString(), 'type' => 'fund'],
                     ['amount' => $row['monthly_target'], 'description' => 'Monthly fund'],
                 );
                 EnvelopeTransaction::firstOrCreate(
-                    ['envelope_id' => $env->id, 'occurred_at' => $date->addDays(15)->toDateString(), 'type' => 'spend'],
+                    ['envelope_id' => $env->id, 'occurred_at' => $date->addDays(15)->startOfDay()->toDateTimeString(), 'type' => 'spend'],
                     ['amount' => $row['spend'], 'description' => $row['name'].' spend'],
                 );
             }
