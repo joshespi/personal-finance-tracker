@@ -12,10 +12,16 @@ class ManualAsset extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['portfolio_id', 'name', 'description', 'asset_class', 'cost_basis', 'currency'];
+    protected $fillable = [
+        'portfolio_id', 'name', 'description', 'asset_class', 'cost_basis', 'currency',
+        'tracking_method', 'proxy_asset_id', 'anchor_value', 'anchor_date', 'anchor_synthetic_shares',
+    ];
 
     protected $casts = [
-        'cost_basis' => 'decimal:2',
+        'cost_basis'              => 'decimal:2',
+        'anchor_value'            => 'decimal:2',
+        'anchor_date'             => 'date',
+        'anchor_synthetic_shares' => 'decimal:8',
     ];
 
     public function profitLoss(): ?float
@@ -47,8 +53,21 @@ class ManualAsset extends Model
         return $this->hasMany(Liability::class);
     }
 
+    public function proxyAsset(): BelongsTo
+    {
+        return $this->belongsTo(Asset::class, 'proxy_asset_id');
+    }
+
     public function currentValue(): float
     {
+        if ($this->tracking_method === 'proxy_ticker') {
+            $price = $this->proxyAsset?->latestPrice?->price;
+            if ($price !== null && $this->anchor_synthetic_shares !== null) {
+                return round((float) $this->anchor_synthetic_shares * (float) $price, 2);
+            }
+            return (float) ($this->anchor_value ?? 0.0);
+        }
+
         return $this->latestValuation ? (float) $this->latestValuation->value : 0.0;
     }
 }

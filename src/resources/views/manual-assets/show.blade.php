@@ -47,12 +47,28 @@
                 </div>
             @endif
 
-            @if ($manualAsset->cost_basis !== null || $manualAsset->latestValuation)
+            @if ($manualAsset->tracking_method === 'proxy_ticker')
+                <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 sm:rounded-lg p-4 text-sm">
+                    <p class="font-medium text-indigo-700 dark:text-indigo-300">Proxy-tracked via {{ $manualAsset->proxyAsset?->symbol ?? '—' }}</p>
+                    <p class="mt-1 text-indigo-600 dark:text-indigo-400">
+                        Anchor: {{ $manualAsset->anchor_value ? number_format((float) $manualAsset->anchor_value, 2) : '—' }}
+                        on {{ $manualAsset->anchor_date?->format('M j, Y') ?? '—' }}
+                        @if ($manualAsset->anchor_synthetic_shares)
+                            &bull; {{ number_format((float) $manualAsset->anchor_synthetic_shares, 4) }} synthetic shares
+                        @endif
+                    </p>
+                    @unless($manualAsset->proxyAsset?->latestPrice)
+                        <p class="mt-1 text-amber-600 dark:text-amber-400">No current price for {{ $manualAsset->proxyAsset?->symbol }}. Run the price fetch or add a transaction for this ticker to seed prices.</p>
+                    @endunless
+                </div>
+            @endif
+
+            @if ($manualAsset->cost_basis !== null || $manualAsset->latestValuation || $manualAsset->tracking_method === 'proxy_ticker')
                 @php
-                    $cost   = $manualAsset->cost_basis !== null ? (float) $manualAsset->cost_basis : null;
-                    $value  = $manualAsset->latestValuation ? (float) $manualAsset->latestValuation->value : null;
-                    $pl     = $manualAsset->profitLoss();
-                    $plPct  = ($pl !== null && $cost > 0) ? ($pl / $cost) * 100 : null;
+                    $cost      = $manualAsset->cost_basis !== null ? (float) $manualAsset->cost_basis : null;
+                    $value     = $manualAsset->currentValue() ?: null;
+                    $pl        = ($cost !== null && $value !== null) ? $value - $cost : null;
+                    $plPct     = ($pl !== null && $cost > 0) ? ($pl / $cost) * 100 : null;
                 @endphp
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
@@ -86,8 +102,9 @@
             {{-- Linked Liabilities --}}
             @if ($manualAsset->liabilities->isNotEmpty())
                 @php
-                    $totalDebt = $manualAsset->liabilities->sum(fn ($l) => $l->currentBalance());
-                    $equity    = $manualAsset->latestValuation ? (float) $manualAsset->latestValuation->value - $totalDebt : null;
+                    $totalDebt  = $manualAsset->liabilities->sum(fn ($l) => $l->currentBalance());
+                    $assetValue = $manualAsset->currentValue();
+                    $equity     = $assetValue > 0 ? $assetValue - $totalDebt : null;
                 @endphp
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">Linked Liabilities</h3>
@@ -104,7 +121,7 @@
                         <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
                             <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Equity</span>
                             <span class="font-mono font-semibold {{ $equity >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
-                                {{ number_format($equity, 2) }}
+                                {{ number_format((float) $equity, 2) }}
                             </span>
                         </div>
                     @endif

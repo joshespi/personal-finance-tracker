@@ -13,7 +13,7 @@ class DashboardController extends Controller
     {
         $portfolios = $request->user()
             ->portfolios()
-            ->with(['transactions.asset.latestPrice', 'manualAssets.latestValuation'])
+            ->with(['transactions.asset.latestPrice', 'manualAssets.latestValuation', 'manualAssets.proxyAsset.latestPrice'])
             ->get();
 
         // All snapshot history (no date limit — let the frontend filter by range)

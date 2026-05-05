@@ -14,7 +14,7 @@ class SnapshotPortfolios extends Command
     public function handle(): int
     {
         $today      = now()->toDateString();
-        $portfolios = Portfolio::with(['transactions.asset.latestPrice', 'manualAssets.latestValuation'])->get();
+        $portfolios = Portfolio::with(['transactions.asset.latestPrice', 'manualAssets.latestValuation', 'manualAssets.proxyAsset.latestPrice'])->get();
 
         if ($portfolios->isEmpty()) {
             $this->info('No portfolios found.');

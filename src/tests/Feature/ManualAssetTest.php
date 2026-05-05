@@ -2,12 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Asset;
+use App\Models\AssetPrice;
 use App\Models\Liability;
 use App\Models\LiabilityBalance;
 use App\Models\ManualAsset;
 use App\Models\ManualValuation;
 use App\Models\Portfolio;
-use App\Models\User;
 use Tests\TestCase;
 
 class ManualAssetTest extends TestCase
@@ -146,5 +147,85 @@ class ManualAssetTest extends TestCase
             ->assertOk()
             ->assertSee('Profit / Loss')
             ->assertSee('+50,000.00');
+    }
+
+    public function test_can_create_proxy_tracked_asset(): void
+    {
+        $portfolio  = Portfolio::factory()->create();
+        $proxyAsset = Asset::factory()->create(['symbol' => 'IWB']);
+        AssetPrice::factory()->for($proxyAsset)->create(['price' => 100.00, 'recorded_at' => '2026-01-01 00:00:00']);
+
+        $this->actingAs($portfolio->user)
+            ->post(route('portfolios.manual-assets.store', $portfolio), [
+                'name'            => 'My 401k',
+                'asset_class'     => 'other',
+                'currency'        => 'USD',
+                'tracking_method' => 'proxy_ticker',
+                'proxy_symbol'    => 'IWB',
+                'anchor_value'    => 50000,
+                'anchor_date'     => '2026-01-01',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('manual_assets', [
+            'name'            => 'My 401k',
+            'tracking_method' => 'proxy_ticker',
+            'proxy_asset_id'  => $proxyAsset->id,
+            'anchor_value'    => 50000,
+        ]);
+    }
+
+    public function test_current_value_computed_from_proxy_price(): void
+    {
+        $proxyAsset = Asset::factory()->create(['symbol' => 'IWB']);
+        $asset      = ManualAsset::factory()->proxyTracked($proxyAsset, 50000.0, '2026-01-01', 500.0)->create();
+        AssetPrice::factory()->for($proxyAsset)->create(['price' => 110.00, 'recorded_at' => now()]);
+
+        $asset->load('proxyAsset.latestPrice');
+
+        $this->assertSame(55000.0, $asset->currentValue());
+    }
+
+    public function test_current_value_falls_back_to_anchor_when_no_proxy_price(): void
+    {
+        $proxyAsset = Asset::factory()->create(['symbol' => 'IWB']);
+        $asset      = ManualAsset::factory()->proxyTracked($proxyAsset, 50000.0, '2026-01-01', 500.0)->create();
+
+        $asset->load('proxyAsset.latestPrice');
+
+        $this->assertSame(50000.0, $asset->currentValue());
+    }
+
+    public function test_proxy_asset_auto_created_when_symbol_unknown(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+
+        $this->actingAs($portfolio->user)
+            ->post(route('portfolios.manual-assets.store', $portfolio), [
+                'name'            => 'My 401k',
+                'asset_class'     => 'other',
+                'currency'        => 'USD',
+                'tracking_method' => 'proxy_ticker',
+                'proxy_symbol'    => 'NEWPRXY',
+                'anchor_value'    => 20000,
+                'anchor_date'     => '2026-01-01',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('assets', ['symbol' => 'NEWPRXY', 'asset_type' => 'stock']);
+    }
+
+    public function test_proxy_tracking_fields_required_when_method_is_proxy_ticker(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+
+        $this->actingAs($portfolio->user)
+            ->post(route('portfolios.manual-assets.store', $portfolio), [
+                'name'            => 'My 401k',
+                'asset_class'     => 'other',
+                'currency'        => 'USD',
+                'tracking_method' => 'proxy_ticker',
+            ])
+            ->assertSessionHasErrors(['proxy_symbol', 'anchor_value', 'anchor_date']);
     }
 }

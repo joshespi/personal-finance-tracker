@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Asset;
+use App\Models\AssetPrice;
 use App\Models\ManualAsset;
 use App\Models\Portfolio;
 use Illuminate\Http\RedirectResponse;
@@ -42,14 +44,23 @@ class ManualAssetController extends Controller
         abort_unless($portfolio->user_id === $request->user()->id, 403);
 
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:200'],
-            'description' => ['nullable', 'string', 'max:1000'],
-            'asset_class' => ['required', 'in:' . implode(',', array_keys(self::ASSET_CLASSES))],
-            'cost_basis'  => ['nullable', 'numeric', 'min:0'],
-            'currency'    => ['required', 'string', 'size:3'],
+            'name'             => ['required', 'string', 'max:200'],
+            'description'      => ['nullable', 'string', 'max:1000'],
+            'asset_class'      => ['required', 'in:' . implode(',', array_keys(self::ASSET_CLASSES))],
+            'cost_basis'       => ['nullable', 'numeric', 'min:0'],
+            'currency'         => ['required', 'string', 'size:3'],
+            'tracking_method'  => ['nullable', 'in:static,proxy_ticker'],
+            'proxy_symbol'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'string', 'max:20'],
+            'anchor_value'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'numeric', 'gt:0'],
+            'anchor_date'      => ['required_if:tracking_method,proxy_ticker', 'nullable', 'date'],
         ]);
 
-        $asset = $portfolio->manualAssets()->create($validated);
+        $validated['tracking_method'] ??= 'static';
+
+        $asset = $portfolio->manualAssets()->create(array_merge(
+            array_diff_key($validated, ['proxy_symbol' => null]),
+            $this->resolveProxyData($validated)
+        ));
 
         return redirect()->route('manual-assets.show', $asset)->with('success', 'Asset created.');
     }
@@ -61,6 +72,8 @@ class ManualAssetController extends Controller
         $manualAsset->load([
             'portfolio',
             'valuations'            => fn ($q) => $q->orderByDesc('valued_at'),
+            'latestValuation',
+            'proxyAsset.latestPrice',
             'liabilities.latestBalance',
         ]);
 
@@ -74,7 +87,7 @@ class ManualAssetController extends Controller
     {
         abort_unless($manualAsset->portfolio->user_id === $request->user()->id, 403);
 
-        $manualAsset->load('portfolio');
+        $manualAsset->load(['portfolio', 'proxyAsset']);
 
         return view('manual-assets.edit', [
             'manualAsset'  => $manualAsset,
@@ -88,14 +101,23 @@ class ManualAssetController extends Controller
         abort_unless($manualAsset->portfolio->user_id === $request->user()->id, 403);
 
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:200'],
-            'description' => ['nullable', 'string', 'max:1000'],
-            'asset_class' => ['required', 'in:' . implode(',', array_keys(self::ASSET_CLASSES))],
-            'cost_basis'  => ['nullable', 'numeric', 'min:0'],
-            'currency'    => ['required', 'string', 'size:3'],
+            'name'             => ['required', 'string', 'max:200'],
+            'description'      => ['nullable', 'string', 'max:1000'],
+            'asset_class'      => ['required', 'in:' . implode(',', array_keys(self::ASSET_CLASSES))],
+            'cost_basis'       => ['nullable', 'numeric', 'min:0'],
+            'currency'         => ['required', 'string', 'size:3'],
+            'tracking_method'  => ['nullable', 'in:static,proxy_ticker'],
+            'proxy_symbol'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'string', 'max:20'],
+            'anchor_value'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'numeric', 'gt:0'],
+            'anchor_date'      => ['required_if:tracking_method,proxy_ticker', 'nullable', 'date'],
         ]);
 
-        $manualAsset->update($validated);
+        $validated['tracking_method'] ??= 'static';
+
+        $manualAsset->update(array_merge(
+            array_diff_key($validated, ['proxy_symbol' => null]),
+            $this->resolveProxyData($validated)
+        ));
 
         return redirect()->route('manual-assets.show', $manualAsset)->with('success', 'Asset updated.');
     }
@@ -110,5 +132,37 @@ class ManualAssetController extends Controller
         return redirect()
             ->route('portfolios.manual-assets.index', $portfolioId)
             ->with('success', 'Asset deleted.');
+    }
+
+    private function resolveProxyData(array $validated): array
+    {
+        if (($validated['tracking_method'] ?? 'static') !== 'proxy_ticker') {
+            return [
+                'proxy_asset_id'          => null,
+                'anchor_value'            => null,
+                'anchor_date'             => null,
+                'anchor_synthetic_shares' => null,
+            ];
+        }
+
+        $symbol     = strtoupper(trim($validated['proxy_symbol']));
+        $proxyAsset = Asset::firstOrCreate(
+            ['symbol' => $symbol],
+            ['name' => $symbol, 'asset_type' => 'stock']
+        );
+
+        $proxyPrice = AssetPrice::where('asset_id', $proxyAsset->id)
+            ->where('recorded_at', '<=', $validated['anchor_date'] . ' 23:59:59')
+            ->orderByDesc('recorded_at')
+            ->value('price');
+
+        return [
+            'proxy_asset_id'          => $proxyAsset->id,
+            'anchor_value'            => $validated['anchor_value'],
+            'anchor_date'             => $validated['anchor_date'],
+            'anchor_synthetic_shares' => ($proxyPrice && $proxyPrice > 0)
+                ? (float) $validated['anchor_value'] / (float) $proxyPrice
+                : null,
+        ];
     }
 }

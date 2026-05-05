@@ -18,7 +18,7 @@
                         <x-input-label for="name" value="Asset Name" />
                         <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
                                       :value="old('name')" required autofocus maxlength="200"
-                                      placeholder="123 Main Street" />
+                                      placeholder="My 401k" />
                         <x-input-error :messages="$errors->get('name')" class="mt-2" />
                     </div>
 
@@ -55,6 +55,55 @@
                                       :value="old('currency', $portfolio->currency)" required maxlength="3"
                                       placeholder="USD" style="text-transform:uppercase" />
                         <x-input-error :messages="$errors->get('currency')" class="mt-2" />
+                    </div>
+
+                    {{-- Valuation method --}}
+                    <div x-data="{ tracking: '{{ old('tracking_method', 'static') }}' }">
+                        <x-input-label value="Valuation Method" />
+                        <div class="mt-2 flex gap-6">
+                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                <input type="radio" name="tracking_method" value="static" x-model="tracking"
+                                       class="border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                                Static (record valuations manually)
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                <input type="radio" name="tracking_method" value="proxy_ticker" x-model="tracking"
+                                       class="border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                                Proxy ticker (auto-priced)
+                            </label>
+                        </div>
+
+                        <div x-show="tracking === 'proxy_ticker'" x-cloak
+                             class="mt-4 p-4 border border-indigo-200 dark:border-indigo-700 rounded-md space-y-4">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Current value will scale with the proxy ticker price relative to your anchor. Re-anchor whenever you get a real statement.
+                            </p>
+
+                            <div>
+                                <x-input-label for="proxy_symbol" value="Proxy Ticker" />
+                                <x-text-input id="proxy_symbol" name="proxy_symbol" type="text" class="mt-1 block w-32"
+                                              :value="old('proxy_symbol')" maxlength="20" placeholder="IWB"
+                                              style="text-transform:uppercase" />
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">ETF or index that tracks this asset's benchmark (e.g. IWB for Russell 1000).</p>
+                                <x-input-error :messages="$errors->get('proxy_symbol')" class="mt-2" />
+                            </div>
+
+                            <div class="flex flex-wrap gap-4">
+                                <div>
+                                    <x-input-label for="anchor_value" value="Anchor Value" />
+                                    <x-text-input id="anchor_value" name="anchor_value" type="number" class="mt-1 block w-40"
+                                                  :value="old('anchor_value')" min="0" step="any" placeholder="50000.00" />
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Your actual account balance on the anchor date.</p>
+                                    <x-input-error :messages="$errors->get('anchor_value')" class="mt-2" />
+                                </div>
+                                <div>
+                                    <x-input-label for="anchor_date" value="Anchor Date" />
+                                    <x-text-input id="anchor_date" name="anchor_date" type="date" class="mt-1 block w-40"
+                                                  :value="old('anchor_date', now()->format('Y-m-d'))" />
+                                    <x-input-error :messages="$errors->get('anchor_date')" class="mt-2" />
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-4">
