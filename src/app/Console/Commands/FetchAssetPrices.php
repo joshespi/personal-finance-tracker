@@ -16,7 +16,11 @@ class FetchAssetPrices extends Command
 
     public function handle(): int
     {
-        $assets = Asset::whereHas('transactions')->get();
+        $proxyIds = \App\Models\ManualAsset::whereNotNull('proxy_asset_id')->pluck('proxy_asset_id');
+
+        $assets = Asset::where(function ($q) use ($proxyIds) {
+            $q->whereHas('transactions')->orWhereIn('id', $proxyIds);
+        })->get();
 
         if ($assets->isEmpty()) {
             $this->info('No assets with transactions found.');
