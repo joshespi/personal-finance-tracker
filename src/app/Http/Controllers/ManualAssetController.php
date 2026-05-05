@@ -14,6 +14,9 @@ class ManualAssetController extends Controller
 {
     public const ASSET_CLASSES = [
         'real_estate' => 'Real Estate',
+        'stock'       => 'Stocks / Index Fund',
+        'bond'        => 'Bond Fund',
+        'crypto'      => 'Crypto Fund',
         'vehicle'     => 'Vehicle',
         'collectible' => 'Collectible',
         'business'    => 'Business',

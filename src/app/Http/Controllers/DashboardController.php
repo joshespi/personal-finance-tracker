@@ -143,11 +143,13 @@ class DashboardController extends Controller
         foreach ($portfolios as $p) {
             foreach ($p->manualAssets as $ma) {
                 $val = $ma->currentValue();
-                if ($ma->asset_class === 'real_estate') {
-                    $realEstateValue += $val;
-                } else {
-                    $otherManualValue += $val;
-                }
+                match ($ma->asset_class) {
+                    'real_estate' => $realEstateValue += $val,
+                    'stock'       => $stockValue      += $val,
+                    'bond'        => $bondValue        += $val,
+                    'crypto'      => $cryptoValue      += $val,
+                    default       => $otherManualValue += $val,
+                };
             }
         }
 
