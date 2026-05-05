@@ -30,4 +30,9 @@ class AssetFactory extends Factory
     {
         return $this->state(['asset_type' => 'crypto']);
     }
+
+    public function bond(): static
+    {
+        return $this->state(['asset_type' => 'bond']);
+    }
 }

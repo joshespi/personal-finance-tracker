@@ -58,6 +58,12 @@
                                               min="0" max="100" step="1" />
                             </div>
                             <div>
+                                <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Bonds %</label>
+                                <x-text-input name="target_bond_pct" type="number" class="mt-1 block w-full"
+                                              :value="old('target_bond_pct', $portfolio->target_bond_pct)"
+                                              min="0" max="100" step="1" />
+                            </div>
+                            <div>
                                 <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Manual Assets %</label>
                                 <x-text-input name="target_manual_pct" type="number" class="mt-1 block w-full"
                                               :value="old('target_manual_pct', $portfolio->target_manual_pct)"

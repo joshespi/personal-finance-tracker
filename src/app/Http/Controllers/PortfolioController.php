@@ -108,6 +108,7 @@ class PortfolioController extends Controller
             'target_stock_pct'       => ['nullable', 'integer', 'min:0', 'max:100'],
             'target_crypto_pct'      => ['nullable', 'integer', 'min:0', 'max:100'],
             'target_real_estate_pct' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'target_bond_pct'        => ['nullable', 'integer', 'min:0', 'max:100'],
             'target_manual_pct'      => ['nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
@@ -118,6 +119,7 @@ class PortfolioController extends Controller
             'target_stock_pct'       => $validated['target_stock_pct'] ?? 0,
             'target_crypto_pct'      => $validated['target_crypto_pct'] ?? 0,
             'target_real_estate_pct' => $validated['target_real_estate_pct'] ?? 0,
+            'target_bond_pct'        => $validated['target_bond_pct'] ?? 0,
             'target_manual_pct'      => $validated['target_manual_pct'] ?? 0,
         ]);
 
@@ -162,6 +164,7 @@ class PortfolioController extends Controller
             'stock'       => $portfolio->target_stock_pct,
             'crypto'      => $portfolio->target_crypto_pct,
             'real_estate' => $portfolio->target_real_estate_pct,
+            'bond'        => $portfolio->target_bond_pct,
             'manual'      => $portfolio->target_manual_pct,
         ];
 
@@ -173,12 +176,14 @@ class PortfolioController extends Controller
         $stockValue      = $holdings->where(fn ($h) => $h['asset']->asset_type === 'stock')->sum('effective_value');
         $cryptoValue     = $holdings->where(fn ($h) => $h['asset']->asset_type === 'crypto')->sum('effective_value');
         $realEstateValue = $holdings->where(fn ($h) => $h['asset']->asset_type === 'real_estate')->sum('effective_value');
+        $bondValue       = $holdings->where(fn ($h) => $h['asset']->asset_type === 'bond')->sum('effective_value');
         $manualValue     = $portfolio->manualAssets->sum(fn ($ma) => $ma->currentValue());
 
         $current = [
             'stock'       => round($stockValue, 2),
             'crypto'      => round($cryptoValue, 2),
             'real_estate' => round($realEstateValue, 2),
+            'bond'        => round($bondValue, 2),
             'manual'      => round($manualValue, 2),
         ];
 
@@ -193,6 +198,7 @@ class PortfolioController extends Controller
             'stock'       => 'Stocks',
             'crypto'      => 'Crypto',
             'real_estate' => 'Real Estate',
+            'bond'        => 'Bonds',
             'manual'      => 'Manual Assets',
         ];
 

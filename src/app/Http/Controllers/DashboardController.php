@@ -127,12 +127,14 @@ class DashboardController extends Controller
         $stockValue      = 0.0;
         $cryptoValue     = 0.0;
         $realEstateValue = 0.0;
+        $bondValue       = 0.0;
 
         foreach ($allHoldings as $h) {
             $val = $h['effective_value'];
             match ($h['asset']->asset_type) {
                 'crypto'      => $cryptoValue     += $val,
                 'real_estate' => $realEstateValue += $val,
+                'bond'        => $bondValue        += $val,
                 default       => $stockValue      += $val,
             };
         }
@@ -149,15 +151,16 @@ class DashboardController extends Controller
             }
         }
 
-        $total = $stockValue + $cryptoValue + $realEstateValue + $otherManualValue;
+        $total = $stockValue + $cryptoValue + $realEstateValue + $bondValue + $otherManualValue;
 
         return [
-            'labels' => ['Stocks', 'Crypto', 'Real Estate', 'Other Assets'],
-            'colors' => ['#6366f1', '#f97316', '#8b5cf6', '#10b981'],
+            'labels' => ['Stocks', 'Crypto', 'Real Estate', 'Bonds', 'Other Assets'],
+            'colors' => ['#6366f1', '#f97316', '#8b5cf6', '#eab308', '#10b981'],
             'values' => [
                 round($stockValue, 2),
                 round($cryptoValue, 2),
                 round($realEstateValue, 2),
+                round($bondValue, 2),
                 round($otherManualValue, 2),
             ],
             'total'  => round($total, 2),

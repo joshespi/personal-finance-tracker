@@ -24,7 +24,7 @@ class FetchAssetPrices extends Command
         }
 
         $cryptos = $assets->where('asset_type', 'crypto');
-        $stocks  = $assets->whereIn('asset_type', ['stock', 'real_estate']);
+        $stocks  = $assets->whereIn('asset_type', ['stock', 'real_estate', 'bond']);
 
         $this->info('Fetching prices...');
 

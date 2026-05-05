@@ -57,6 +57,7 @@
                                 <option value="crypto" @selected(old('asset_type', 'crypto') === 'crypto')>Crypto</option>
                                 <option value="stock"  @selected(old('asset_type') === 'stock')>Stock</option>
                                 <option value="real_estate" @selected(old('asset_type') === 'real_estate')>Real Estate</option>
+                                <option value="bond" @selected(old('asset_type') === 'bond')>Bond</option>
                             </select>
                             <x-input-error :messages="$errors->get('asset_type')" class="mt-2" />
                         </div>

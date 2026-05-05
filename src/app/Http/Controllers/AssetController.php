@@ -11,7 +11,7 @@ class AssetController extends Controller
     public function reclassify(Request $request, Asset $asset): RedirectResponse
     {
         $request->validate([
-            'asset_type' => ['required', 'in:stock,crypto,real_estate'],
+            'asset_type' => ['required', 'in:stock,crypto,real_estate,bond'],
         ]);
 
         $type = $request->input('asset_type');

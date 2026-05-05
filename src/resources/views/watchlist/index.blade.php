@@ -57,6 +57,7 @@
                             <option value="stock">Stock</option>
                             <option value="crypto">Crypto</option>
                             <option value="real_estate">Real Estate</option>
+                            <option value="bond">Bond</option>
                         </select>
                     </div>
 
@@ -108,6 +109,7 @@
                                                 $typeClass = match ($item->asset_type) {
                                                     'crypto'      => 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300',
                                                     'real_estate' => 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300',
+                                                    'bond'        => 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300',
                                                     default       => 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
                                                 };
                                                 $typeLabel = $item->asset_type === 'real_estate' ? 'Real Estate' : ucfirst($item->asset_type);

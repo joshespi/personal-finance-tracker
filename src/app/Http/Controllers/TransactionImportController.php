@@ -67,7 +67,7 @@ class TransactionImportController extends Controller
             $v = Validator::make($data, [
                 'date'           => ['required', 'date_format:Y-m-d'],
                 'symbol'         => ['required', 'string', 'max:20'],
-                'asset_type'     => ['required', Rule::in(['stock', 'crypto', 'real_estate'])],
+                'asset_type'     => ['required', Rule::in(['stock', 'crypto', 'real_estate', 'bond'])],
                 'type'           => ['required', Rule::in(self::VALID_TYPES)],
                 'quantity'       => ['required', 'numeric', 'gt:0'],
                 'price_per_unit' => ['required', 'numeric', 'gte:0'],

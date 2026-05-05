@@ -155,6 +155,7 @@
                                     $legendColor = match ($h['type']) {
                                         'crypto'      => 'text-orange-500',
                                         'real_estate' => 'text-emerald-500',
+                                        'bond'        => 'text-yellow-500',
                                         default       => 'text-blue-500',
                                     };
                                     $legendLabel = $h['type'] === 'real_estate' ? 'Real Estate' : ucfirst($h['type']);
@@ -286,10 +287,13 @@
                                                             ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
                                                             : (h.asset_type === 'real_estate'
                                                                 ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                                                                : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300')">
+                                                                : (h.asset_type === 'bond'
+                                                                    ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300'
+                                                                    : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'))">
                                                     <option value="stock"       :selected="h.asset_type === 'stock'">Stock</option>
                                                     <option value="crypto"      :selected="h.asset_type === 'crypto'">Crypto</option>
                                                     <option value="real_estate" :selected="h.asset_type === 'real_estate'">Real Estate</option>
+                                                    <option value="bond"        :selected="h.asset_type === 'bond'">Bond</option>
                                                 </select>
                                             </form>
                                         </td>
