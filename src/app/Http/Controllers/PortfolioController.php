@@ -8,6 +8,7 @@ use App\Services\BenchmarkService;
 use App\Services\RealizedGainService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class PortfolioController extends Controller
@@ -61,7 +62,6 @@ class PortfolioController extends Controller
             ])
             ->values();
 
-        // All snapshot history for chart (no date cap — frontend filters by range)
         $chartData = $portfolio->snapshots
             ->sortBy('recorded_on')
             ->map(fn ($s) => [
@@ -70,19 +70,11 @@ class PortfolioController extends Controller
                 'cost'  => round((float) $s->cost_basis, 2),
             ])->values();
 
-        // Realized P&L (FIFO)
         $realizedGains = (new RealizedGainService())->compute($portfolio);
-
-        // Time-weighted return
-        $twr = (new RealizedGainService())->computeTwr($portfolio);
-
+        $twr           = (new RealizedGainService())->computeTwr($portfolio);
         $benchmarkData = (new BenchmarkService())->all();
-
-        // Asset allocation for donut
-        $allocation = $this->buildAllocation($holdings, $portfolio);
-
-        // Rebalancing suggestion
-        $rebalancing = $this->buildRebalancing($holdings, $portfolio);
+        $allocation    = $this->buildAllocation($holdings, $portfolio);
+        $rebalancing   = $this->buildRebalancing($holdings, $portfolio);
 
         return view('portfolios.show', compact(
             'portfolio', 'holdings', 'incomeByAsset', 'chartData',
@@ -139,7 +131,7 @@ class PortfolioController extends Controller
         return redirect()->route('portfolios.index')->with('success', 'Portfolio deleted.');
     }
 
-    private function buildAllocation($holdings, Portfolio $portfolio): array
+    private function buildAllocation(Collection $holdings, Portfolio $portfolio): array
     {
         $byHolding = $holdings->map(fn ($h) => [
             'symbol' => $h['asset']->symbol,
@@ -158,7 +150,7 @@ class PortfolioController extends Controller
         ];
     }
 
-    private function buildRebalancing($holdings, Portfolio $portfolio): array
+    private function buildRebalancing(Collection $holdings, Portfolio $portfolio): array
     {
         $targets = [
             'stock'       => $portfolio->target_stock_pct,

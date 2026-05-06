@@ -14,7 +14,6 @@ class TaxSummaryController extends Controller
         $service   = new RealizedGainService();
         $portfolios = $user->portfolios()->with('transactions.asset')->get();
 
-        // Aggregate lots across all portfolios
         $allLots = collect();
 
         foreach ($portfolios as $portfolio) {
@@ -25,7 +24,6 @@ class TaxSummaryController extends Controller
             }));
         }
 
-        // Group by tax year, then split short/long term (>= 365 days = long)
         $byYear = $allLots
             ->groupBy(fn ($l) => $l['sell_date']->year)
             ->map(function ($lots, $year) {
@@ -44,7 +42,7 @@ class TaxSummaryController extends Controller
             ->sortKeysDesc()
             ->values();
 
-        $selectedYear = (int) $request->get('year', now()->year);
+        $selectedYear = (int) $request->input('year', now()->year);
         $yearDetail   = $byYear->firstWhere('year', $selectedYear);
 
         return view('tax.summary', compact('byYear', 'selectedYear', 'yearDetail'));

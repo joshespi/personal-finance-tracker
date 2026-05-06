@@ -64,6 +64,6 @@ class PortfolioTransferController extends Controller
 
         return redirect()
             ->route('dashboard')
-            ->with('success', "Transfer of {} recorded.");
+            ->with('success', 'Transfer recorded.');
     }
 }

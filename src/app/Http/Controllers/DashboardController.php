@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PortfolioSnapshot;
 use App\Services\BenchmarkService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -16,7 +17,6 @@ class DashboardController extends Controller
             ->with(['transactions.asset.latestPrice', 'manualAssets.latestValuation', 'manualAssets.proxyAsset.latestPrice'])
             ->get();
 
-        // All snapshot history (no date limit — let the frontend filter by range)
         $rawSnapshots = PortfolioSnapshot::whereIn('portfolio_id', $portfolios->pluck('id'))
             ->orderBy('recorded_on')
             ->get(['portfolio_id', 'recorded_on', 'market_value', 'manual_value', 'cost_basis'])
@@ -36,7 +36,6 @@ class DashboardController extends Controller
 
         $benchmarkData = (new BenchmarkService())->all();
 
-        // Compute per-portfolio holdings once and reuse
         $portfolioHoldings = $portfolios->map(fn ($p) => [
             'portfolio' => $p,
             'holdings'  => $p->computeHoldings(),
@@ -81,7 +80,6 @@ class DashboardController extends Controller
             'net_worth'    => round($totalAssets - $totalDebt, 2),
         ];
 
-        // Aggregate holdings across all portfolios by asset symbol
         $allHoldings = $portfolioHoldings
             ->flatMap(fn ($ph) => $ph['holdings']->all())
             ->groupBy(fn ($h) => $h['asset']->symbol)
@@ -114,7 +112,6 @@ class DashboardController extends Controller
             return $h;
         });
 
-        // Asset allocation breakdown for donut chart
         $allocation = $this->buildAllocation($allHoldings, $portfolios);
 
         return view('dashboard', compact(
@@ -122,7 +119,7 @@ class DashboardController extends Controller
         ));
     }
 
-    private function buildAllocation($allHoldings, $portfolios): array
+    private function buildAllocation(Collection $allHoldings, Collection $portfolios): array
     {
         $stockValue      = 0.0;
         $cryptoValue     = 0.0;
