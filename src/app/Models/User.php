@@ -62,6 +62,11 @@ class User extends Authenticatable /* implements MustVerifyEmail */
         return $this->hasMany(Envelope::class);
     }
 
+    public function scheduledTransactions(): HasMany
+    {
+        return $this->hasMany(ScheduledTransaction::class);
+    }
+
     public function totalCash(): float
     {
         return (float) CashTransaction::query()

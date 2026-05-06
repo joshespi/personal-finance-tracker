@@ -22,7 +22,8 @@
                     $moneyActive = request()->routeIs('cash-accounts.*')
                         || request()->routeIs('envelopes.*')
                         || request()->routeIs('liabilities.*')
-                        || request()->routeIs('cashflow');
+                        || request()->routeIs('cashflow')
+                        || request()->routeIs('scheduled-transactions.*');
 
                     $triggerActive = 'inline-flex items-center px-1 pt-1 border-b-2 border-indigo-400 text-sm font-medium leading-5 text-gray-900 dark:text-gray-100 focus:outline-none transition duration-150 ease-in-out';
                     $triggerInactive = 'inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600 focus:outline-none transition duration-150 ease-in-out';
@@ -79,6 +80,7 @@
                                 <x-dropdown-link :href="route('cashflow')">{{ __('Cashflow') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('cash-accounts.index')">{{ __('Cash Accounts') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('envelopes.index')">{{ __('Budget Envelopes') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('scheduled-transactions.index')">{{ __('Scheduled') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('liabilities.index')">{{ __('Liabilities') }}</x-dropdown-link>
                             </div>
                         </div>
@@ -183,6 +185,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('envelopes.index')" :active="request()->routeIs('envelopes.*')">
                 {{ __('Budget Envelopes') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('scheduled-transactions.index')" :active="request()->routeIs('scheduled-transactions.*')">
+                {{ __('Scheduled') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('liabilities.index')" :active="request()->routeIs('liabilities.*')">
                 {{ __('Liabilities') }}
