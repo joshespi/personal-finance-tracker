@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\AssetType;
 use App\Models\Asset;
 use App\Models\AssetPrice;
 use Illuminate\Console\Command;
@@ -27,8 +28,8 @@ class FetchAssetPrices extends Command
             return self::SUCCESS;
         }
 
-        $cryptos = $assets->where('asset_type', 'crypto');
-        $stocks  = $assets->whereIn('asset_type', ['stock', 'real_estate', 'bond']);
+        $cryptos = $assets->where('asset_type', AssetType::Crypto->value);
+        $stocks  = $assets->whereIn('asset_type', [AssetType::Stock->value, AssetType::RealEstate->value, AssetType::Bond->value]);
 
         $this->info('Fetching prices...');
 

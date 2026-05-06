@@ -54,10 +54,9 @@
                                 x-model="assetType"
                                 @change="results = []; query && search()"
                                 class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">
-                            <option value="stock">Stock</option>
-                            <option value="crypto">Crypto</option>
-                            <option value="real_estate">Real Estate</option>
-                            <option value="bond">Bond</option>
+                            @foreach (App\Enums\AssetType::cases() as $type)
+                                <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                            @endforeach
                         </select>
                     </div>
 
@@ -158,41 +157,7 @@
     @push('scripts')
     <script>
     function tickerAutocomplete(defaultType) {
-        return {
-            query: '',
-            assetType: defaultType,
-            results: [],
-            open: false,
-            activeIndex: -1,
-            async search() {
-                if (this.query.length < 1) { this.results = []; this.open = false; return; }
-                try {
-                    const res = await fetch(`/tickers/search?q=${encodeURIComponent(this.query)}&type=${this.assetType}`);
-                    this.results = await res.json();
-                    this.open = this.results.length > 0;
-                    this.activeIndex = -1;
-                } catch { this.results = []; }
-            },
-            select(r) {
-                this.query = r.symbol;
-                this.assetType = r.type;
-                this.open = false;
-            },
-            selectCurrent() {
-                if (this.activeIndex >= 0 && this.results[this.activeIndex]) {
-                    this.select(this.results[this.activeIndex]);
-                }
-            },
-            moveDown() { this.activeIndex = Math.min(this.activeIndex + 1, this.results.length - 1); },
-            moveUp()   { this.activeIndex = Math.max(this.activeIndex - 1, -1); },
-            close()    { this.open = false; this.activeIndex = -1; },
-            delayClose() { setTimeout(() => this.close(), 150); },
-            submitForm(form) {
-                // Sync the hidden asset_type select before submitting
-                form.querySelector('[name="asset_type"]').value = this.assetType;
-                form.submit();
-            },
-        };
+        return tickerSearch({ defaultType });
     }
     </script>
     @endpush

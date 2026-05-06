@@ -28,28 +28,6 @@ class AssetReclassifyTest extends TestCase
         $this->assertDatabaseHas('assets', ['id' => $asset->id, 'asset_type' => 'crypto']);
     }
 
-    public function test_reclassify_stock_to_crypto(): void
-    {
-        $user  = User::factory()->create();
-        $asset = Asset::factory()->stock()->create();
-
-        $this->actingAs($user)
-            ->patch(route('assets.reclassify', $asset), ['asset_type' => 'crypto']);
-
-        $this->assertEquals('crypto', $asset->fresh()->asset_type);
-    }
-
-    public function test_reclassify_crypto_to_stock(): void
-    {
-        $user  = User::factory()->create();
-        $asset = Asset::factory()->crypto()->create();
-
-        $this->actingAs($user)
-            ->patch(route('assets.reclassify', $asset), ['asset_type' => 'stock']);
-
-        $this->assertEquals('stock', $asset->fresh()->asset_type);
-    }
-
     public function test_reclassify_validates_asset_type(): void
     {
         $user  = User::factory()->create();

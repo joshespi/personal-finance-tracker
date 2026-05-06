@@ -78,6 +78,18 @@ class WatchlistTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_invalid_asset_type_is_rejected(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('watchlist.store'), [
+            'symbol'     => 'AAPL',
+            'asset_type' => 'commodity',
+        ])->assertSessionHasErrors('asset_type');
+
+        $this->assertDatabaseMissing('watchlist_items', ['symbol' => 'AAPL']);
+    }
+
     public function test_adding_duplicate_symbol_updates_existing(): void
     {
         $user = User::factory()->create();

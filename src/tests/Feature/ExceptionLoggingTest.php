@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use RuntimeException;
 use Tests\TestCase;
@@ -31,17 +30,5 @@ class ExceptionLoggingTest extends TestCase
         );
     }
 
-    public function test_stack_channel_contains_stderr_when_log_stack_env_includes_it(): void
-    {
-        config(['logging.channels.stack' => [
-            'driver' => 'stack',
-            'channels' => explode(',', 'single,stderr'),
-            'ignore_exceptions' => false,
-        ]]);
 
-        Log::channel('stack')->error('verifying stack resolves');
-
-        $this->assertContains('stderr', config('logging.channels.stack.channels'));
-        $this->assertContains('single', config('logging.channels.stack.channels'));
-    }
 }

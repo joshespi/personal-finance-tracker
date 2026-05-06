@@ -136,6 +136,17 @@ class PortfolioTransferTest extends TestCase
             ]);
     }
 
+    public function test_invalid_asset_type_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        $from = Portfolio::factory()->for($user)->create();
+        $to   = Portfolio::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->post(route('transfers.store'), $this->transferPayload($from, $to, ['asset_type' => 'commodity']))
+            ->assertSessionHasErrors('asset_type');
+    }
+
     public function test_store_validates_positive_quantity(): void
     {
         $user = User::factory()->create();

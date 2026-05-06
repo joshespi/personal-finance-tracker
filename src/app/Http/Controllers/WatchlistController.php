@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssetType;
 use App\Models\ActivityLog;
 use App\Models\Asset;
 use App\Models\WatchlistItem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class WatchlistController extends Controller
@@ -49,7 +51,7 @@ class WatchlistController extends Controller
     {
         $validated = $request->validate([
             'symbol'       => ['required', 'string', 'max:20'],
-            'asset_type'   => ['required', 'in:stock,crypto,real_estate,bond'],
+            'asset_type'   => ['required', Rule::enum(AssetType::class)],
             'target_price' => ['nullable', 'numeric', 'gt:0'],
             'notes'        => ['nullable', 'string', 'max:500'],
         ]);

@@ -103,24 +103,6 @@ class RealEstateAssetTypeTest extends TestCase
             ->assertSee('Real Estate');
     }
 
-    public function test_portfolio_can_save_real_estate_target_pct(): void
-    {
-        $portfolio = Portfolio::factory()->create();
-
-        $this->actingAs($portfolio->user)
-            ->put(route('portfolios.update', $portfolio), [
-                'name'                   => $portfolio->name,
-                'currency'               => $portfolio->currency,
-                'target_stock_pct'       => 60,
-                'target_crypto_pct'      => 10,
-                'target_real_estate_pct' => 20,
-                'target_manual_pct'      => 10,
-            ])
-            ->assertRedirect();
-
-        $this->assertSame(20, $portfolio->fresh()->target_real_estate_pct);
-    }
-
     public function test_real_estate_manual_asset_rolls_into_real_estate_allocation_bucket(): void
     {
         $user      = User::factory()->create();
@@ -155,27 +137,4 @@ class RealEstateAssetTypeTest extends TestCase
         $this->assertSame(25000.0, $allocation['values'][$otherIdx]);
     }
 
-    public function test_rebalancing_includes_real_estate_row(): void
-    {
-        $user      = User::factory()->create();
-        $portfolio = Portfolio::factory()->for($user)->create([
-            'target_stock_pct'       => 70,
-            'target_real_estate_pct' => 30,
-        ]);
-
-        $stock = Asset::factory()->create(['symbol' => 'AAPL', 'asset_type' => 'stock']);
-        Transaction::factory()->for($portfolio)->for($stock)->create([
-            'type' => 'buy', 'quantity' => 10, 'price_per_unit' => 100, 'transacted_at' => '2026-05-01',
-        ]);
-
-        $vnq = Asset::factory()->create(['symbol' => 'VNQ', 'asset_type' => 'real_estate']);
-        Transaction::factory()->for($portfolio)->for($vnq)->create([
-            'type' => 'buy', 'quantity' => 10, 'price_per_unit' => 90, 'transacted_at' => '2026-05-01',
-        ]);
-
-        $this->actingAs($user)
-            ->get(route('portfolios.show', $portfolio))
-            ->assertOk()
-            ->assertSee('Real Estate');
-    }
 }

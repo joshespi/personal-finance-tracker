@@ -1,4 +1,5 @@
 import './bootstrap';
+import './ticker-search';
 
 import Alpine from 'alpinejs';
 window.Alpine = Alpine;
