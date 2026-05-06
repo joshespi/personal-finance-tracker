@@ -21,7 +21,8 @@
                         || request()->routeIs('tax.*');
                     $moneyActive = request()->routeIs('cash-accounts.*')
                         || request()->routeIs('envelopes.*')
-                        || request()->routeIs('liabilities.*');
+                        || request()->routeIs('liabilities.*')
+                        || request()->routeIs('cashflow');
 
                     $triggerActive = 'inline-flex items-center px-1 pt-1 border-b-2 border-indigo-400 text-sm font-medium leading-5 text-gray-900 dark:text-gray-100 focus:outline-none transition duration-150 ease-in-out';
                     $triggerInactive = 'inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600 focus:outline-none transition duration-150 ease-in-out';
@@ -75,6 +76,7 @@
                              style="display: none;"
                              @click="open = false">
                             <div class="rounded-md ring-1 ring-black ring-opacity-5 dark:ring-gray-700 py-1 bg-white dark:bg-gray-800">
+                                <x-dropdown-link :href="route('cashflow')">{{ __('Cashflow') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('cash-accounts.index')">{{ __('Cash Accounts') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('envelopes.index')">{{ __('Budget Envelopes') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('liabilities.index')">{{ __('Liabilities') }}</x-dropdown-link>
@@ -173,6 +175,9 @@
             </x-responsive-nav-link>
 
             <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Money') }}</p>
+            <x-responsive-nav-link :href="route('cashflow')" :active="request()->routeIs('cashflow')">
+                {{ __('Cashflow') }}
+            </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('cash-accounts.index')" :active="request()->routeIs('cash-accounts.*')">
                 {{ __('Cash Accounts') }}
             </x-responsive-nav-link>
