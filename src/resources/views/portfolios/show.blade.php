@@ -284,12 +284,12 @@
                                                         title="Reclassify"
                                                         class="text-xs font-medium border-0 rounded px-2 py-0.5 cursor-pointer focus:ring-1 focus:ring-indigo-500"
                                                         :class="h.asset_type === 'crypto'
-                                                            ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
+                                                            ? 'bg-orange-100 dark:bg-orange-900/60 text-orange-800 dark:text-orange-200'
                                                             : (h.asset_type === 'real_estate'
-                                                                ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                                                                ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200'
                                                                 : (h.asset_type === 'bond'
-                                                                    ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-900 dark:text-yellow-300'
-                                                                    : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'))">
+                                                                    ? 'bg-yellow-100 dark:bg-yellow-900/60 text-yellow-900 dark:text-yellow-200'
+                                                                    : 'bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200'))">
                                                     <option value="stock"       :selected="h.asset_type === 'stock'">Stock</option>
                                                     <option value="crypto"      :selected="h.asset_type === 'crypto'">Crypto</option>
                                                     <option value="real_estate" :selected="h.asset_type === 'real_estate'">Real Estate</option>
