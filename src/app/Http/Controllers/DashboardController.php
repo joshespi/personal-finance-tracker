@@ -155,16 +155,19 @@ class DashboardController extends Controller
 
         $total = $stockValue + $cryptoValue + $realEstateValue + $bondValue + $otherManualValue;
 
+        $entries = [
+            ['label' => 'Stocks',       'color' => '#6366f1', 'value' => round($stockValue, 2)],
+            ['label' => 'Crypto',       'color' => '#f97316', 'value' => round($cryptoValue, 2)],
+            ['label' => 'Real Estate',  'color' => '#b45309', 'value' => round($realEstateValue, 2)],
+            ['label' => 'Bonds',        'color' => '#eab308', 'value' => round($bondValue, 2)],
+            ['label' => 'Other Assets', 'color' => '#10b981', 'value' => round($otherManualValue, 2)],
+        ];
+        usort($entries, fn ($a, $b) => $b['value'] <=> $a['value']);
+
         return [
-            'labels' => ['Stocks', 'Crypto', 'Real Estate', 'Bonds', 'Other Assets'],
-            'colors' => ['#6366f1', '#f97316', '#8b5cf6', '#eab308', '#10b981'],
-            'values' => [
-                round($stockValue, 2),
-                round($cryptoValue, 2),
-                round($realEstateValue, 2),
-                round($bondValue, 2),
-                round($otherManualValue, 2),
-            ],
+            'labels' => array_column($entries, 'label'),
+            'colors' => array_column($entries, 'color'),
+            'values' => array_column($entries, 'value'),
             'total'  => round($total, 2),
         ];
     }
