@@ -155,19 +155,18 @@ class DashboardController extends Controller
 
         $total = $stockValue + $cryptoValue + $realEstateValue + $bondValue + $otherManualValue;
 
-        $entries = [
+        $entries = collect([
             ['label' => 'Stocks',       'color' => '#6366f1', 'value' => round($stockValue, 2)],
             ['label' => 'Crypto',       'color' => '#f97316', 'value' => round($cryptoValue, 2)],
             ['label' => 'Real Estate',  'color' => '#b45309', 'value' => round($realEstateValue, 2)],
             ['label' => 'Bonds',        'color' => '#eab308', 'value' => round($bondValue, 2)],
             ['label' => 'Other Assets', 'color' => '#10b981', 'value' => round($otherManualValue, 2)],
-        ];
-        usort($entries, fn ($a, $b) => $b['value'] <=> $a['value']);
+        ])->sortByDesc('value');
 
         return [
-            'labels' => array_column($entries, 'label'),
-            'colors' => array_column($entries, 'color'),
-            'values' => array_column($entries, 'value'),
+            'labels' => $entries->pluck('label')->values()->all(),
+            'colors' => $entries->pluck('color')->values()->all(),
+            'values' => $entries->pluck('value')->values()->all(),
             'total'  => round($total, 2),
         ];
     }
