@@ -130,7 +130,7 @@
                         </div>
                     </form>
                     @if ($cashAccounts->isNotEmpty())
-                        <p class="px-6 pb-4 -mt-2 text-xs text-gray-400 dark:text-gray-500">Choosing a cash account will create a paired withdrawal there.</p>
+                        <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Choosing a cash account will create a paired withdrawal there.</p>
                     @endif
                 </div>
             </div>
