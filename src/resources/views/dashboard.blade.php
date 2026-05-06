@@ -335,7 +335,7 @@
         </div>
     </div>
 
-    @if ($chartData->isNotEmpty())
+    @if ($chartData->isNotEmpty() || $allocation['total'] > 0)
         @vite('resources/js/chartjs.js')
         @push('scripts')
         <script>
@@ -485,40 +485,43 @@
             }
 
             // ── Portfolio Value Chart ─────────────────────────────────
-            let dashRange = '1Y';
-            const dashChart = new Chart(document.getElementById('dashChart'), {
-                type: 'line',
-                data: {
-                    datasets: [
-                        { label: 'Portfolio Value', data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 0 },
-                        { label: 'Cost Basis',      data: [], borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    scales: timeSeriesScales(fmtK),
-                    plugins: {
-                        legend: legendOpts(),
-                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtFull(ctx.parsed.y)}` } },
+            const dashChartEl = document.getElementById('dashChart');
+            if (dashChartEl) {
+                let dashRange = '1Y';
+                const dashChart = new Chart(dashChartEl, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            { label: 'Portfolio Value', data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 0 },
+                            { label: 'Cost Basis',      data: [], borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 },
+                        ],
                     },
-                },
-            });
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: timeSeriesScales(fmtK),
+                        plugins: {
+                            legend: legendOpts(),
+                            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtFull(ctx.parsed.y)}` } },
+                        },
+                    },
+                });
 
-            function updateDashChart(range) {
-                const filtered = filterByRange(allData, range);
-                dashChart.data.datasets[0].data = filtered.map(r => pointFromRow(r, 'value'));
-                dashChart.data.datasets[1].data = filtered.map(r => pointFromRow(r, 'cost'));
-                dashChart.update();
-                activateBtn('#dash-range-btns', range);
-                updateTiles(filtered, range);
+                function updateDashChart(range) {
+                    const filtered = filterByRange(allData, range);
+                    dashChart.data.datasets[0].data = filtered.map(r => pointFromRow(r, 'value'));
+                    dashChart.data.datasets[1].data = filtered.map(r => pointFromRow(r, 'cost'));
+                    dashChart.update();
+                    activateBtn('#dash-range-btns', range);
+                    updateTiles(filtered, range);
+                }
+
+                document.querySelectorAll('#dash-range-btns button[data-range]').forEach(b =>
+                    b.addEventListener('click', () => { dashRange = b.dataset.range; updateDashChart(dashRange); })
+                );
+                updateDashChart(dashRange);
             }
-
-            document.querySelectorAll('#dash-range-btns button[data-range]').forEach(b =>
-                b.addEventListener('click', () => { dashRange = b.dataset.range; updateDashChart(dashRange); })
-            );
-            updateDashChart(dashRange);
 
             // ── Benchmark Chart ───────────────────────────────────────
             const benchEl = document.getElementById('benchmarkChart');

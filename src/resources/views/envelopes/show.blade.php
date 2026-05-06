@@ -64,8 +64,9 @@
             </div>
 
             @if ($envelope->notes)
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ $envelope->notes }}</p>
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
+                    <h3 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Notes</h3>
+                    <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{{ $envelope->notes }}</p>
                 </div>
             @endif
 

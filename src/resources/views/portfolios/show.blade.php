@@ -515,7 +515,7 @@
         </div>
     </div>
 
-    @if ($chartData->count() > 1)
+    @if ($chartData->count() > 1 || $allocation['total'] > 0)
         @vite('resources/js/chartjs.js')
         @push('scripts')
         <script>
@@ -600,39 +600,42 @@
             }
 
             // ── Portfolio Value Chart ─────────────────────────────────
-            let portRange = '1Y';
-            const portChart = new Chart(document.getElementById('portChart'), {
-                type: 'line',
-                data: {
-                    datasets: [
-                        { label: 'Market Value', data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 0 },
-                        { label: 'Cost Basis',   data: [], borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    scales: timeSeriesScales(fmtK),
-                    plugins: {
-                        legend: legendOpts(),
-                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtFull(ctx.parsed.y)}` } },
+            const portChartEl = document.getElementById('portChart');
+            if (portChartEl) {
+                let portRange = '1Y';
+                const portChart = new Chart(portChartEl, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            { label: 'Market Value', data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 0 },
+                            { label: 'Cost Basis',   data: [], borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 },
+                        ],
                     },
-                },
-            });
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: timeSeriesScales(fmtK),
+                        plugins: {
+                            legend: legendOpts(),
+                            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtFull(ctx.parsed.y)}` } },
+                        },
+                    },
+                });
 
-            function updatePortChart(range) {
-                const filtered = filterByRange(allData, range);
-                portChart.data.datasets[0].data = filtered.map(r => pointFromRow(r, 'value'));
-                portChart.data.datasets[1].data = filtered.map(r => pointFromRow(r, 'cost'));
-                portChart.update();
-                activateBtn('#port-range-btns', range);
+                function updatePortChart(range) {
+                    const filtered = filterByRange(allData, range);
+                    portChart.data.datasets[0].data = filtered.map(r => pointFromRow(r, 'value'));
+                    portChart.data.datasets[1].data = filtered.map(r => pointFromRow(r, 'cost'));
+                    portChart.update();
+                    activateBtn('#port-range-btns', range);
+                }
+
+                document.querySelectorAll('#port-range-btns button').forEach(b =>
+                    b.addEventListener('click', () => { portRange = b.dataset.range; updatePortChart(portRange); })
+                );
+                updatePortChart(portRange);
             }
-
-            document.querySelectorAll('#port-range-btns button').forEach(b =>
-                b.addEventListener('click', () => { portRange = b.dataset.range; updatePortChart(portRange); })
-            );
-            updatePortChart(portRange);
 
             // ── Benchmark Chart ───────────────────────────────────────
             const benchEl = document.getElementById('portBenchChart');

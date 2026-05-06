@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 class FetchAssetPrices extends Command
 {
     protected $signature = 'assets:fetch-prices';
-    protected $description = 'Fetch latest prices for all tracked assets from CoinGecko (crypto) and Finnhub (stocks + real_estate)';
+    protected $description = 'Fetch latest prices for all tracked assets from CoinGecko (crypto) and Finnhub (stocks, bonds + real estate)';
 
     public function handle(): int
     {
