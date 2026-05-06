@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AllTransactionsController;
 use App\Http\Controllers\CashAccountController;
 use App\Http\Controllers\CashTransactionController;
+use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\EnvelopeController;
 use App\Http\Controllers\EnvelopeTransactionController;
 use App\Http\Controllers\ExportController;
@@ -84,6 +85,8 @@ Route::middleware('auth')->group(function () {
         ->name('cash-accounts.transactions.store');
     Route::delete('cash-transactions/{transaction}', [CashTransactionController::class, 'destroy'])
         ->name('cash-accounts.transactions.destroy');
+
+    Route::get('/cashflow', CashflowController::class)->name('cashflow');
 
     Route::resource('envelopes', EnvelopeController::class);
 
