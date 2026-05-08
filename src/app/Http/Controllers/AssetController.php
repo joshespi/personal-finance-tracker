@@ -12,6 +12,13 @@ class AssetController extends Controller
 {
     public function reclassify(Request $request, Asset $asset): RedirectResponse
     {
+        // Assets are global; require the user to hold this asset in one of their portfolios.
+        $portfolioIds = $request->user()->portfolios()->pluck('id');
+        abort_unless(
+            $asset->transactions()->whereIn('portfolio_id', $portfolioIds)->exists(),
+            403
+        );
+
         $request->validate([
             'asset_type' => ['required', Rule::enum(AssetType::class)],
         ]);

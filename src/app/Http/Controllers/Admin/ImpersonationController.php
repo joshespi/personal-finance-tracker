@@ -13,6 +13,7 @@ class ImpersonationController extends Controller
     public function store(Request $request, User $user): RedirectResponse
     {
         abort_if($user->id === $request->user()->id, 403, 'Cannot impersonate yourself.');
+        abort_if($user->is_admin, 403, 'Cannot impersonate another admin.');
 
         ActivityLog::record('impersonate.start', $user, ['target_name' => $user->name]);
 
@@ -24,9 +25,18 @@ class ImpersonationController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        // Capture admin ID before clearing — HandleImpersonation already swapped Auth to the
+        // impersonated user for this request, so auth()->id() would record the wrong actor.
+        $adminId = $request->session()->get('impersonate_admin_id');
+
         $request->session()->forget(['impersonate_user_id', 'impersonate_admin_id']);
 
-        ActivityLog::record('impersonate.stop');
+        ActivityLog::create([
+            'user_id'    => $adminId,
+            'action'     => 'impersonate.stop',
+            'ip_address' => $request->ip(),
+            'user_agent' => substr($request->userAgent() ?? '', 0, 255),
+        ]);
 
         return redirect()->route('admin.users.index');
     }

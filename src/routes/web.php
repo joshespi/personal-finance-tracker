@@ -106,7 +106,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/watchlist/{watchlistItem}', [WatchlistController::class, 'destroy'])->name('watchlist.destroy');
 
     // Ticker autocomplete
-    Route::get('/tickers/search', TickerSearchController::class)->name('tickers.search');
+    Route::get('/tickers/search', TickerSearchController::class)->name('tickers.search')->middleware('throttle:30,1');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

@@ -6,6 +6,7 @@ use App\Models\ScheduledTransaction;
 use App\Services\ScheduledTransactionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ScheduledTransactionController extends Controller
@@ -71,7 +72,11 @@ class ScheduledTransactionController extends Controller
 
     private function validated(Request $request): array
     {
-        $type = $request->input('type');
+        $type   = $request->input('type');
+        $userId = $request->user()->id;
+
+        $envelopeRule     = Rule::exists('envelopes', 'id')->where('user_id', $userId);
+        $cashAccountRule  = Rule::exists('cash_accounts', 'id')->where('user_id', $userId);
 
         return $request->validate([
             'description'    => 'required|string|max:500',
@@ -80,11 +85,11 @@ class ScheduledTransactionController extends Controller
             'recurrence'     => 'required|in:monthly,weekly,biweekly',
             'next_due_at'    => 'required|date',
             'envelope_id'    => in_array($type, ['envelope_fund', 'envelope_spend'])
-                ? 'required|exists:envelopes,id'
+                ? ['required', $envelopeRule]
                 : 'nullable',
             'cash_account_id' => in_array($type, ['cash_deposit', 'cash_withdrawal'])
-                ? 'required|exists:cash_accounts,id'
-                : 'nullable|exists:cash_accounts,id',
+                ? ['required', $cashAccountRule]
+                : ['nullable', $cashAccountRule],
             'is_active'      => 'boolean',
         ]);
     }

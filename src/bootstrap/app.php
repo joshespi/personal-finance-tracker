@@ -18,7 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('portfolios:snapshot')->dailyAt('00:05');
     })
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->trustProxies(at: '0.0.0.0/0');
+        $middleware->trustProxies(at: env('TRUSTED_PROXIES', null));
         $middleware->alias(['admin' => EnsureUserIsAdmin::class]);
         $middleware->appendToGroup('web', HandleImpersonation::class);
     })

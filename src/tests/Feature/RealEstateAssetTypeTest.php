@@ -34,10 +34,11 @@ class RealEstateAssetTypeTest extends TestCase
 
     public function test_can_reclassify_asset_to_real_estate(): void
     {
-        $user  = User::factory()->create();
-        $asset = Asset::factory()->stock()->create();
+        $portfolio = Portfolio::factory()->create();
+        $asset     = Asset::factory()->stock()->create();
+        Transaction::factory()->create(['portfolio_id' => $portfolio->id, 'asset_id' => $asset->id]);
 
-        $this->actingAs($user)
+        $this->actingAs($portfolio->user)
             ->patch(route('assets.reclassify', $asset), ['asset_type' => 'real_estate'])
             ->assertRedirect()
             ->assertSessionHas('success');
