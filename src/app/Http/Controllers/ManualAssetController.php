@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssetType;
 use App\Models\Asset;
 use App\Models\AssetPrice;
 use App\Models\ManualAsset;
@@ -144,7 +145,7 @@ class ManualAssetController extends Controller
         $symbol     = strtoupper(trim($validated['proxy_symbol']));
         $proxyAsset = Asset::firstOrCreate(
             ['symbol' => $symbol],
-            ['name' => $symbol, 'asset_type' => 'stock']
+            ['name' => $symbol, 'asset_type' => AssetType::Stock->value]
         );
 
         $proxyPrice = AssetPrice::where('asset_id', $proxyAsset->id)

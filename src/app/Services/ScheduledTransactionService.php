@@ -20,11 +20,11 @@ class ScheduledTransactionService
 
         $created = 0;
 
-        foreach ($due as $scheduled) {
-            DB::transaction(function () use ($scheduled, &$created) {
+        DB::transaction(function () use ($due, &$created) {
+            foreach ($due as $scheduled) {
                 $created += $this->materializeOne($scheduled);
-            });
-        }
+            }
+        });
 
         return $created;
     }
@@ -34,7 +34,7 @@ class ScheduledTransactionService
         $date    = $scheduled->next_due_at->copy();
         $today   = today();
         $created = 0;
-        $cap     = 24; // safety: max periods to backfill per run
+        $cap     = 24;
 
         while ($date->lte($today) && $created < $cap) {
             $this->createTransactions($scheduled, $date);

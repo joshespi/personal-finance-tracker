@@ -1,8 +1,3 @@
-{{--
-    Shared form partial for create + edit.
-    Expects: $envelopes, $cashAccounts
-    Optionally: $scheduledTransaction (for edit mode)
---}}
 @php $s = $scheduledTransaction ?? null; @endphp
 
 <div x-data="{

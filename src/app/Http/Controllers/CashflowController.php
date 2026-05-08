@@ -15,20 +15,21 @@ class CashflowController extends Controller
         $month = Carbon::parse($request->input('month', now()->format('Y-m')))->startOfMonth();
 
         $cashAccountIds = $request->user()->cashAccounts()->pluck('id');
-        $envelopeIds    = $request->user()->envelopes()->pluck('id');
-
-        [$income, $totalSpent] = $this->totalsForMonth($month, $cashAccountIds, $envelopeIds);
-
-        $net = round($income - $totalSpent, 2);
 
         $envelopes = $request->user()
             ->envelopes()
             ->with(['transactions' => fn ($q) => $q
                 ->where('type', 'spend')
-                ->whereBetween('occurred_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])
+                ->whereBetween('occurred_at', [$month, $month->copy()->endOfMonth()])
             ])
             ->orderBy('sort_order')
             ->get();
+
+        $envelopeIds = $envelopes->pluck('id');
+
+        [$income, $totalSpent] = $this->totalsForMonth($month, $cashAccountIds, $envelopeIds);
+
+        $net = round($income - $totalSpent, 2);
 
         $envelopeRows = $envelopes
             ->map(fn ($e) => [
@@ -65,12 +66,12 @@ class CashflowController extends Controller
     {
         $income = round((float) CashTransaction::whereIn('cash_account_id', $cashAccountIds)
             ->where('type', 'deposit')
-            ->whereBetween('occurred_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])
+            ->whereBetween('occurred_at', [$month, $month->copy()->endOfMonth()])
             ->sum('amount'), 2);
 
         $spent = round((float) EnvelopeTransaction::whereIn('envelope_id', $envelopeIds)
             ->where('type', 'spend')
-            ->whereBetween('occurred_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])
+            ->whereBetween('occurred_at', [$month, $month->copy()->endOfMonth()])
             ->sum('amount'), 2);
 
         return [$income, $spent];
