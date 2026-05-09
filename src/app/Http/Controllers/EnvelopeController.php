@@ -5,14 +5,23 @@ namespace App\Http\Controllers;
 use App\Models\Envelope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class EnvelopeController extends Controller
 {
     public function index(Request $request): View
     {
-        $startOfMonth = now()->startOfMonth();
-        $endOfMonth   = now()->endOfMonth();
+        try {
+            $month = $request->filled('month')
+                ? Carbon::createFromFormat('Y-m', $request->input('month'))->startOfMonth()
+                : now()->startOfMonth();
+        } catch (\Exception) {
+            $month = now()->startOfMonth();
+        }
+
+        $startOfMonth = $month->copy()->startOfMonth();
+        $endOfMonth   = $month->copy()->endOfMonth();
 
         $envelopes = $request->user()
             ->envelopes()
@@ -23,19 +32,32 @@ class EnvelopeController extends Controller
                     ->where('type', 'spend')
                     ->whereBetween('occurred_at', [$startOfMonth, $endOfMonth]),
             ], 'amount')
+            ->withSum([
+                'transactions as month_fund_total' => fn ($q) => $q
+                    ->where('type', 'fund')
+                    ->whereBetween('occurred_at', [$startOfMonth, $endOfMonth]),
+            ], 'amount')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get()
             ->each(function ($e) {
-                $e->current_balance  = (float) ($e->funds_total ?? 0) - (float) ($e->spends_total ?? 0);
-                $e->spent_this_month = (float) ($e->month_spend_total ?? 0);
+                $e->current_balance   = (float) ($e->funds_total ?? 0) - (float) ($e->spends_total ?? 0);
+                $e->spent_this_month  = (float) ($e->month_spend_total ?? 0);
+                $e->funded_this_month = (float) ($e->month_fund_total ?? 0);
             });
 
-        $totalBalance       = $envelopes->sum('current_balance');
-        $totalMonthlyTarget = $envelopes->sum(fn ($e) => (float) ($e->monthly_target ?? 0));
-        $totalSpentMonth    = $envelopes->sum('spent_this_month');
+        $totalBalance     = $envelopes->sum('current_balance');
+        $totalSpentMonth  = $envelopes->sum('spent_this_month');
+        $totalFundedMonth = $envelopes->sum('funded_this_month');
 
-        return view('envelopes.index', compact('envelopes', 'totalBalance', 'totalMonthlyTarget', 'totalSpentMonth'));
+        $prevMonth      = $month->copy()->subMonth()->format('Y-m');
+        $nextMonth      = $month->copy()->addMonth()->format('Y-m');
+        $isCurrentMonth = $month->isSameMonth(now());
+
+        return view('envelopes.index', compact(
+            'envelopes', 'totalBalance', 'totalSpentMonth', 'totalFundedMonth',
+            'month', 'prevMonth', 'nextMonth', 'isCurrentMonth',
+        ));
     }
 
     public function create(): View
