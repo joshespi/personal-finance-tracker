@@ -10,6 +10,7 @@ use App\Http\Controllers\CashAccountController;
 use App\Http\Controllers\CashTransactionController;
 use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\ScheduledTransactionController;
+use App\Http\Controllers\SpendingTrendsController;
 use App\Http\Controllers\EnvelopeController;
 use App\Http\Controllers\EnvelopeTransactionController;
 use App\Http\Controllers\ExportController;
@@ -88,6 +89,7 @@ Route::middleware('auth')->group(function () {
         ->name('cash-accounts.transactions.destroy');
 
     Route::get('/cashflow', CashflowController::class)->name('cashflow');
+    Route::get('/spending-trends', SpendingTrendsController::class)->name('spending-trends');
 
     Route::resource('scheduled-transactions', ScheduledTransactionController::class);
     Route::patch('scheduled-transactions/{scheduledTransaction}/toggle', [ScheduledTransactionController::class, 'toggle'])
