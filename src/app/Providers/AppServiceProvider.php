@@ -6,6 +6,7 @@ use App\Listeners\RecordLoginHistory;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -17,5 +18,9 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(Login::class, RecordLoginHistory::class);
 
         Model::preventLazyLoading(! $this->app->isProduction());
+
+        if ($this->app->isProduction()) {
+            URL::forceScheme('https');
+        }
     }
 }
