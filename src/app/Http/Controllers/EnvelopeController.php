@@ -20,8 +20,7 @@ class EnvelopeController extends Controller
             $month = now()->startOfMonth();
         }
 
-        $startOfMonth = $month->copy()->startOfMonth();
-        $endOfMonth   = $month->copy()->endOfMonth();
+        $endOfMonth = $month->copy()->endOfMonth();
 
         $envelopes = $request->user()
             ->envelopes()
@@ -30,12 +29,12 @@ class EnvelopeController extends Controller
             ->withSum([
                 'transactions as month_spend_total' => fn ($q) => $q
                     ->where('type', 'spend')
-                    ->whereBetween('occurred_at', [$startOfMonth, $endOfMonth]),
+                    ->whereBetween('occurred_at', [$month, $endOfMonth]),
             ], 'amount')
             ->withSum([
                 'transactions as month_fund_total' => fn ($q) => $q
                     ->where('type', 'fund')
-                    ->whereBetween('occurred_at', [$startOfMonth, $endOfMonth]),
+                    ->whereBetween('occurred_at', [$month, $endOfMonth]),
             ], 'amount')
             ->orderBy('sort_order')
             ->orderBy('name')

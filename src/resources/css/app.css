@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+
+html:not(.dark) .bg-white {
+    background-color: #f8fafc; /* slate-50 */
+}
+
 /* EasyMDE dark mode */
 .dark .EasyMDEContainer .CodeMirror,
 .dark .EasyMDEContainer .editor-toolbar {
