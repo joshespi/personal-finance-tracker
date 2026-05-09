@@ -3,19 +3,9 @@
 namespace App\Services;
 
 use App\Models\Portfolio;
-use Illuminate\Support\Collection;
 
 class RealizedGainService
 {
-    /**
-     * Compute realized gains for a portfolio using FIFO lot matching.
-     *
-     * Returns an array with:
-     *   - lots: Collection of closed lots
-     *   - total_gain: float
-     *   - by_year: array<int, float>
-     *   - by_asset: Collection grouped by symbol
-     */
     public function compute(Portfolio $portfolio): array
     {
         if (! $portfolio->relationLoaded('transactions')) {
@@ -26,9 +16,8 @@ class RealizedGainService
             ->filter(fn ($t) => in_array($t->type, ['buy', 'sell', 'transfer_in', 'transfer_out', 'staking_reward']))
             ->sortBy('transacted_at');
 
-        // Per-asset FIFO lot tracking
-        $lots    = collect(); // closed lots
-        $openLots = []; // [asset_id => [['qty', 'cost_per_unit', 'date'], ...]]
+        $lots     = collect();
+        $openLots = [];
 
         foreach ($txns as $t) {
             $assetId = $t->asset_id;
@@ -97,10 +86,6 @@ class RealizedGainService
         return compact('lots', 'totalGain', 'byYear', 'byAsset');
     }
 
-    /**
-     * Compute a simple time-weighted return from portfolio snapshots.
-     * Returns total return % and annualized return %.
-     */
     public function computeTwr(Portfolio $portfolio): array
     {
         $snapshots = $portfolio->snapshots()

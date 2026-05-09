@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssetType;
 use App\Models\Asset;
 use App\Models\AssetPrice;
 use App\Models\ManualAsset;
@@ -46,18 +47,7 @@ class ManualAssetController extends Controller
     {
         abort_unless($portfolio->user_id === $request->user()->id, 403);
 
-        $validated = $request->validate([
-            'name'             => ['required', 'string', 'max:200'],
-            'description'      => ['nullable', 'string', 'max:1000'],
-            'asset_class'      => ['required', 'in:' . implode(',', array_keys(self::ASSET_CLASSES))],
-            'cost_basis'       => ['nullable', 'numeric', 'min:0'],
-            'currency'         => ['required', 'string', 'size:3'],
-            'tracking_method'  => ['nullable', 'in:static,proxy_ticker'],
-            'proxy_symbol'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'string', 'max:20'],
-            'anchor_value'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'numeric', 'gt:0'],
-            'anchor_date'      => ['required_if:tracking_method,proxy_ticker', 'nullable', 'date'],
-        ]);
-
+        $validated = $this->validatePayload($request);
         $validated['tracking_method'] ??= 'static';
 
         $asset = $portfolio->manualAssets()->create(array_merge(
@@ -103,18 +93,7 @@ class ManualAssetController extends Controller
     {
         abort_unless($manualAsset->portfolio->user_id === $request->user()->id, 403);
 
-        $validated = $request->validate([
-            'name'             => ['required', 'string', 'max:200'],
-            'description'      => ['nullable', 'string', 'max:1000'],
-            'asset_class'      => ['required', 'in:' . implode(',', array_keys(self::ASSET_CLASSES))],
-            'cost_basis'       => ['nullable', 'numeric', 'min:0'],
-            'currency'         => ['required', 'string', 'size:3'],
-            'tracking_method'  => ['nullable', 'in:static,proxy_ticker'],
-            'proxy_symbol'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'string', 'max:20'],
-            'anchor_value'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'numeric', 'gt:0'],
-            'anchor_date'      => ['required_if:tracking_method,proxy_ticker', 'nullable', 'date'],
-        ]);
-
+        $validated = $this->validatePayload($request);
         $validated['tracking_method'] ??= 'static';
 
         $manualAsset->update(array_merge(
@@ -137,6 +116,21 @@ class ManualAssetController extends Controller
             ->with('success', 'Asset deleted.');
     }
 
+    private function validatePayload(Request $request): array
+    {
+        return $request->validate([
+            'name'             => ['required', 'string', 'max:200'],
+            'description'      => ['nullable', 'string', 'max:1000'],
+            'asset_class'      => ['required', 'in:' . implode(',', array_keys(self::ASSET_CLASSES))],
+            'cost_basis'       => ['nullable', 'numeric', 'min:0'],
+            'currency'         => ['required', 'string', 'size:3'],
+            'tracking_method'  => ['nullable', 'in:static,proxy_ticker'],
+            'proxy_symbol'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'string', 'max:20'],
+            'anchor_value'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'numeric', 'gt:0'],
+            'anchor_date'      => ['required_if:tracking_method,proxy_ticker', 'nullable', 'date'],
+        ]);
+    }
+
     private function resolveProxyData(array $validated): array
     {
         if (($validated['tracking_method'] ?? 'static') !== 'proxy_ticker') {
@@ -151,7 +145,7 @@ class ManualAssetController extends Controller
         $symbol     = strtoupper(trim($validated['proxy_symbol']));
         $proxyAsset = Asset::firstOrCreate(
             ['symbol' => $symbol],
-            ['name' => $symbol, 'asset_type' => 'stock']
+            ['name' => $symbol, 'asset_type' => AssetType::Stock->value]
         );
 
         $proxyPrice = AssetPrice::where('asset_id', $proxyAsset->id)

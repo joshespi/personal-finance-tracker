@@ -9,6 +9,7 @@ use App\Http\Controllers\AllTransactionsController;
 use App\Http\Controllers\CashAccountController;
 use App\Http\Controllers\CashTransactionController;
 use App\Http\Controllers\CashflowController;
+use App\Http\Controllers\ScheduledTransactionController;
 use App\Http\Controllers\EnvelopeController;
 use App\Http\Controllers\EnvelopeTransactionController;
 use App\Http\Controllers\ExportController;
@@ -88,6 +89,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/cashflow', CashflowController::class)->name('cashflow');
 
+    Route::resource('scheduled-transactions', ScheduledTransactionController::class);
+    Route::patch('scheduled-transactions/{scheduledTransaction}/toggle', [ScheduledTransactionController::class, 'toggle'])
+        ->name('scheduled-transactions.toggle');
+
     Route::resource('envelopes', EnvelopeController::class);
 
     Route::post('envelopes/{envelope}/transactions', [EnvelopeTransactionController::class, 'store'])
@@ -101,7 +106,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/watchlist/{watchlistItem}', [WatchlistController::class, 'destroy'])->name('watchlist.destroy');
 
     // Ticker autocomplete
-    Route::get('/tickers/search', TickerSearchController::class)->name('tickers.search');
+    Route::get('/tickers/search', TickerSearchController::class)->name('tickers.search')->middleware('throttle:30,1');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

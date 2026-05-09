@@ -3,11 +3,23 @@
 namespace Tests\Feature;
 
 use App\Models\Asset;
+use App\Models\Portfolio;
+use App\Models\Transaction;
 use App\Models\User;
 use Tests\TestCase;
 
 class AssetReclassifyTest extends TestCase
 {
+    private function userWithAsset(): array
+    {
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->create(['user_id' => $user->id]);
+        $asset     = Asset::factory()->stock()->create();
+        Transaction::factory()->create(['portfolio_id' => $portfolio->id, 'asset_id' => $asset->id]);
+
+        return [$user, $asset];
+    }
+
     public function test_reclassify_requires_auth(): void
     {
         $asset = Asset::factory()->stock()->create();
@@ -18,8 +30,7 @@ class AssetReclassifyTest extends TestCase
 
     public function test_authenticated_user_can_reclassify_asset(): void
     {
-        $user  = User::factory()->create();
-        $asset = Asset::factory()->stock()->create();
+        [$user, $asset] = $this->userWithAsset();
 
         $this->actingAs($user)
             ->patch(route('assets.reclassify', $asset), ['asset_type' => 'crypto'])
@@ -28,32 +39,19 @@ class AssetReclassifyTest extends TestCase
         $this->assertDatabaseHas('assets', ['id' => $asset->id, 'asset_type' => 'crypto']);
     }
 
-    public function test_reclassify_stock_to_crypto(): void
+    public function test_user_cannot_reclassify_asset_they_do_not_hold(): void
     {
         $user  = User::factory()->create();
-        $asset = Asset::factory()->stock()->create();
+        $asset = Asset::factory()->stock()->create(); // no transaction for this user
 
         $this->actingAs($user)
-            ->patch(route('assets.reclassify', $asset), ['asset_type' => 'crypto']);
-
-        $this->assertEquals('crypto', $asset->fresh()->asset_type);
-    }
-
-    public function test_reclassify_crypto_to_stock(): void
-    {
-        $user  = User::factory()->create();
-        $asset = Asset::factory()->crypto()->create();
-
-        $this->actingAs($user)
-            ->patch(route('assets.reclassify', $asset), ['asset_type' => 'stock']);
-
-        $this->assertEquals('stock', $asset->fresh()->asset_type);
+            ->patch(route('assets.reclassify', $asset), ['asset_type' => 'crypto'])
+            ->assertForbidden();
     }
 
     public function test_reclassify_validates_asset_type(): void
     {
-        $user  = User::factory()->create();
-        $asset = Asset::factory()->stock()->create();
+        [$user, $asset] = $this->userWithAsset();
 
         $this->actingAs($user)
             ->patch(route('assets.reclassify', $asset), ['asset_type' => 'invalid'])
@@ -64,8 +62,7 @@ class AssetReclassifyTest extends TestCase
 
     public function test_reclassify_requires_asset_type(): void
     {
-        $user  = User::factory()->create();
-        $asset = Asset::factory()->stock()->create();
+        [$user, $asset] = $this->userWithAsset();
 
         $this->actingAs($user)
             ->patch(route('assets.reclassify', $asset), [])
@@ -74,8 +71,7 @@ class AssetReclassifyTest extends TestCase
 
     public function test_reclassify_flashes_success_message(): void
     {
-        $user  = User::factory()->create();
-        $asset = Asset::factory()->stock()->create();
+        [$user, $asset] = $this->userWithAsset();
 
         $this->actingAs($user)
             ->patch(route('assets.reclassify', $asset), ['asset_type' => 'crypto'])

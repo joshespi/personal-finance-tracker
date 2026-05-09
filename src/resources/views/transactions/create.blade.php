@@ -53,10 +53,9 @@
                                     x-model="assetType"
                                     @change="results = []; query && search()"
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                                <option value="stock" @selected(old('asset_type') === 'stock')>Stock</option>
-                                <option value="crypto" @selected(old('asset_type') === 'crypto')>Crypto</option>
-                                <option value="real_estate" @selected(old('asset_type') === 'real_estate')>Real Estate</option>
-                                <option value="bond" @selected(old('asset_type') === 'bond')>Bond</option>
+                                @foreach (App\Enums\AssetType::cases() as $type)
+                                    <option value="{{ $type->value }}" @selected(old('asset_type', 'stock') === $type->value)>{{ $type->label() }}</option>
+                                @endforeach
                             </select>
                             <x-input-error :messages="$errors->get('asset_type')" class="mt-2" />
                         </div>
@@ -146,37 +145,8 @@
     <script>
     function transactionForm() {
         return {
-            query: '{{ old('symbol', '') }}',
-            assetType: '{{ old('asset_type', 'stock') }}',
+            ...tickerSearch({ query: '{{ old('symbol', '') }}', defaultType: '{{ old('asset_type', 'stock') }}', syncSelectId: 'asset_type' }),
             txType: '{{ old('type', 'buy') }}',
-            results: [],
-            open: false,
-            activeIndex: -1,
-            async search() {
-                if (this.query.length < 1) { this.results = []; this.open = false; return; }
-                try {
-                    const res = await fetch(`/tickers/search?q=${encodeURIComponent(this.query)}&type=${this.assetType}`);
-                    this.results = await res.json();
-                    this.open = this.results.length > 0;
-                    this.activeIndex = -1;
-                } catch { this.results = []; }
-            },
-            select(r) {
-                this.query     = r.symbol;
-                this.assetType = r.type;
-                this.open      = false;
-                // sync the hidden select
-                document.getElementById('asset_type').value = r.type;
-            },
-            selectCurrent() {
-                if (this.activeIndex >= 0 && this.results[this.activeIndex]) {
-                    this.select(this.results[this.activeIndex]);
-                }
-            },
-            moveDown() { this.activeIndex = Math.min(this.activeIndex + 1, this.results.length - 1); },
-            moveUp()   { this.activeIndex = Math.max(this.activeIndex - 1, -1); },
-            close()    { this.open = false; this.activeIndex = -1; },
-            delayClose() { setTimeout(() => this.close(), 150); },
         };
     }
     </script>

@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssetType;
 use App\Models\ActivityLog;
 use App\Models\Asset;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class TransactionController extends Controller
@@ -79,7 +81,7 @@ class TransactionController extends Controller
 
         $validated = $request->validate([
             'symbol'         => ['required', 'string', 'max:20'],
-            'asset_type'     => ['required', 'in:stock,crypto,real_estate,bond'],
+            'asset_type'     => ['required', Rule::enum(AssetType::class)],
             'type'           => ['required', 'in:' . implode(',', array_keys(self::TYPES))],
             'quantity'       => ['required', 'numeric', 'gt:0'],
             'price_per_unit' => ['required', 'numeric', 'gte:0'],

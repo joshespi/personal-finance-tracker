@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssetType;
 use App\Models\Asset;
 use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +27,7 @@ class PortfolioTransferController extends Controller
             'from_portfolio_id' => ['required', 'integer', Rule::in($portfolioIds)],
             'to_portfolio_id'   => ['required', 'integer', 'different:from_portfolio_id', Rule::in($portfolioIds)],
             'symbol'            => ['required', 'string', 'max:20'],
-            'asset_type'        => ['required', 'in:stock,crypto,real_estate,bond'],
+            'asset_type'        => ['required', Rule::enum(AssetType::class)],
             'quantity'          => ['required', 'numeric', 'gt:0'],
             'price_per_unit'    => ['required', 'numeric', 'gte:0'],
             'fees'              => ['nullable', 'numeric', 'gte:0'],
@@ -64,6 +65,6 @@ class PortfolioTransferController extends Controller
 
         return redirect()
             ->route('dashboard')
-            ->with('success', "Transfer of {} recorded.");
+            ->with('success', 'Transfer recorded.');
     }
 }
