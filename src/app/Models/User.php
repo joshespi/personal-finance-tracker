@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\EnvelopeTransaction;
 
 #[Fillable(['name', 'email', 'password', 'is_admin'])]
 #[Hidden(['password', 'remember_token'])]
@@ -65,6 +66,24 @@ class User extends Authenticatable /* implements MustVerifyEmail */
     public function scheduledTransactions(): HasMany
     {
         return $this->hasMany(ScheduledTransaction::class);
+    }
+
+    public function incomeEntries(): HasMany
+    {
+        return $this->hasMany(IncomeEntry::class);
+    }
+
+    public function readyToAssign(): float
+    {
+        $totalIncome = (float) $this->incomeEntries()->sum('amount');
+
+        $totalAssigned = (float) EnvelopeTransaction::query()
+            ->join('envelopes', 'envelopes.id', '=', 'envelope_transactions.envelope_id')
+            ->where('envelopes.user_id', $this->id)
+            ->where('envelope_transactions.type', 'fund')
+            ->sum('envelope_transactions.amount');
+
+        return round($totalIncome - $totalAssigned, 2);
     }
 
     public function totalCash(): float

@@ -25,6 +25,8 @@
                         || request()->routeIs('cashflow')
                         || request()->routeIs('spending-trends')
                         || request()->routeIs('emergency-fund')
+                        || request()->routeIs('ready-to-assign')
+                        || request()->routeIs('income-entries.*')
                         || request()->routeIs('scheduled-transactions.*');
 
                     $triggerActive = 'inline-flex items-center px-1 pt-1 border-b-2 border-indigo-400 text-sm font-medium leading-5 text-gray-900 dark:text-gray-100 focus:outline-none transition duration-150 ease-in-out';
@@ -79,6 +81,7 @@
                              style="display: none;"
                              @click="open = false">
                             <div class="rounded-md ring-1 ring-black ring-opacity-5 dark:ring-gray-700 py-1 bg-white dark:bg-gray-800">
+                                <x-dropdown-link :href="route('ready-to-assign')">{{ __('Ready to Assign') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('cashflow')">{{ __('Cashflow') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('spending-trends')">{{ __('Spending Trends') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('emergency-fund')">{{ __('Emergency Fund') }}</x-dropdown-link>
@@ -181,6 +184,9 @@
             </x-responsive-nav-link>
 
             <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Money') }}</p>
+            <x-responsive-nav-link :href="route('ready-to-assign')" :active="request()->routeIs('ready-to-assign')">
+                {{ __('Ready to Assign') }}
+            </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('cashflow')" :active="request()->routeIs('cashflow')">
                 {{ __('Cashflow') }}
             </x-responsive-nav-link>
