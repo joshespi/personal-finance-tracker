@@ -2,89 +2,46 @@
 
 **Live:** [portfolio.espifam.com](https://portfolio.espifam.com)
 
-Laravel app for tracking investments, manual assets, liabilities, cash, and budgets in one place.
+Laravel app for tracking investments, manual assets, liabilities, cash, and budgets.
 
 ## Stack
 
 - PHP 8.5 / Laravel (FPM)
-- MariaDB 11.8
-- Nginx
-- Node 24 / Vite / Tailwind / Alpine.js / ApexCharts
+- MariaDB 11.8 / Nginx
+- Node 24 / Vite / Tailwind / Alpine.js / Chart.js / EasyMDE
 - Docker Compose
-
-## Prerequisites
-
-- Docker & Docker Compose
-- A [Finnhub](https://finnhub.io) API key
 
 ## Setup
 
-1. Copy env files:
+```bash
+cp .env.example .env
+cp src/.env.example src/.env
+```
 
-   ```bash
-   cp src/.env.example src/.env
-   ```
-
-   Create `.env` at the repo root for compose secrets:
-
-   ```bash
-   FINNHUB_API_KEY=your_key_here
-   DB_ROOT_PASSWORD=root
-   DB_DATABASE=laravel
-   DB_USERNAME=laravel
-   DB_PASSWORD=secret
-
-   # Logging / debug — forwarded into the app container by docker-compose.yml
-   APP_DEBUG=true
-   LOG_CHANNEL=stack
-   LOG_STACK=single,stderr
-   LOG_LEVEL=debug
-   ```
-
-2. First-time build:
-
-   ```bash
-   bash setup.sh
-   ```
-
-3. Start:
-
-   ```bash
-   docker compose up -d
-   ```
-
-4. Migrate:
-
-   ```bash
-   docker compose exec app php artisan migrate
-   ```
-
-   App is at [http://localhost:8080](http://localhost:8080).
-
-5. (Dev only) Seed demo data:
-
-   ```bash
-   docker compose exec app php artisan db:seed
-   ```
-
-   Creates two login-able accounts plus a populated portfolio, manual asset + mortgage, cash accounts, and envelopes:
-
-   | Email                | Password | Role    |
-   | -------------------- | -------- | ------- |
-   | `demo@example.com`   | password | regular |
-   | `admin@example.com`  | password | admin   |
-
-   The seeder is idempotent — running it again won't duplicate rows. Skip in production.
-
-## Composer install (dev vs prod)
+Fill in `.env`: set `FINNHUB_API_KEY` and generate an `APP_KEY`:
 
 ```bash
-# Development — installs everything, including phpunit, faker, etc.
-docker compose exec app composer install
-
-# Production — skips dev deps, optimizes autoloader
-docker compose exec app composer install --no-dev --optimize-autoloader
+docker compose run --rm app php artisan key:generate --show
 ```
+
+Then build and start:
+
+```bash
+docker compose up -d --build
+```
+
+Migrations run automatically on container start. App is at [http://localhost:8080](http://localhost:8080).
+
+Seed demo data (dev only):
+
+```bash
+docker compose exec app php artisan db:seed
+```
+
+| Email               | Password | Role    |
+| ------------------- | -------- | ------- |
+| `demo@example.com`  | password | regular |
+| `admin@example.com` | password | admin   |
 
 ## Development
 
@@ -96,11 +53,17 @@ docker compose exec app npm run dev
 
 ## Scheduled commands
 
-| Command               | Frequency      | Description                                       |
-| --------------------- | -------------- | ------------------------------------------------- |
-| `assets:fetch-prices` | Hourly         | Fetches latest prices via Finnhub / CoinGecko     |
-| `portfolios:snapshot` | Daily @ 00:05  | Records portfolio value snapshots                 |
-| `benchmarks:fetch`    | Daily @ 00:10  | Fetches SPY and BTC close prices                  |
+| Command               | Frequency     | Description                                   |
+| --------------------- | ------------- | --------------------------------------------- |
+| `assets:fetch-prices` | Hourly        | Fetches latest prices via Finnhub / CoinGecko |
+| `portfolios:snapshot` | Daily @ 00:05 | Records portfolio value snapshots             |
+| `benchmarks:fetch`    | Daily @ 00:10 | Fetches SPY and BTC close prices              |
+
+Cron entry:
+
+```bash
+* * * * * docker compose -f /path/to/laravel-app/docker-compose.yml exec -T app php artisan schedule:run >> /dev/null 2>&1
+```
 
 Seed historical benchmarks once:
 
@@ -108,32 +71,19 @@ Seed historical benchmarks once:
 docker compose exec app php artisan benchmarks:fetch
 ```
 
-Cron entry for the scheduler:
-
-```bash
-* * * * * docker compose -f /path/to/laravel-app/docker-compose.yml exec -T app php artisan schedule:run >> /dev/null 2>&1
-```
-
-## Ports
-
-| Service     | Host port |
-| ----------- | --------- |
-| Nginx (app) | 8080      |
-| MariaDB     | 3307      |
-
 ## Tests
-
-Run the suite:
 
 ```bash
 docker compose exec app php artisan test
 ```
 
+## Ports
+
+| Service | Host port |
+| ------- | --------- |
+| App     | 8080      |
+| MariaDB | 3307      |
+
 ## Logging
 
-Logs ship to two destinations by default (`LOG_STACK=single,stderr`):
-
-- `src/storage/logs/laravel.log` — file on disk inside the container.
-- Container stderr — visible via `docker compose logs -f app`. Useful when the file leg fails (perm issues, missing dir, full disk) so errors aren't silent.
-
-PHP fatals from FPM workers are also routed to container stderr via `docker/php/zzz-laravel.conf` (`php_admin_value[error_log] = /proc/self/fd/2`). To flip debug mode without rebuilding, edit `APP_DEBUG` in the repo-root `.env` and `docker compose up -d --force-recreate app`.
+Logs go to `src/storage/logs/laravel.log` and container stderr (`docker compose logs -f app`). PHP-FPM fatals also route to stderr via `docker/php/zzz-laravel.conf`.
