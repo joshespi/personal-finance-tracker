@@ -1,16 +1,29 @@
 {
     "name": "Portfolio Tracker",
     "short_name": "Portfolio",
-    "description": "Track stocks, crypto, and custom assets in one place.",
+    "description": "Track investments, budget envelopes, cash, and liabilities in one place.",
     "start_url": "/dashboard",
     "display": "standalone",
-    "background_color": "#f3f4f6",
+    "background_color": "#f1f5f9",
     "theme_color": "#4f46e5",
     "icons": [
         {
-            "src": "/favicon.ico",
-            "sizes": "48x48",
-            "type": "image/x-icon"
+            "src": "/icons/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
         }
     ]
 }

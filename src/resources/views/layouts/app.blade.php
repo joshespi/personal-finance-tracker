@@ -9,6 +9,7 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="Portfolio Tracker">
+        <link rel="apple-touch-icon" href="/icons/icon-180.png">
 
         <title>{{ config('app.name', 'Portfolio Tracker') }}</title>
 
@@ -26,7 +27,7 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-gray-100 dark:bg-gray-900">
+    <body class="font-sans antialiased bg-slate-100 dark:bg-gray-900">
         <div class="min-h-screen">
             @if (session('impersonate_admin_id'))
                 <div class="bg-amber-500 text-amber-950 text-sm font-medium px-4 py-2 flex items-center justify-between">
@@ -73,5 +74,10 @@
         </div>
 
         @stack('scripts')
+        <script>
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js');
+            }
+        </script>
     </body>
 </html>

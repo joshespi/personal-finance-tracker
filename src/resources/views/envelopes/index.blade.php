@@ -81,8 +81,11 @@
 
                                 $parts = [];
                                 if ($funded > 0) $parts[] = 'funded $' . number_format($funded, 2);
-                                if ($target > 0) $parts[] = 'spent $' . number_format($spent, 2) . ' / $' . number_format($target, 2);
-                                elseif ($spent > 0) $parts[] = 'spent $' . number_format($spent, 2);
+                                if ($target > 0) {
+                                    $parts[] = 'spent $' . number_format($spent, 2) . ' / $' . number_format($target, 2);
+                                } elseif ($spent > 0) {
+                                    $parts[] = 'spent $' . number_format($spent, 2);
+                                }
                             @endphp
                             <div class="px-6 py-4">
                                 <div class="flex items-center justify-between">
