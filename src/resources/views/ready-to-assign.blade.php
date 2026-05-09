@@ -155,7 +155,6 @@
                                                        step="0.01"
                                                        min="0"
                                                        x-model.number="amounts[{{ $envelope->id }}]"
-                                                       @input="recalc"
                                                        class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm pl-7 py-1.5"
                                                        placeholder="0.00">
                                             </div>
@@ -200,7 +199,6 @@
                 get remaining() {
                     return this.rta - this.total;
                 },
-                recalc() {},
             };
         }
     </script>

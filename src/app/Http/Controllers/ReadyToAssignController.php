@@ -13,10 +13,15 @@ class ReadyToAssignController extends Controller
     {
         $user = $request->user();
 
-        $envelopes = $user->envelopes()->orderBy('sort_order')->orderBy('name')->get();
-        foreach ($envelopes as $e) {
-            $e->current_balance = $e->balance();
-        }
+        $envelopes = $user->envelopes()
+            ->withSum(['transactions as funds_total' => fn ($q) => $q->where('type', 'fund')], 'amount')
+            ->withSum(['transactions as spends_total' => fn ($q) => $q->where('type', 'spend')], 'amount')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->each(function ($e) {
+                $e->current_balance = (float) ($e->funds_total ?? 0) - (float) ($e->spends_total ?? 0);
+            });
 
         $recentIncome = $user->incomeEntries()
             ->orderByDesc('occurred_at')
