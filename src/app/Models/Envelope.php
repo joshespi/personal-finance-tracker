@@ -12,10 +12,12 @@ class Envelope extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'name', 'monthly_target', 'color', 'sort_order', 'notes'];
+    protected $fillable = ['user_id', 'name', 'monthly_target', 'color', 'sort_order', 'notes', 'is_mandatory', 'is_emergency_fund'];
 
     protected $casts = [
-        'monthly_target' => 'decimal:8',
+        'monthly_target'   => 'decimal:8',
+        'is_mandatory'     => 'boolean',
+        'is_emergency_fund' => 'boolean',
     ];
 
     public function user(): BelongsTo
