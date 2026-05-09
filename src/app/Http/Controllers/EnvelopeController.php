@@ -47,6 +47,10 @@ class EnvelopeController extends Controller
     {
         $validated = $this->validatePayload($request);
 
+        if ($validated['is_emergency_fund']) {
+            $this->clearEmergencyFundFlag($request);
+        }
+
         $envelope = $request->user()->envelopes()->create($validated);
 
         return redirect()->route('envelopes.show', $envelope)->with('success', 'Envelope created.');
@@ -77,6 +81,11 @@ class EnvelopeController extends Controller
         abort_unless($envelope->user_id === $request->user()->id, 403);
 
         $validated = $this->validatePayload($request);
+
+        if ($validated['is_emergency_fund']) {
+            $this->clearEmergencyFundFlag($request, except: $envelope->id);
+        }
+
         $envelope->update($validated);
 
         return redirect()->route('envelopes.show', $envelope)->with('success', 'Envelope updated.');
@@ -91,14 +100,29 @@ class EnvelopeController extends Controller
         return redirect()->route('envelopes.index')->with('success', 'Envelope deleted.');
     }
 
+    private function clearEmergencyFundFlag(Request $request, ?int $except = null): void
+    {
+        $request->user()
+            ->envelopes()
+            ->where('is_emergency_fund', true)
+            ->when($except !== null, fn ($q) => $q->where('id', '!=', $except))
+            ->update(['is_emergency_fund' => false]);
+    }
+
     private function validatePayload(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name'           => ['required', 'string', 'max:200'],
             'monthly_target' => ['nullable', 'numeric', 'gte:0'],
             'color'          => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'sort_order'     => ['nullable', 'integer', 'gte:0'],
             'notes'          => ['nullable', 'string', 'max:1000'],
         ]);
+
+        // Checkboxes omit the key when unchecked; coerce explicitly
+        $validated['is_mandatory']      = $request->boolean('is_mandatory');
+        $validated['is_emergency_fund'] = $request->boolean('is_emergency_fund');
+
+        return $validated;
     }
 }

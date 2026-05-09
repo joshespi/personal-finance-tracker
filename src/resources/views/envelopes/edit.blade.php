@@ -55,6 +55,23 @@
                         <x-input-error :messages="$errors->get('notes')" class="mt-2" />
                     </div>
 
+                    <div class="flex flex-col gap-2.5">
+                        <label class="flex items-center gap-2.5 cursor-pointer">
+                            <input type="checkbox" name="is_mandatory" value="1"
+                                   {{ old('is_mandatory', $envelope->is_mandatory) ? 'checked' : '' }}
+                                   class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Mandatory expense</span>
+                            <span class="text-xs text-gray-400 dark:text-gray-500">(counted in emergency fund target)</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 cursor-pointer">
+                            <input type="checkbox" name="is_emergency_fund" value="1"
+                                   {{ old('is_emergency_fund', $envelope->is_emergency_fund) ? 'checked' : '' }}
+                                   class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Emergency fund savings</span>
+                            <span class="text-xs text-gray-400 dark:text-gray-500">(balance counts as your emergency fund)</span>
+                        </label>
+                    </div>
+
                     <div class="flex items-center gap-4">
                         <x-primary-button>Save</x-primary-button>
                         <a href="{{ route('envelopes.show', $envelope) }}"
