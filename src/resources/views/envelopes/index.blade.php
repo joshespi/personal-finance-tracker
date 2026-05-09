@@ -1,14 +1,42 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-4">
             <div>
                 <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Budget Envelopes</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Allocate money into envelopes; spend from them as the month goes.</p>
             </div>
-            <a href="{{ route('envelopes.create') }}"
-               class="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 dark:hover:bg-gray-600 transition">
-                + Add Envelope
-            </a>
+            <div class="flex items-center gap-3">
+                {{-- Month navigation --}}
+                <div class="flex items-center gap-1">
+                    <a href="{{ route('envelopes.index', ['month' => $prevMonth]) }}"
+                       class="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </a>
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[96px] text-center">
+                        {{ $month->format('M Y') }}
+                    </span>
+                    @if ($isCurrentMonth)
+                        <span class="p-1.5 rounded-md text-gray-300 dark:text-gray-600 cursor-not-allowed">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </span>
+                    @else
+                        <a href="{{ route('envelopes.index', ['month' => $nextMonth]) }}"
+                           class="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                    @endif
+                </div>
+                <a href="{{ route('envelopes.create') }}"
+                   class="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 dark:hover:bg-gray-600 transition">
+                    + Add Envelope
+                </a>
+            </div>
         </div>
     </x-slot>
 
@@ -28,12 +56,12 @@
                         <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">${{ number_format($totalBalance, 2) }}</p>
                     </div>
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Spent This Month</p>
-                        <p class="mt-1 text-2xl font-semibold font-mono text-red-600 dark:text-red-400">−${{ number_format($totalSpentMonth, 2) }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Funded in {{ $month->format('M Y') }}</p>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-indigo-600 dark:text-indigo-400">+${{ number_format($totalFundedMonth, 2) }}</p>
                     </div>
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Monthly Target</p>
-                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">${{ number_format($totalMonthlyTarget, 2) }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Spent in {{ $month->format('M Y') }}</p>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-red-600 dark:text-red-400">−${{ number_format($totalSpentMonth, 2) }}</p>
                     </div>
                 </div>
             @endif
@@ -45,10 +73,16 @@
                     <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($envelopes as $e)
                             @php
-                                $target  = (float) ($e->monthly_target ?? 0);
-                                $spent   = (float) $e->spent_this_month;
-                                $pct     = $target > 0 ? min(100, round($spent / $target * 100)) : 0;
+                                $target     = (float) ($e->monthly_target ?? 0);
+                                $spent      = (float) $e->spent_this_month;
+                                $funded     = (float) $e->funded_this_month;
+                                $pct        = $target > 0 ? min(100, round($spent / $target * 100)) : 0;
                                 $overBudget = $target > 0 && $spent > $target;
+
+                                $parts = [];
+                                if ($funded > 0) $parts[] = 'funded $' . number_format($funded, 2);
+                                if ($target > 0) $parts[] = 'spent $' . number_format($spent, 2) . ' / $' . number_format($target, 2);
+                                elseif ($spent > 0) $parts[] = 'spent $' . number_format($spent, 2);
                             @endphp
                             <div class="px-6 py-4">
                                 <div class="flex items-center justify-between">
@@ -62,9 +96,9 @@
                                             <p class="font-mono {{ $e->current_balance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }} text-sm">
                                                 {{ $e->current_balance < 0 ? '−' : '' }}${{ number_format(abs($e->current_balance), 2) }}
                                             </p>
-                                            @if ($target > 0)
+                                            @if (count($parts))
                                                 <p class="text-xs {{ $overBudget ? 'text-red-500' : 'text-gray-400 dark:text-gray-500' }}">
-                                                    ${{ number_format($spent, 2) }} / ${{ number_format($target, 2) }} this month
+                                                    {{ implode(' · ', $parts) }}
                                                 </p>
                                             @endif
                                         </div>

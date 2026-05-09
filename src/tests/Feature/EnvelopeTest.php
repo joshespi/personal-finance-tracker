@@ -262,4 +262,74 @@ class EnvelopeTest extends TestCase
 
         $this->assertDatabaseMissing('envelope_transactions', ['envelope_id' => $envelope->id]);
     }
+
+    public function test_index_defaults_to_current_month(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('envelopes.index'))
+            ->assertOk()
+            ->assertSee(now()->format('M Y'));
+    }
+
+    public function test_index_month_param_scopes_spend_totals(): void
+    {
+        $envelope = Envelope::factory()->create();
+        EnvelopeTransaction::factory()->for($envelope)->spend()->create(['amount' => 100, 'occurred_at' => '2026-03-15']);
+        EnvelopeTransaction::factory()->for($envelope)->spend()->create(['amount' => 50,  'occurred_at' => '2026-04-10']);
+
+        $this->actingAs($envelope->user)
+            ->get(route('envelopes.index', ['month' => '2026-03']))
+            ->assertOk()
+            ->assertSee('Mar 2026')
+            ->assertSee('spent $100.00')
+            ->assertDontSee('spent $50.00');
+    }
+
+    public function test_index_month_param_scopes_fund_totals(): void
+    {
+        $envelope = Envelope::factory()->create();
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 200, 'occurred_at' => '2026-04-01']);
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 300, 'occurred_at' => '2026-05-01']);
+
+        $this->actingAs($envelope->user)
+            ->get(route('envelopes.index', ['month' => '2026-04']))
+            ->assertOk()
+            ->assertSee('funded $200.00')
+            ->assertDontSee('funded $300.00');
+    }
+
+    public function test_index_invalid_month_param_defaults_to_current_month(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('envelopes.index', ['month' => 'not-a-date']))
+            ->assertOk()
+            ->assertSee(now()->format('M Y'));
+    }
+
+    public function test_index_next_arrow_disabled_on_current_month(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->get(route('envelopes.index'))
+            ->assertOk();
+
+        $nextMonth = now()->addMonth()->format('Y-m');
+        $response->assertDontSee(route('envelopes.index', ['month' => $nextMonth]));
+    }
+
+    public function test_index_next_arrow_present_on_past_month(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->get(route('envelopes.index', ['month' => '2026-03']))
+            ->assertOk();
+
+        $response->assertSee(route('envelopes.index', ['month' => '2026-04']));
+    }
 }
