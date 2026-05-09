@@ -11,6 +11,8 @@ use App\Http\Controllers\CashTransactionController;
 use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\ScheduledTransactionController;
 use App\Http\Controllers\EmergencyFundController;
+use App\Http\Controllers\IncomeEntryController;
+use App\Http\Controllers\ReadyToAssignController;
 use App\Http\Controllers\SpendingTrendsController;
 use App\Http\Controllers\EnvelopeController;
 use App\Http\Controllers\EnvelopeTransactionController;
@@ -92,6 +94,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/cashflow', CashflowController::class)->name('cashflow');
     Route::get('/spending-trends', SpendingTrendsController::class)->name('spending-trends');
     Route::get('/emergency-fund', EmergencyFundController::class)->name('emergency-fund');
+    Route::get('/ready-to-assign', [ReadyToAssignController::class, 'index'])->name('ready-to-assign');
+    Route::post('/ready-to-assign/assign', [ReadyToAssignController::class, 'assign'])->name('ready-to-assign.assign');
+    Route::post('/income-entries', [IncomeEntryController::class, 'store'])->name('income-entries.store');
+    Route::delete('/income-entries/{incomeEntry}', [IncomeEntryController::class, 'destroy'])->name('income-entries.destroy');
 
     Route::resource('scheduled-transactions', ScheduledTransactionController::class);
     Route::patch('scheduled-transactions/{scheduledTransaction}/toggle', [ScheduledTransactionController::class, 'toggle'])
