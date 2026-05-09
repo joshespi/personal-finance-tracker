@@ -286,7 +286,7 @@
                     </div>
                     <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($summaries as $s)
-                            <div class="px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                 <div>
                                     <a href="{{ route('portfolios.show', $s['portfolio']) }}"
                                        class="font-medium text-gray-900 dark:text-gray-100 hover:underline">
@@ -296,8 +296,8 @@
                                         <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ $s['portfolio']->description }}</p>
                                     @endif
                                 </div>
-                                <div class="flex items-center gap-8 text-right text-sm shrink-0 ms-4">
-                                    <div>
+                                <div class="flex items-center gap-4 sm:gap-8 text-right text-sm">
+                                    <div class="hidden sm:block">
                                         <p class="text-xs text-gray-400 dark:text-gray-500">Cost Basis</p>
                                         <p class="font-mono text-gray-700 dark:text-gray-300">${{ number_format($s['cost_basis'], 2) }}</p>
                                     </div>
@@ -306,7 +306,7 @@
                                             <p class="text-xs text-gray-400 dark:text-gray-500">Market Value</p>
                                             <p class="font-mono text-gray-900 dark:text-gray-100 font-semibold">${{ number_format($s['market_value'], 2) }}</p>
                                         </div>
-                                        <div>
+                                        <div class="hidden sm:block">
                                             <p class="text-xs text-gray-400 dark:text-gray-500">P&L</p>
                                             @php $unr = $s['unrealized'] ?? 0; @endphp
                                             <p class="font-mono font-semibold {{ $unr >= 0 ? 'text-green-600' : 'text-red-600' }}">
@@ -315,13 +315,13 @@
                                         </div>
                                     @endif
                                     @if ($s['manual_value'] > 0)
-                                        <div>
+                                        <div class="hidden sm:block">
                                             <p class="text-xs text-gray-400 dark:text-gray-500">Manual</p>
                                             <p class="font-mono text-gray-700 dark:text-gray-300">${{ number_format($s['manual_value'], 2) }}</p>
                                         </div>
                                     @endif
                                     <a href="{{ route('portfolios.show', $s['portfolio']) }}"
-                                       class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                                       class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition shrink-0">
                                         View
                                     </a>
                                 </div>
