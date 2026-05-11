@@ -29,6 +29,7 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD}
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES}
     restart: always
     depends_on:
       db:
