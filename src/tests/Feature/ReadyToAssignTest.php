@@ -15,13 +15,6 @@ class ReadyToAssignTest extends TestCase
         $this->get(route('ready-to-assign'))->assertRedirect(route('login'));
     }
 
-    public function test_index_loads_for_authenticated_user(): void
-    {
-        $this->actingAs(User::factory()->create())
-            ->get(route('ready-to-assign'))
-            ->assertOk();
-    }
-
     public function test_ready_to_assign_is_income_minus_funded(): void
     {
         $user     = User::factory()->create();

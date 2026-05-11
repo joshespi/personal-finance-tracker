@@ -13,6 +13,22 @@
                     </div>
                 @endif
 
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Email</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        Sends a plain-text test email to <strong>{{ auth()->user()->email }}</strong> using the configured mailer (<code>{{ config('mail.default') }}</code>).
+                    </p>
+                    <form method="POST" action="{{ route('admin.settings.test-email') }}">
+                        @csrf
+                        <button type="submit"
+                                class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                            Send test email
+                        </button>
+                    </form>
+                </div>
+
+                <hr class="border-gray-200 dark:border-gray-700">
+
                 <form method="POST" action="{{ route('admin.settings.update') }}" class="space-y-6">
                     @csrf
 

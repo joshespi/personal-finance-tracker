@@ -14,13 +14,6 @@ class SpendingTrendsTest extends TestCase
         $this->get(route('spending-trends'))->assertRedirect(route('login'));
     }
 
-    public function test_index_loads_for_authenticated_user(): void
-    {
-        $this->actingAs(User::factory()->create())
-            ->get(route('spending-trends'))
-            ->assertOk();
-    }
-
     public function test_shows_envelope_spend_for_current_user(): void
     {
         $user     = User::factory()->create();

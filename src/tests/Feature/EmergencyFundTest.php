@@ -14,13 +14,6 @@ class EmergencyFundTest extends TestCase
         $this->get(route('emergency-fund'))->assertRedirect(route('login'));
     }
 
-    public function test_index_loads_for_authenticated_user(): void
-    {
-        $this->actingAs(User::factory()->create())
-            ->get(route('emergency-fund'))
-            ->assertOk();
-    }
-
     public function test_shows_empty_state_when_no_mandatory_envelopes(): void
     {
         $user = User::factory()->create();

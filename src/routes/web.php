@@ -134,6 +134,7 @@ Route::middleware('auth')->group(function () {
         Route::get('activity', AdminActivityLogController::class)->name('activity');
         Route::get('settings', [AdminSettingsController::class, 'edit'])->name('settings');
         Route::post('settings', [AdminSettingsController::class, 'update'])->name('settings.update');
+        Route::post('settings/test-email', [AdminSettingsController::class, 'sendTestEmail'])->name('settings.test-email');
         Route::post('impersonate/{user}', [ImpersonationController::class, 'store'])->name('impersonate');
     });
 });
