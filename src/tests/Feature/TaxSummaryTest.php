@@ -107,4 +107,52 @@ class TaxSummaryTest extends TestCase
         $this->actingAs($user)->get(route('export.transactions'))->assertOk();
         $this->actingAs($other)->get(route('export.transactions'))->assertOk();
     }
+
+    public function test_tax_advantaged_portfolio_excluded_from_tax_summary(): void
+    {
+        $portfolio = Portfolio::factory()->create(['is_tax_advantaged' => true]);
+        $asset     = Asset::factory()->stock()->create(['symbol' => 'MSFT']);
+
+        Transaction::factory()->for($portfolio)->for($asset)->buy()
+            ->create(['quantity' => 10, 'price_per_unit' => 100, 'transacted_at' => '2022-01-01']);
+        Transaction::factory()->for($portfolio)->for($asset)->sell()
+            ->create(['quantity' => 10, 'price_per_unit' => 200, 'transacted_at' => '2022-06-01']);
+
+        $this->actingAs($portfolio->user)
+            ->get(route('tax.summary', ['year' => 2022]))
+            ->assertOk()
+            ->assertSee('No realized gains');
+    }
+
+    public function test_taxable_portfolio_still_appears_on_tax_summary(): void
+    {
+        $portfolio = Portfolio::factory()->create(['is_tax_advantaged' => false]);
+        $asset     = Asset::factory()->stock()->create(['symbol' => 'GOOG']);
+
+        Transaction::factory()->for($portfolio)->for($asset)->buy()
+            ->create(['quantity' => 5, 'price_per_unit' => 100, 'transacted_at' => '2022-01-01']);
+        Transaction::factory()->for($portfolio)->for($asset)->sell()
+            ->create(['quantity' => 5, 'price_per_unit' => 200, 'transacted_at' => '2022-06-01']);
+
+        $this->actingAs($portfolio->user)
+            ->get(route('tax.summary', ['year' => 2022]))
+            ->assertOk()
+            ->assertSee('500.00');
+    }
+
+    public function test_tax_advantaged_portfolio_excluded_from_realized_gains_export(): void
+    {
+        $portfolio = Portfolio::factory()->create(['is_tax_advantaged' => true]);
+        $asset     = Asset::factory()->stock()->create(['symbol' => 'AMZN']);
+
+        Transaction::factory()->for($portfolio)->for($asset)->buy()
+            ->create(['quantity' => 10, 'price_per_unit' => 100, 'transacted_at' => '2022-01-01']);
+        Transaction::factory()->for($portfolio)->for($asset)->sell()
+            ->create(['quantity' => 10, 'price_per_unit' => 200, 'transacted_at' => '2022-06-01']);
+
+        $response = $this->actingAs($portfolio->user)->get(route('export.realized-gains'));
+
+        $response->assertOk();
+        $this->assertStringNotContainsString('AMZN', $response->streamedContent());
+    }
 }

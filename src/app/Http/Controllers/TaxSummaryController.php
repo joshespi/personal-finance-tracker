@@ -12,7 +12,7 @@ class TaxSummaryController extends Controller
     {
         $user      = $request->user();
         $service   = new RealizedGainService();
-        $portfolios = $user->portfolios()->with('transactions.asset')->get();
+        $portfolios = $user->portfolios()->where('is_tax_advantaged', false)->with('transactions.asset')->get();
 
         $allLots = collect();
 

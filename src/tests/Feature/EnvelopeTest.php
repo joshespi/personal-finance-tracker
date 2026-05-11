@@ -332,4 +332,89 @@ class EnvelopeTest extends TestCase
 
         $response->assertSee(route('envelopes.index', ['month' => '2026-04']));
     }
+
+    public function test_create_envelope_with_savings_goal(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('envelopes.store'), [
+                'name'        => 'Down Payment',
+                'color'       => '#6366f1',
+                'goal_amount' => 50000,
+                'goal_date'   => '2028-06-01',
+            ])
+            ->assertRedirect();
+
+        $envelope = Envelope::where('user_id', $user->id)->where('name', 'Down Payment')->firstOrFail();
+        $this->assertEquals(50000.0, (float) $envelope->goal_amount);
+        $this->assertEquals('2028-06-01', $envelope->goal_date->format('Y-m-d'));
+    }
+
+    public function test_update_envelope_goal(): void
+    {
+        $envelope = Envelope::factory()->create(['goal_amount' => null, 'goal_date' => null]);
+
+        $this->actingAs($envelope->user)
+            ->put(route('envelopes.update', $envelope), [
+                'name'        => $envelope->name,
+                'color'       => $envelope->color,
+                'goal_amount' => 10000,
+                'goal_date'   => '2027-01-01',
+            ])
+            ->assertRedirect();
+
+        $envelope->refresh();
+        $this->assertEquals(10000.0, (float) $envelope->goal_amount);
+        $this->assertEquals('2027-01-01', $envelope->goal_date->format('Y-m-d'));
+    }
+
+    public function test_show_displays_savings_goal_tile(): void
+    {
+        $envelope = Envelope::factory()->create([
+            'goal_amount' => 20000,
+            'goal_date'   => '2028-01-01',
+        ]);
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 5000]);
+
+        $this->actingAs($envelope->user)
+            ->get(route('envelopes.show', $envelope))
+            ->assertOk()
+            ->assertSee('Savings Goal')
+            ->assertSee('20,000.00')
+            ->assertSee('by Jan 2028');
+    }
+
+    public function test_index_displays_goal_progress_for_savings_envelope(): void
+    {
+        $envelope = Envelope::factory()->create([
+            'goal_amount' => 10000,
+            'goal_date'   => '2027-06-01',
+        ]);
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 2500]);
+
+        $this->actingAs($envelope->user)
+            ->get(route('envelopes.index'))
+            ->assertOk()
+            ->assertSee('goal $2,500.00 / $10,000.00');
+    }
+
+    public function test_goal_without_date_is_valid(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('envelopes.store'), [
+                'name'        => 'Vacation Fund',
+                'color'       => '#10b981',
+                'goal_amount' => 3000,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('envelopes', [
+            'user_id'     => $user->id,
+            'goal_amount' => 3000,
+            'goal_date'   => null,
+        ]);
+    }
 }

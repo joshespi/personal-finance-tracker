@@ -1,8 +1,11 @@
-# Portfolio Tracker
+# Personal Finance Tracker
 
-**Live:** [portfolio.espifam.com](https://portfolio.espifam.com)
+**Live:** [portfolio.espifam.com](https://portfolio.espifam.com) (planned move to `finance.espifam.com` — see ROADMAP)
 
-Laravel app for tracking investments, manual assets, liabilities, cash, and budgets.
+Self-hosted Laravel app covering both halves of personal finance:
+
+- **Investing** — portfolios, transactions, market-priced assets (Finnhub/CoinGecko), manual assets (incl. proxy-ticker auto-pricing), tax summary, realized gains, dashboards
+- **Budgeting / YNAB-replacement** — envelopes (monthly target + savings goals), cash accounts, income entries, "ready to assign", scheduled/recurring transactions, cashflow report, spending trends, emergency-fund calculator, FIRE/net-worth forecast
 
 ## Stack
 
@@ -38,6 +41,8 @@ Seed demo data (dev only):
 docker compose exec app php artisan db:seed
 ```
 
+The seeder creates a representative dataset: two portfolios (one tax-advantaged), bond/stock/crypto/real-estate transactions, a proxy-ticker manual asset (401k tracked via VOO), checking + savings cash accounts, six envelopes (mandatory/discretionary/emergency/savings-goal), six months of paycheck income entries, and two scheduled transactions.
+
 | Email               | Password | Role    |
 | ------------------- | -------- | ------- |
 | `demo@example.com`  | password | regular |
@@ -49,6 +54,7 @@ docker compose exec app php artisan db:seed
 docker compose logs -f app
 docker compose exec app php artisan <command>
 docker compose exec app npm run dev
+docker compose exec app npm run build       # production assets
 ```
 
 ## Scheduled commands
@@ -58,6 +64,8 @@ docker compose exec app npm run dev
 | `assets:fetch-prices` | Hourly        | Fetches latest prices via Finnhub / CoinGecko |
 | `portfolios:snapshot` | Daily @ 00:05 | Records portfolio value snapshots             |
 | `benchmarks:fetch`    | Daily @ 00:10 | Fetches SPY and BTC close prices              |
+
+Recurring transactions (`ScheduledTransaction`) are materialised lazily — when a user visits `/scheduled-transactions`, any due entries are created and `next_due_at` is advanced. No cron entry needed for that path today.
 
 Cron entry:
 

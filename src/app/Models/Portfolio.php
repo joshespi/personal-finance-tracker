@@ -12,9 +12,10 @@ class Portfolio extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'name', 'description', 'currency', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'target_manual_pct'];
+    protected $fillable = ['user_id', 'name', 'description', 'currency', 'is_tax_advantaged', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'target_manual_pct'];
 
     protected $casts = [
+        'is_tax_advantaged'      => 'boolean',
         'target_stock_pct'       => 'integer',
         'target_crypto_pct'      => 'integer',
         'target_real_estate_pct' => 'integer',

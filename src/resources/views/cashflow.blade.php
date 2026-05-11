@@ -47,6 +47,31 @@
                 </div>
             </div>
 
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Income</h3>
+                    <a href="{{ route('ready-to-assign') }}"
+                       class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">+ Record income</a>
+                </div>
+                @if ($incomeRows->isEmpty())
+                    <div class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">No income recorded for this month.</div>
+                @else
+                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach ($incomeRows as $entry)
+                            <div class="px-6 py-3 flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-800 dark:text-gray-200">{{ $entry->description ?: '—' }}</p>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ $entry->occurred_at->format('M j') }}</p>
+                                </div>
+                                <span class="text-sm font-mono font-semibold text-green-600 dark:text-green-400">
+                                    ${{ number_format($entry->amount, 2) }}
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
             {{-- 6-month history chart --}}
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">6-Month History</h3>

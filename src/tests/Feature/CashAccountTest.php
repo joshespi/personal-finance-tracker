@@ -175,6 +175,32 @@ class CashAccountTest extends TestCase
         $this->assertDatabaseMissing('cash_transactions', ['cash_account_id' => $account->id]);
     }
 
+    public function test_show_renders_filter_and_dataset_attrs(): void
+    {
+        $account = CashAccount::factory()->create();
+        CashTransaction::factory()->for($account, 'cashAccount')->withdrawal()->create([
+            'amount'      => 45.32,
+            'description' => 'Whole Foods',
+            'occurred_at' => now()->subDays(3),
+        ]);
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create([
+            'amount'      => 1000,
+            'description' => 'Paycheck',
+            'occurred_at' => now()->subDays(1),
+        ]);
+
+        $response = $this->actingAs($account->user)
+            ->get(route('cash-accounts.show', $account))
+            ->assertOk()
+            ->assertSee('cashFilter', false)
+            ->assertSee('id="tx-filter"', false);
+
+        // Filter input present, each row carries the data attrs the JS uses.
+        $response->assertSee('data-amount="45.32"', false)
+                 ->assertSee('data-desc="whole foods"', false)
+                 ->assertSee('data-amount="1000"', false);
+    }
+
     public function test_dashboard_includes_cash_in_net_worth(): void
     {
         $user = User::factory()->create();

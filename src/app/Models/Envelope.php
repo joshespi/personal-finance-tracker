@@ -12,11 +12,13 @@ class Envelope extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'name', 'monthly_target', 'color', 'sort_order', 'notes', 'is_mandatory', 'is_emergency_fund'];
+    protected $fillable = ['user_id', 'name', 'monthly_target', 'goal_amount', 'goal_date', 'color', 'sort_order', 'notes', 'is_mandatory', 'is_emergency_fund'];
 
     protected $casts = [
-        'monthly_target'   => 'decimal:8',
-        'is_mandatory'     => 'boolean',
+        'monthly_target'    => 'decimal:8',
+        'goal_amount'       => 'decimal:2',
+        'goal_date'         => 'date',
+        'is_mandatory'      => 'boolean',
         'is_emergency_fund' => 'boolean',
     ];
 

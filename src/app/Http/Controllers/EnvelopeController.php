@@ -135,6 +135,8 @@ class EnvelopeController extends Controller
         $validated = $request->validate([
             'name'           => ['required', 'string', 'max:200'],
             'monthly_target' => ['nullable', 'numeric', 'gte:0'],
+            'goal_amount'    => ['nullable', 'numeric', 'gte:0'],
+            'goal_date'      => ['nullable', 'date'],
             'color'          => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'sort_order'     => ['nullable', 'integer', 'gte:0'],
             'notes'          => ['nullable', 'string', 'max:1000'],

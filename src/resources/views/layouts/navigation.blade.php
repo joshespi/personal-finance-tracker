@@ -93,6 +93,10 @@
                         </div>
                     </div>
 
+                    <x-nav-link :href="route('forecast')" :active="request()->routeIs('forecast')">
+                        {{ __('Forecast') }}
+                    </x-nav-link>
+
                     @if (Auth::user()->is_admin)
                         <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
                             {{ __('Admin') }}
@@ -207,6 +211,11 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('liabilities.index')" :active="request()->routeIs('liabilities.*')">
                 {{ __('Liabilities') }}
+            </x-responsive-nav-link>
+
+            <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Planning') }}</p>
+            <x-responsive-nav-link :href="route('forecast')" :active="request()->routeIs('forecast')">
+                {{ __('Forecast') }}
             </x-responsive-nav-link>
 
             @if (Auth::user()->is_admin)

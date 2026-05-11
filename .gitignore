@@ -17,3 +17,4 @@ docker-compose.override.yml
 
 db_data
 ROADMAP.md
+CLAUDE.md

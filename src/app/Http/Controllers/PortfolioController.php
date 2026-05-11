@@ -33,10 +33,13 @@ class PortfolioController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:100'],
-            'description' => ['nullable', 'string', 'max:1000'],
-            'currency'    => ['required', 'string', 'size:3'],
+            'name'               => ['required', 'string', 'max:100'],
+            'description'        => ['nullable', 'string', 'max:1000'],
+            'currency'           => ['required', 'string', 'size:3'],
+            'is_tax_advantaged'  => ['boolean'],
         ]);
+
+        $validated['is_tax_advantaged'] = $request->boolean('is_tax_advantaged');
 
         $portfolio = $request->user()->portfolios()->create($validated);
 
@@ -94,9 +97,10 @@ class PortfolioController extends Controller
         abort_unless($portfolio->user_id === $request->user()->id, 403);
 
         $validated = $request->validate([
-            'name'               => ['required', 'string', 'max:100'],
-            'description'        => ['nullable', 'string', 'max:1000'],
-            'currency'           => ['required', 'string', 'size:3'],
+            'name'                   => ['required', 'string', 'max:100'],
+            'description'            => ['nullable', 'string', 'max:1000'],
+            'currency'               => ['required', 'string', 'size:3'],
+            'is_tax_advantaged'      => ['boolean'],
             'target_stock_pct'       => ['nullable', 'integer', 'min:0', 'max:100'],
             'target_crypto_pct'      => ['nullable', 'integer', 'min:0', 'max:100'],
             'target_real_estate_pct' => ['nullable', 'integer', 'min:0', 'max:100'],
@@ -108,6 +112,7 @@ class PortfolioController extends Controller
             'name'                   => $validated['name'],
             'description'            => $validated['description'] ?? null,
             'currency'               => $validated['currency'],
+            'is_tax_advantaged'      => $request->boolean('is_tax_advantaged'),
             'target_stock_pct'       => $validated['target_stock_pct'] ?? 0,
             'target_crypto_pct'      => $validated['target_crypto_pct'] ?? 0,
             'target_real_estate_pct' => $validated['target_real_estate_pct'] ?? 0,

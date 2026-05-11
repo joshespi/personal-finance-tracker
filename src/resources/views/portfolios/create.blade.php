@@ -33,6 +33,15 @@
                         <x-input-error :messages="$errors->get('currency')" class="mt-2" />
                     </div>
 
+                    <div class="flex items-center gap-3">
+                        <input id="is_tax_advantaged" name="is_tax_advantaged" type="checkbox" value="1"
+                               class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm"
+                               {{ old('is_tax_advantaged') ? 'checked' : '' }}>
+                        <label for="is_tax_advantaged" class="text-sm text-gray-700 dark:text-gray-300">
+                            Tax-advantaged account (401k, IRA, HSA, etc.) — excluded from tax summary
+                        </label>
+                    </div>
+
                     <div class="flex items-center gap-4">
                         <x-primary-button>Create Portfolio</x-primary-button>
                         <a href="{{ route('portfolios.index') }}" class="text-sm text-gray-600 dark:text-gray-400 hover:underline">Cancel</a>

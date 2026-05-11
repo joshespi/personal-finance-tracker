@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CashTransaction;
 use App\Models\EnvelopeTransaction;
+use App\Models\IncomeEntry;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -12,43 +12,75 @@ class CashflowController extends Controller
 {
     public function __invoke(Request $request): View
     {
-        $month = Carbon::parse($request->input('month', now()->format('Y-m')))->startOfMonth();
+        $user     = $request->user();
+        $month    = Carbon::parse($request->input('month', now()->format('Y-m')))->startOfMonth();
+        $monthEnd = $month->copy()->endOfMonth();
 
-        $cashAccountIds = $request->user()->cashAccounts()->pluck('id');
-
-        $envelopes = $request->user()
+        $envelopes = $user
             ->envelopes()
-            ->with(['transactions' => fn ($q) => $q
+            ->withSum(['transactions as spent_amount' => fn ($q) => $q
                 ->where('type', 'spend')
-                ->whereBetween('occurred_at', [$month, $month->copy()->endOfMonth()])
-            ])
+                ->whereBetween('occurred_at', [$month, $monthEnd])
+            ], 'amount')
             ->orderBy('sort_order')
             ->get();
 
         $envelopeIds = $envelopes->pluck('id');
 
-        [$income, $totalSpent] = $this->totalsForMonth($month, $cashAccountIds, $envelopeIds);
+        $incomeRows = $user->incomeEntries()
+            ->whereBetween('occurred_at', [$month, $monthEnd])
+            ->orderByDesc('occurred_at')
+            ->orderByDesc('id')
+            ->get();
 
-        $net = round($income - $totalSpent, 2);
+        $income     = round((float) $incomeRows->sum('amount'), 2);
+        $totalSpent = round((float) $envelopes->sum('spent_amount'), 2);
+        $net        = round($income - $totalSpent, 2);
 
         $envelopeRows = $envelopes
             ->map(fn ($e) => [
                 'envelope' => $e,
-                'spent'    => round((float) $e->transactions->sum('amount'), 2),
+                'spent'    => round((float) $e->spent_amount, 2),
                 'target'   => round((float) $e->monthly_target, 2),
             ])
             ->filter(fn ($r) => $r['spent'] > 0 || $r['target'] > 0)
             ->sortByDesc('spent')
             ->values();
 
+        $currentYm     = $month->format('Y-m');
+        $historyStart  = $month->copy()->subMonths(5)->startOfMonth();
+        $historyEnd    = $month->copy()->subMonth()->endOfMonth();
+
+        $incomeByMonth = [$currentYm => $income];
+        $spentByMonth  = [$currentYm => $totalSpent];
+
+        $historyIncome = IncomeEntry::where('user_id', $user->id)
+            ->whereBetween('occurred_at', [$historyStart, $historyEnd])
+            ->get(['occurred_at', 'amount']);
+
+        $historySpent = EnvelopeTransaction::whereIn('envelope_id', $envelopeIds)
+            ->where('type', 'spend')
+            ->whereBetween('occurred_at', [$historyStart, $historyEnd])
+            ->get(['occurred_at', 'amount']);
+
+        foreach ($historyIncome as $row) {
+            $ym = $row->occurred_at->format('Y-m');
+            $incomeByMonth[$ym] = ($incomeByMonth[$ym] ?? 0) + (float) $row->amount;
+        }
+
+        foreach ($historySpent as $row) {
+            $ym = $row->occurred_at->format('Y-m');
+            $spentByMonth[$ym] = ($spentByMonth[$ym] ?? 0) + (float) $row->amount;
+        }
+
         $history = collect();
         for ($i = 5; $i >= 0; $i--) {
-            $m = $month->copy()->subMonths($i);
-            [$mIncome, $mSpent] = $this->totalsForMonth($m, $cashAccountIds, $envelopeIds);
+            $m  = $month->copy()->subMonths($i);
+            $ym = $m->format('Y-m');
             $history->push([
                 'month'  => $m->format('M Y'),
-                'income' => $mIncome,
-                'spent'  => $mSpent,
+                'income' => round($incomeByMonth[$ym] ?? 0, 2),
+                'spent'  => round($spentByMonth[$ym] ?? 0, 2),
             ]);
         }
 
@@ -58,22 +90,7 @@ class CashflowController extends Controller
 
         return view('cashflow', compact(
             'month', 'income', 'totalSpent', 'net',
-            'envelopeRows', 'history', 'prevMonth', 'nextMonth', 'isCurrentMonth'
+            'incomeRows', 'envelopeRows', 'history', 'prevMonth', 'nextMonth', 'isCurrentMonth'
         ));
-    }
-
-    private function totalsForMonth(Carbon $month, $cashAccountIds, $envelopeIds): array
-    {
-        $income = round((float) CashTransaction::whereIn('cash_account_id', $cashAccountIds)
-            ->where('type', 'deposit')
-            ->whereBetween('occurred_at', [$month, $month->copy()->endOfMonth()])
-            ->sum('amount'), 2);
-
-        $spent = round((float) EnvelopeTransaction::whereIn('envelope_id', $envelopeIds)
-            ->where('type', 'spend')
-            ->whereBetween('occurred_at', [$month, $month->copy()->endOfMonth()])
-            ->sum('amount'), 2);
-
-        return [$income, $spent];
     }
 }
