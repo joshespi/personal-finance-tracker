@@ -73,8 +73,9 @@ class PortfolioController extends Controller
                 'cost'  => round((float) $s->cost_basis, 2),
             ])->values();
 
-        $realizedGains = (new RealizedGainService())->compute($portfolio);
-        $twr           = (new RealizedGainService())->computeTwr($portfolio);
+        $gainService   = new RealizedGainService();
+        $realizedGains = $gainService->compute($portfolio);
+        $twr           = $gainService->computeTwr($portfolio);
         $benchmarkData = (new BenchmarkService())->all();
         $allocation    = $this->buildAllocation($holdings, $portfolio);
         $rebalancing   = $this->buildRebalancing($holdings, $portfolio);
