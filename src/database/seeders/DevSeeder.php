@@ -30,6 +30,7 @@ class DevSeeder extends Seeder
                 'name'              => 'Demo User',
                 'password'          => 'password',
                 'email_verified_at' => now(),
+                'is_admin'          => true,
             ],
         );
 

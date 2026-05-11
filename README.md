@@ -79,6 +79,17 @@ Seed historical benchmarks once:
 docker compose exec app php artisan benchmarks:fetch
 ```
 
+## Email (Brevo SMTP)
+
+Fill in the `MAIL_*` vars in `src/.env` (see `src/.env.example` for the full list). Set `MAIL_MAILER=log` locally to keep emails in `storage/logs/laravel.log`.
+
+Prod checklist:
+
+- Add Brevo SPF + DKIM DNS records for your sending domain (verify with `mail-tester.com`)
+- Disable open/click tracking in the Brevo dashboard (privacy — this app does not use tracking pixels)
+
+Email is used for password reset and email verification on new registrations.
+
 ## Tests
 
 ```bash

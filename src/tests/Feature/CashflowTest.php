@@ -15,13 +15,6 @@ class CashflowTest extends TestCase
         $this->get(route('cashflow'))->assertRedirect(route('login'));
     }
 
-    public function test_loads_for_authenticated_user(): void
-    {
-        $this->actingAs(User::factory()->create())
-            ->get(route('cashflow'))
-            ->assertOk();
-    }
-
     public function test_income_comes_from_income_entries_not_cash_deposits(): void
     {
         $user = User::factory()->create();

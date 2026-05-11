@@ -9,11 +9,13 @@ class ProfileTest extends TestCase
 {
     public function test_profile_page_is_displayed(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['name' => 'Jane Doe', 'email' => 'jane@example.com']);
 
         $this->actingAs($user)
             ->get('/profile')
-            ->assertOk();
+            ->assertOk()
+            ->assertSee('Jane Doe')
+            ->assertSee('jane@example.com');
     }
 
     public function test_profile_information_can_be_updated(): void

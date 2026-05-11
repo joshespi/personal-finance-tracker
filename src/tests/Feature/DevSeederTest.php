@@ -30,7 +30,7 @@ class DevSeederTest extends TestCase
         $this->assertTrue(Hash::check('password', $demo->password));
         $this->assertTrue(Hash::check('password', $admin->password));
         $this->assertTrue((bool) $admin->is_admin);
-        $this->assertFalse((bool) $demo->is_admin);
+        $this->assertTrue((bool) $demo->is_admin);
     }
 
     public function test_seeder_creates_full_demo_dataset_for_demo_user(): void

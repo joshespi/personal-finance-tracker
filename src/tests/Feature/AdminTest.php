@@ -257,4 +257,15 @@ class AdminTest extends TestCase
             'action'  => 'portfolio.created',
         ]);
     }
+
+    public function test_admin_can_send_test_email(): void
+    {
+        $admin = User::factory()->admin()->create(['email' => 'admin@example.com']);
+
+        // .env.testing sets MAIL_MAILER=array so no real email is sent
+        $this->actingAs($admin)
+            ->post(route('admin.settings.test-email'))
+            ->assertRedirect(route('admin.settings'))
+            ->assertSessionHas('success');
+    }
 }
