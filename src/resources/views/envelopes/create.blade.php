@@ -24,10 +24,26 @@
 
                     <div class="flex flex-wrap gap-4">
                         <div>
-                            <x-input-label for="monthly_target" value="Monthly Target (optional)" />
+                            <x-input-label for="monthly_target" value="Monthly Budget (optional)" />
                             <x-text-input id="monthly_target" name="monthly_target" type="number" class="mt-1 block w-40"
                                           :value="old('monthly_target')" min="0" step="any" placeholder="500.00" />
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Max to spend per month</p>
                             <x-input-error :messages="$errors->get('monthly_target')" class="mt-2" />
+                        </div>
+
+                        <div>
+                            <x-input-label for="goal_amount" value="Savings Goal (optional)" />
+                            <x-text-input id="goal_amount" name="goal_amount" type="number" class="mt-1 block w-40"
+                                          :value="old('goal_amount')" min="0" step="any" placeholder="10000.00" />
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Target balance to accumulate</p>
+                            <x-input-error :messages="$errors->get('goal_amount')" class="mt-2" />
+                        </div>
+
+                        <div>
+                            <x-input-label for="goal_date" value="Goal Date (optional)" />
+                            <x-text-input id="goal_date" name="goal_date" type="date" class="mt-1 block w-40"
+                                          :value="old('goal_date')" />
+                            <x-input-error :messages="$errors->get('goal_date')" class="mt-2" />
                         </div>
 
                         <div>

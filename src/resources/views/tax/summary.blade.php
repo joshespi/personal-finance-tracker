@@ -1,7 +1,10 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Tax Summary</h2>
+            <div>
+                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Tax Summary</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Tax-advantaged accounts (401k, IRA, HSA) are excluded.</p>
+            </div>
             <a href="{{ route('export.realized-gains') }}"
                class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                 ↓ Export CSV

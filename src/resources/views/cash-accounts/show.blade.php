@@ -28,7 +28,7 @@
         </div>
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-12" x-data="cashFilter({ windowDays: 30 })">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
             @if (session('success'))
@@ -55,7 +55,7 @@
                 <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Record Transaction</h3>
                 </div>
-                <div class="p-6">
+                <div class="p-6 space-y-3">
                     <form method="POST" action="{{ route('cash-accounts.transactions.store', $account) }}"
                           class="flex flex-wrap items-end gap-4">
                         @csrf
@@ -73,7 +73,8 @@
                         <div>
                             <x-input-label for="amount" value="Amount ({{ $account->currency }})" />
                             <x-text-input id="amount" name="amount" type="number" class="mt-1 block w-40"
-                                          :value="old('amount')" required min="0" step="any" placeholder="0.00" />
+                                          :value="old('amount')" required min="0" step="any" placeholder="0.00"
+                                          x-model="entryAmount" />
                             <x-input-error :messages="$errors->get('amount')" class="mt-2" />
                         </div>
 
@@ -95,13 +96,41 @@
                             <x-primary-button>Record</x-primary-button>
                         </div>
                     </form>
+
+                    {{-- Duplicate hint: shown when entry amount matches existing transaction(s) within ±30 days --}}
+                    <div x-cloak x-show="dupCount > 0"
+                         class="flex items-center justify-between gap-3 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+                        <span>
+                            ⚠
+                            <span x-text="dupCount"></span>
+                            existing transaction<span x-show="dupCount > 1">s</span>
+                            match this amount within 30 days.
+                        </span>
+                        <button type="button" @click="showDupsInList()"
+                                class="text-xs font-semibold underline hover:no-underline">
+                            Show in list
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {{-- Transaction History --}}
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
-                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-3 justify-between">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Transactions</h3>
+
+                    @if ($account->transactions->isNotEmpty())
+                        <div class="flex items-center gap-2 flex-1 sm:flex-none sm:min-w-[18rem] max-w-md ml-auto">
+                            <input id="tx-filter" type="search" x-model.debounce.150ms="filter"
+                                   placeholder="Filter: 45.32 or whole foods"
+                                   class="flex-1 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                            <button type="button" x-show="filter" @click="filter = ''"
+                                    class="text-xs text-gray-500 dark:text-gray-400 hover:underline">Clear</button>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                <span x-text="visibleCount"></span> / {{ $account->transactions->count() }}
+                            </span>
+                        </div>
+                    @endif
                 </div>
 
                 @if ($account->transactions->isEmpty())
@@ -120,7 +149,12 @@
                             </thead>
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach ($account->transactions as $t)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <tr data-amount="{{ (float) $t->amount }}"
+                                        data-desc="{{ strtolower($t->description ?? '') }}"
+                                        data-date="{{ $t->occurred_at->toDateString() }}"
+                                        class="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                                        x-show="rowVisible($el)"
+                                        :class="rowIsDup($el) ? 'bg-amber-50 dark:bg-amber-900/20' : ''">
                                         <td class="px-6 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ $t->occurred_at->format('M j, Y') }}</td>
                                         <td class="px-6 py-3">
                                             @if ($t->type === 'deposit')
@@ -143,6 +177,11 @@
                                         </td>
                                     </tr>
                                 @endforeach
+                                <tr x-cloak x-show="visibleCount === 0">
+                                    <td colspan="5" class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
+                                        No transactions match the current filter.
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -150,4 +189,70 @@
             </div>
         </div>
     </div>
+
+    <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('cashFilter', (opts = {}) => ({
+            windowDays:   opts.windowDays ?? 30,
+            entryAmount:  '',
+            filter:       '',
+            visibleCount: 0,
+            dupCount:     0,
+
+            init() {
+                this.$nextTick(() => this.recompute());
+                this.$watch('filter',      () => this.recompute());
+                this.$watch('entryAmount', () => this.recompute());
+            },
+
+            parseAmount(s) {
+                if (s === null || s === undefined) return NaN;
+                const n = parseFloat(String(s).replace(/[$,\s]/g, ''));
+                return isFinite(n) ? n : NaN;
+            },
+
+            rowVisible(el) {
+                const f = (this.filter ?? '').trim().toLowerCase();
+                if (!f) return true;
+                const asNum = this.parseAmount(f);
+                const amt   = parseFloat(el.dataset.amount);
+                if (!isNaN(asNum) && asNum > 0) {
+                    return Math.abs(amt - asNum) < 0.005;
+                }
+                return (el.dataset.desc || '').includes(f);
+            },
+
+            rowIsDup(el) {
+                const a = this.parseAmount(this.entryAmount);
+                if (!a || a <= 0) return false;
+                const amt = parseFloat(el.dataset.amount);
+                if (Math.abs(amt - a) > 0.005) return false;
+                const t  = Date.parse(el.dataset.date);
+                if (isNaN(t)) return false;
+                const days = Math.abs((Date.now() - t) / 86_400_000);
+                return days <= this.windowDays;
+            },
+
+            recompute() {
+                const rows = this.$root.querySelectorAll('tbody tr[data-amount]');
+                let v = 0, d = 0;
+                rows.forEach(r => {
+                    if (this.rowVisible(r)) v++;
+                    if (this.rowIsDup(r))   d++;
+                });
+                this.visibleCount = v;
+                this.dupCount     = d;
+            },
+
+            showDupsInList() {
+                this.filter = String(this.entryAmount).replace(/[^\d.]/g, '');
+                const el = document.getElementById('tx-filter');
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.focus();
+                }
+            },
+        }));
+    });
+    </script>
 </x-app-layout>

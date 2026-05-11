@@ -74,10 +74,12 @@
                         @foreach ($envelopes as $e)
                             @php
                                 $target     = (float) ($e->monthly_target ?? 0);
+                                $goalAmount = (float) ($e->goal_amount ?? 0);
                                 $spent      = (float) $e->spent_this_month;
                                 $funded     = (float) $e->funded_this_month;
                                 $pct        = $target > 0 ? min(100, round($spent / $target * 100)) : 0;
                                 $overBudget = $target > 0 && $spent > $target;
+                                $goalPct    = $goalAmount > 0 ? min(100, round($e->current_balance / $goalAmount * 100)) : 0;
 
                                 $parts = [];
                                 if ($funded > 0) $parts[] = 'funded $' . number_format($funded, 2);
@@ -85,6 +87,11 @@
                                     $parts[] = 'spent $' . number_format($spent, 2) . ' / $' . number_format($target, 2);
                                 } elseif ($spent > 0) {
                                     $parts[] = 'spent $' . number_format($spent, 2);
+                                }
+                                if ($goalAmount > 0) {
+                                    $goalLabel = 'goal $' . number_format($e->current_balance, 2) . ' / $' . number_format($goalAmount, 2);
+                                    if ($e->goal_date) $goalLabel .= ' by ' . $e->goal_date->format('M Y');
+                                    $parts[] = $goalLabel;
                                 }
                             @endphp
                             <div class="px-6 py-4">
@@ -123,6 +130,12 @@
                                     <div class="mt-3 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
                                         <div class="h-full rounded-full transition-all"
                                              style="width: {{ $pct }}%; background-color: {{ $overBudget ? '#dc2626' : $e->color }};"></div>
+                                    </div>
+                                @endif
+                                @if ($goalAmount > 0)
+                                    <div class="mt-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                                        <div class="h-full rounded-full transition-all"
+                                             style="width: {{ $goalPct }}%; background-color: {{ $e->color }}; opacity: 0.6;"></div>
                                     </div>
                                 @endif
                             </div>

@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Models\Asset;
 use App\Models\CashAccount;
 use App\Models\Envelope;
+use App\Models\IncomeEntry;
 use App\Models\Liability;
 use App\Models\ManualAsset;
 use App\Models\Portfolio;
+use App\Models\ScheduledTransaction;
 use App\Models\Transaction;
 use App\Models\User;
 use Database\Seeders\DevSeeder;
@@ -37,13 +39,20 @@ class DevSeederTest extends TestCase
 
         $demo = User::where('email', 'demo@example.com')->firstOrFail();
 
-        $this->assertSame(1, Portfolio::where('user_id', $demo->id)->count());
-        $this->assertGreaterThanOrEqual(4, Asset::count());
+        $this->assertSame(2, Portfolio::where('user_id', $demo->id)->count());
+        $this->assertTrue(Portfolio::where('user_id', $demo->id)->where('is_tax_advantaged', true)->exists());
+        $this->assertGreaterThanOrEqual(5, Asset::count());
+        $this->assertTrue(Asset::where('asset_type', 'bond')->exists());
         $this->assertGreaterThanOrEqual(12, Transaction::count());
-        $this->assertSame(1, ManualAsset::count());
+        $this->assertSame(2, ManualAsset::count());
+        $this->assertTrue(ManualAsset::where('tracking_method', 'proxy_ticker')->exists());
         $this->assertSame(2, Liability::where('user_id', $demo->id)->count());
         $this->assertSame(2, CashAccount::where('user_id', $demo->id)->count());
-        $this->assertSame(3, Envelope::where('user_id', $demo->id)->count());
+        $this->assertSame(7, Envelope::where('user_id', $demo->id)->count());
+        $this->assertTrue(Envelope::where('user_id', $demo->id)->where('is_emergency_fund', true)->exists());
+        $this->assertTrue(Envelope::where('user_id', $demo->id)->whereNotNull('goal_amount')->exists());
+        $this->assertGreaterThanOrEqual(12, IncomeEntry::where('user_id', $demo->id)->count());
+        $this->assertGreaterThanOrEqual(2, ScheduledTransaction::where('user_id', $demo->id)->count());
     }
 
     public function test_seeder_is_idempotent(): void

@@ -7,6 +7,8 @@ html:not(.dark) .bg-white {
     background-color: #f8fafc; /* slate-50 */
 }
 
+[x-cloak] { display: none !important; }
+
 /* EasyMDE dark mode */
 .dark .EasyMDEContainer .CodeMirror,
 .dark .EasyMDEContainer .editor-toolbar {
