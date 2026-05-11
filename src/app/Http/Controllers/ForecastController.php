@@ -87,8 +87,9 @@ class ForecastController extends Controller
             $allThresholds[] = $fireTarget;
         }
 
-        $hitMap     = array_fill_keys($allThresholds, null);
-        $projection = [];
+        $hitMap      = array_fill_keys($allThresholds, null);
+        $projection  = [];
+        $currentYear = now()->year;
 
         for ($y = 0; $y <= $years; $y++) {
             $t = $y * 12;
@@ -103,14 +104,14 @@ class ForecastController extends Controller
 
             $projection[] = [
                 'year'    => $y,
-                'label'   => now()->addYears($y)->year,
+                'label'   => $currentYear + $y,
                 'nominal' => round($nominal, 2),
                 'real'    => round($real, 2),
             ];
 
             foreach ($allThresholds as $threshold) {
                 if ($hitMap[$threshold] === null && $nominal >= $threshold) {
-                    $hitMap[$threshold] = ['year' => $y, 'calendar' => now()->addYears($y)->year];
+                    $hitMap[$threshold] = ['year' => $y, 'calendar' => $currentYear + $y];
                 }
             }
         }
