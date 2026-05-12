@@ -5,7 +5,7 @@
 Self-hosted Laravel app covering both halves of personal finance:
 
 - **Investing** — portfolios, transactions, market-priced assets (Finnhub/CoinGecko), manual assets (incl. proxy-ticker auto-pricing), tax summary, realized gains, dashboards
-- **Budgeting / YNAB-replacement** — envelopes (monthly target + savings goals), cash accounts, income entries, "ready to assign", scheduled/recurring transactions, cashflow report, spending trends, emergency-fund calculator, FIRE/net-worth forecast
+- **Budgeting / YNAB-replacement** — envelopes (monthly target + savings goals), cash accounts, income entries, "ready to assign", scheduled/recurring transactions, cashflow report, spending trends, emergency-fund calculator, 60/30/20 budget-rule calculator with dashboard drift banner, FIRE/net-worth forecast
 
 ## Stack
 

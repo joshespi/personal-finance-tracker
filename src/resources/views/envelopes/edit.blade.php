@@ -86,6 +86,13 @@
                             <span class="text-sm text-gray-700 dark:text-gray-300">Emergency fund savings</span>
                             <span class="text-xs text-gray-400 dark:text-gray-500">(balance counts as your emergency fund)</span>
                         </label>
+                        <label class="flex items-center gap-2.5 cursor-pointer">
+                            <input type="checkbox" name="is_savings" value="1"
+                                   {{ old('is_savings', $envelope->is_savings) ? 'checked' : '' }}
+                                   class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Savings envelope</span>
+                            <span class="text-xs text-gray-400 dark:text-gray-500">(counts toward 20% savings rate)</span>
+                        </label>
                     </div>
 
                     <div class="flex items-center gap-4">

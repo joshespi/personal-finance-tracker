@@ -24,6 +24,18 @@
         </div>
 
         <div>
+            <x-input-label for="emergency_fund_target_months" :value="__('Emergency fund target (months of mandatory expenses)')" />
+            <select id="emergency_fund_target_months" name="emergency_fund_target_months"
+                    class="mt-1 block w-40 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                @foreach ([3, 6, 9, 12] as $m)
+                    <option value="{{ $m }}" {{ (int) old('emergency_fund_target_months', $user->emergency_fund_target_months ?? 6) === $m ? 'selected' : '' }}>{{ $m }} months</option>
+                @endforeach
+            </select>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Used by the 60/30/20 calculator to size your emergency fund target.</p>
+            <x-input-error class="mt-2" :messages="$errors->get('emergency_fund_target_months')" />
+        </div>
+
+        <div>
             <x-input-label for="email" :value="__('Email')" />
             <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" />
             <x-input-error class="mt-2" :messages="$errors->get('email')" />

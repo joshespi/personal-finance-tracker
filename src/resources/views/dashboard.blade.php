@@ -24,6 +24,8 @@
                 $showNetWorth  = $totals['total_debt'] > 0 || (! $hasPortfolios && $totals['total_value'] > 0);
             @endphp
 
+            <x-budget-rule-drift-banner :drift="$budgetRuleData['drift']" :ratios="$budgetRuleData['ratios']" />
+
             @if (! $hasPortfolios && ! $hasMoneyData)
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-8 text-center">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Welcome to your financial tracker</h3>

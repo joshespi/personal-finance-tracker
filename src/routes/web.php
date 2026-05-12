@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AllTransactionsController;
+use App\Http\Controllers\BudgetRuleController;
 use App\Http\Controllers\CashAccountController;
 use App\Http\Controllers\CashTransactionController;
 use App\Http\Controllers\CashflowController;
@@ -96,6 +97,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/cashflow', CashflowController::class)->name('cashflow');
     Route::get('/spending-trends', SpendingTrendsController::class)->name('spending-trends');
     Route::get('/emergency-fund', EmergencyFundController::class)->name('emergency-fund');
+    Route::get('/budget-rule', BudgetRuleController::class)->name('budget-rule');
     Route::get('/forecast', ForecastController::class)->name('forecast');
     Route::get('/ready-to-assign', [ReadyToAssignController::class, 'index'])->name('ready-to-assign');
     Route::post('/ready-to-assign/assign', [ReadyToAssignController::class, 'assign'])->name('ready-to-assign.assign');

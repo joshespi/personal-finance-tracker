@@ -25,6 +25,7 @@
                         || request()->routeIs('cashflow')
                         || request()->routeIs('spending-trends')
                         || request()->routeIs('emergency-fund')
+                        || request()->routeIs('budget-rule')
                         || request()->routeIs('ready-to-assign')
                         || request()->routeIs('income-entries.*')
                         || request()->routeIs('scheduled-transactions.*');
@@ -85,6 +86,7 @@
                                 <x-dropdown-link :href="route('cashflow')">{{ __('Cashflow') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('spending-trends')">{{ __('Spending Trends') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('emergency-fund')">{{ __('Emergency Fund') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('budget-rule')">{{ __('60/30/20 Rule') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('cash-accounts.index')">{{ __('Cash Accounts') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('envelopes.index')">{{ __('Budget Envelopes') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('scheduled-transactions.index')">{{ __('Scheduled') }}</x-dropdown-link>
@@ -199,6 +201,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('emergency-fund')" :active="request()->routeIs('emergency-fund')">
                 {{ __('Emergency Fund') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('budget-rule')" :active="request()->routeIs('budget-rule')">
+                {{ __('60/30/20 Rule') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('cash-accounts.index')" :active="request()->routeIs('cash-accounts.*')">
                 {{ __('Cash Accounts') }}

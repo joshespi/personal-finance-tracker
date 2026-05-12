@@ -145,6 +145,7 @@ class EnvelopeController extends Controller
         // Checkboxes omit the key when unchecked; coerce explicitly
         $validated['is_mandatory']      = $request->boolean('is_mandatory');
         $validated['is_emergency_fund'] = $request->boolean('is_emergency_fund');
+        $validated['is_savings']        = $request->boolean('is_savings') || $validated['is_emergency_fund'];
 
         return $validated;
     }

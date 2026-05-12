@@ -285,6 +285,7 @@ class DevSeeder extends Seeder
                 'sort_order'  => 6,
                 'goal_amount' => 5000,
                 'goal_date'   => CarbonImmutable::now()->addYear()->startOfMonth()->toDateString(),
+                'is_savings'  => true,
             ],
         );
     }

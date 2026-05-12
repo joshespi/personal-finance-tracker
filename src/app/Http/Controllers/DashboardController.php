@@ -4,13 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\PortfolioSnapshot;
 use App\Services\BenchmarkService;
+use App\Services\BudgetRuleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request, BudgetRuleService $budgetRule): View
     {
         $portfolios = $request->user()
             ->portfolios()
@@ -114,8 +115,10 @@ class DashboardController extends Controller
 
         $allocation = $this->buildAllocation($allHoldings, $portfolios);
 
+        $budgetRuleData = $budgetRule->compute($request->user());
+
         return view('dashboard', compact(
-            'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'benchmarkData'
+            'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'benchmarkData', 'budgetRuleData'
         ));
     }
 
