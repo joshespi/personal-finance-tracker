@@ -56,6 +56,14 @@
                         </div>
 
                         <div>
+                            <x-input-label for="minimum_payment" value="Minimum Payment (optional)" />
+                            <x-text-input id="minimum_payment" name="minimum_payment" type="number" class="mt-1 block w-36"
+                                          :value="old('minimum_payment')" min="0" step="0.01"
+                                          placeholder="25.00" />
+                            <x-input-error :messages="$errors->get('minimum_payment')" class="mt-2" />
+                        </div>
+
+                        <div>
                             <x-input-label for="currency" value="Currency" />
                             <x-text-input id="currency" name="currency" type="text" class="mt-1 block w-32"
                                           :value="old('currency', 'USD')" required maxlength="3"

@@ -26,6 +26,19 @@
 
             <x-budget-rule-drift-banner :drift="$budgetRuleData['drift']" :ratios="$budgetRuleData['ratios']" />
 
+            @if ($revolvingBalance > 0)
+                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-amber-800 dark:text-amber-300">
+                    <div>
+                        <span class="font-semibold">Interest bleed:</span>
+                        <span class="font-mono">${{ number_format($interestBleedMonthly, 2) }}/mo &middot; ${{ number_format($interestBleedYearly, 2) }}/yr</span>
+                        draining to lenders.
+                    </div>
+                    <a href="{{ route('debt-payoff') }}" class="shrink-0 inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-600 rounded-md text-xs font-semibold text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">
+                        View payoff plan &rarr;
+                    </a>
+                </div>
+            @endif
+
             @if (! $hasPortfolios && ! $hasMoneyData)
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-8 text-center">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Welcome to your financial tracker</h3>

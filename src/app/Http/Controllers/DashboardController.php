@@ -63,9 +63,22 @@ class DashboardController extends Controller
             ];
         });
 
-        $totalCash   = round($request->user()->totalCash(), 2);
-        $totalAssets = round($summaries->sum('total_value') + $totalCash, 2);
-        $totalDebt   = round($request->user()->totalDebt(), 2);
+        $totalCash        = round($request->user()->totalCash(), 2);
+        $totalAssets      = round($summaries->sum('total_value') + $totalCash, 2);
+        $userLiabilities  = $request->user()->liabilities()->with('latestBalance')->get();
+        $totalDebt        = round($userLiabilities->sum(fn ($l) => $l->currentBalance()), 2);
+
+        [$revolvingBalance, $interestBleedMonthly] = $userLiabilities
+            ->filter(fn ($l) => $l->isRevolving() && $l->currentBalance() > 0)
+            ->reduce(function ($carry, $l) {
+                $bal = $l->currentBalance();
+                $carry[0] += $bal;
+                $carry[1] += $bal * ((float) ($l->interest_rate ?? 0) / 100 / 12);
+                return $carry;
+            }, [0.0, 0.0]);
+        $revolvingBalance     = round($revolvingBalance, 2);
+        $interestBleedMonthly = round($interestBleedMonthly, 2);
+        $interestBleedYearly  = round($interestBleedMonthly * 12, 2);
 
         $totals = [
             'cost_basis'   => round($summaries->sum('cost_basis'), 2),
@@ -118,7 +131,8 @@ class DashboardController extends Controller
         $budgetRuleData = $budgetRule->compute($request->user());
 
         return view('dashboard', compact(
-            'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'benchmarkData', 'budgetRuleData'
+            'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'benchmarkData', 'budgetRuleData',
+            'revolvingBalance', 'interestBleedMonthly', 'interestBleedYearly'
         ));
     }
 

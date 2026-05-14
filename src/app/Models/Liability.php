@@ -12,10 +12,11 @@ class Liability extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'manual_asset_id', 'name', 'liability_type', 'interest_rate', 'notes', 'currency'];
+    protected $fillable = ['user_id', 'manual_asset_id', 'name', 'liability_type', 'interest_rate', 'minimum_payment', 'notes', 'currency'];
 
     protected $casts = [
-        'interest_rate' => 'decimal:3',
+        'interest_rate'   => 'decimal:3',
+        'minimum_payment' => 'decimal:2',
     ];
 
     public function user(): BelongsTo
@@ -36,6 +37,11 @@ class Liability extends Model
     public function latestBalance(): HasOne
     {
         return $this->hasOne(LiabilityBalance::class)->latestOfMany('recorded_at');
+    }
+
+    public function isRevolving(): bool
+    {
+        return $this->liability_type !== 'mortgage';
     }
 
     public function currentBalance(): float
