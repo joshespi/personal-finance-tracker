@@ -6,6 +6,8 @@ use App\Models\Asset;
 use App\Models\AssetPrice;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
+use App\Models\Liability;
+use App\Models\LiabilityBalance;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use App\Models\User;
@@ -147,6 +149,38 @@ class DashboardTest extends TestCase
         $this->assertEquals(round(50000 / 56000 * 100, 2), $btcRow['pct']);
         $this->assertEquals(round(6000  / 56000 * 100, 2), $ethRow['pct']);
         $this->assertEqualsWithDelta(100.0, $btcRow['pct'] + $ethRow['pct'], 0.1);
+    }
+
+    public function test_interest_bleed_banner_shows_when_revolving_debt_exists(): void
+    {
+        $user      = User::factory()->create();
+        $liability = Liability::factory()->for($user)->create(['liability_type' => 'credit_card', 'interest_rate' => 24.0]);
+        LiabilityBalance::factory()->for($liability)->create(['balance' => 5000]);
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Interest bleed')
+            ->assertSee('View payoff plan');
+    }
+
+    public function test_interest_bleed_banner_hidden_when_no_revolving_debt(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('Interest bleed');
+    }
+
+    public function test_interest_bleed_banner_hidden_when_only_mortgage(): void
+    {
+        $user      = User::factory()->create();
+        $liability = Liability::factory()->for($user)->create(['liability_type' => 'mortgage', 'interest_rate' => 6.5]);
+        LiabilityBalance::factory()->for($liability)->create(['balance' => 300000]);
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('Interest bleed');
     }
 
     public function test_dashboard_sorted_by_value_descending(): void

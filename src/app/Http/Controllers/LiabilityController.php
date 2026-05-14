@@ -117,14 +117,22 @@ class LiabilityController extends Controller
 
     private function validatePayload(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name'            => ['required', 'string', 'max:200'],
             'liability_type'  => ['required', 'in:' . implode(',', array_keys(self::LIABILITY_TYPES))],
             'manual_asset_id' => ['nullable', 'integer', 'exists:manual_assets,id'],
             'interest_rate'   => ['nullable', 'numeric', 'gte:0', 'lte:100'],
+            'minimum_payment' => ['nullable', 'numeric', 'gte:0'],
             'notes'           => ['nullable', 'string', 'max:1000'],
             'currency'        => ['required', 'string', 'size:3'],
         ]);
+
+        // Explicitly coerce omitted nullable fields so update() clears them
+        $validated['minimum_payment'] = $request->filled('minimum_payment')
+            ? (float) $request->input('minimum_payment')
+            : null;
+
+        return $validated;
     }
 
     private function ensureOwnsManualAsset(Request $request, int $manualAssetId): void
