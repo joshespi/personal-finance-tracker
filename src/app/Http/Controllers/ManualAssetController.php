@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AssetType;
-use App\Models\Asset;
 use App\Models\AssetPrice;
+use App\Services\AssetService;
 use App\Models\ManualAsset;
 use App\Models\Portfolio;
 use Illuminate\Http\RedirectResponse;
@@ -143,10 +143,7 @@ class ManualAssetController extends Controller
         }
 
         $symbol     = strtoupper(trim($validated['proxy_symbol']));
-        $proxyAsset = Asset::firstOrCreate(
-            ['symbol' => $symbol],
-            ['name' => $symbol, 'asset_type' => AssetType::Stock->value]
-        );
+        $proxyAsset = AssetService::findOrCreateBySymbol($symbol, AssetType::Stock);
 
         $proxyPrice = AssetPrice::where('asset_id', $proxyAsset->id)
             ->where('recorded_at', '<=', $validated['anchor_date'] . ' 23:59:59')

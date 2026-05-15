@@ -61,7 +61,7 @@ class PortfolioController extends Controller
             ->groupBy('asset_id')
             ->map(fn ($txns) => [
                 'asset'        => $txns->first()->asset,
-                'total_income' => round($txns->sum(fn ($t) => (float) $t->quantity * (float) $t->price_per_unit), 2),
+                'total_income' => round($txns->sum(fn ($t) => $t->dividendValue()), 2),
             ])
             ->values();
 

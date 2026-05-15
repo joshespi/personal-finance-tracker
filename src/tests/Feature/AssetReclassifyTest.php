@@ -77,4 +77,19 @@ class AssetReclassifyTest extends TestCase
             ->patch(route('assets.reclassify', $asset), ['asset_type' => 'crypto'])
             ->assertSessionHas('success');
     }
+
+    public function test_transaction_edit_page_shows_asset_type_dropdown(): void
+    {
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+        $asset     = Asset::factory()->stock()->create();
+        $tx        = Transaction::factory()->for($portfolio)->for($asset)->create();
+
+        $this->actingAs($user)
+            ->get(route('transactions.edit', $tx))
+            ->assertOk()
+            ->assertSee(route('assets.reclassify', $asset), false)
+            ->assertSee('crypto')
+            ->assertSee('real_estate');
+    }
 }

@@ -15,10 +15,22 @@
     <div class="py-12">
         <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                <div class="mb-6 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Symbol</p>
-                    <p class="font-mono font-bold text-gray-900 dark:text-gray-100 text-lg">{{ $transaction->asset->symbol }}</p>
-                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ ucfirst($transaction->asset->asset_type) }}</p>
+                <div class="mb-6 p-3 bg-gray-50 dark:bg-gray-700 rounded-md flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Symbol</p>
+                        <p class="font-mono font-bold text-gray-900 dark:text-gray-100 text-lg">{{ $transaction->asset->symbol }}</p>
+                    </div>
+                    <form method="POST" action="{{ route('assets.reclassify', $transaction->asset) }}" class="flex flex-col items-end gap-1">
+                        @csrf
+                        @method('PATCH')
+                        <label class="text-xs text-gray-500 dark:text-gray-400">Asset type</label>
+                        <select name="asset_type" onchange="this.form.submit()"
+                                class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm py-1">
+                            @foreach ($assetTypes as $type)
+                                <option value="{{ $type->value }}" @selected($transaction->asset->asset_type === $type->value)>{{ $type->label() }}</option>
+                            @endforeach
+                        </select>
+                    </form>
                 </div>
 
                 <form method="POST" action="{{ route('transactions.update', $transaction) }}" class="space-y-6">

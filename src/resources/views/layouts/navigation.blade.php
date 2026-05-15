@@ -18,7 +18,8 @@
                         || request()->routeIs('manual-assets.*')
                         || request()->routeIs('transactions.*')
                         || request()->routeIs('watchlist.*')
-                        || request()->routeIs('tax.*');
+                        || request()->routeIs('tax.*')
+                        || request()->routeIs('dividends');
                     $moneyActive = request()->routeIs('cash-accounts.*')
                         || request()->routeIs('envelopes.*')
                         || request()->routeIs('liabilities.*')
@@ -27,6 +28,7 @@
                         || request()->routeIs('emergency-fund')
                         || request()->routeIs('budget-rule')
                         || request()->routeIs('debt-payoff')
+                        || request()->routeIs('allocator')
                         || request()->routeIs('ready-to-assign')
                         || request()->routeIs('income-entries.*')
                         || request()->routeIs('scheduled-transactions.*');
@@ -59,6 +61,7 @@
                             <div class="rounded-md ring-1 ring-black ring-opacity-5 dark:ring-gray-700 py-1 bg-white dark:bg-gray-800">
                                 <x-dropdown-link :href="route('portfolios.index')">{{ __('Portfolios') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('transactions.all')">{{ __('Transactions') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('dividends')">{{ __('Dividend Income') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('watchlist.index')">{{ __('Watchlist') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('tax.summary')">{{ __('Tax Summary') }}</x-dropdown-link>
                             </div>
@@ -88,6 +91,7 @@
                                 <x-dropdown-link :href="route('spending-trends')">{{ __('Spending Trends') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('emergency-fund')">{{ __('Emergency Fund') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('debt-payoff')">{{ __('Debt Payoff') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('allocator')">{{ __('Extra-Cash Allocator') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('budget-rule')">{{ __('60/30/20 Rule') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('cash-accounts.index')">{{ __('Cash Accounts') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('envelopes.index')">{{ __('Budget Envelopes') }}</x-dropdown-link>
@@ -139,6 +143,9 @@
                         <x-dropdown-link :href="route('profile.edit')">
                             {{ __('Profile') }}
                         </x-dropdown-link>
+                        <x-dropdown-link :href="route('export.index')">
+                            {{ __('Export & Backup') }}
+                        </x-dropdown-link>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <x-dropdown-link :href="route('logout')"
@@ -184,6 +191,9 @@
             <x-responsive-nav-link :href="route('transactions.all')" :active="request()->routeIs('transactions.all')">
                 {{ __('Transactions') }}
             </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('dividends')" :active="request()->routeIs('dividends')">
+                {{ __('Dividend Income') }}
+            </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('watchlist.index')" :active="request()->routeIs('watchlist.*')">
                 {{ __('Watchlist') }}
             </x-responsive-nav-link>
@@ -206,6 +216,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('debt-payoff')" :active="request()->routeIs('debt-payoff')">
                 {{ __('Debt Payoff') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('allocator')" :active="request()->routeIs('allocator')">
+                {{ __('Extra-Cash Allocator') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('budget-rule')" :active="request()->routeIs('budget-rule')">
                 {{ __('60/30/20 Rule') }}
@@ -243,6 +256,9 @@
             <div class="mt-3 space-y-1">
                 <x-responsive-nav-link :href="route('profile.edit')">
                     {{ __('Profile') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('export.index')" :active="request()->routeIs('export.*')">
+                    {{ __('Export & Backup') }}
                 </x-responsive-nav-link>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf

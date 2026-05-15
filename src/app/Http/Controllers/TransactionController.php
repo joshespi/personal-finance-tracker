@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Enums\AssetType;
 use App\Models\ActivityLog;
-use App\Models\Asset;
 use App\Models\Portfolio;
 use App\Models\Transaction;
+use App\Services\AssetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -92,10 +92,7 @@ class TransactionController extends Controller
         ]);
 
         $symbol = strtoupper(trim($validated['symbol']));
-        $asset  = Asset::firstOrCreate(
-            ['symbol' => $symbol],
-            ['name' => $symbol, 'asset_type' => $validated['asset_type']]
-        );
+        $asset  = AssetService::findOrCreateBySymbol($symbol, $validated['asset_type']);
 
         $portfolio->transactions()->create([
             'asset_id'       => $asset->id,
@@ -125,6 +122,7 @@ class TransactionController extends Controller
             'transaction' => $transaction,
             'portfolio'   => $transaction->portfolio,
             'types'       => self::TYPES,
+            'assetTypes'  => AssetType::cases(),
         ]);
     }
 

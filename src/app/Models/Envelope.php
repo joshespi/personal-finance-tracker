@@ -35,6 +35,12 @@ class Envelope extends Model
 
     public function balance(): float
     {
+        if ($this->relationLoaded('transactions')) {
+            return (float) $this->transactions->sum(
+                fn ($t) => $t->type === 'fund' ? (float) $t->amount : -(float) $t->amount
+            );
+        }
+
         return (float) $this->transactions()
             ->selectRaw("COALESCE(SUM(CASE WHEN type = 'fund' THEN amount ELSE -amount END), 0) AS bal")
             ->value('bal');

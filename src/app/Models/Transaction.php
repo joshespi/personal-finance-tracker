@@ -51,4 +51,10 @@ class Transaction extends Model
     {
         return (float) $this->quantity * (float) $this->price_per_unit + (float) $this->fees;
     }
+
+    /** Dividend received: quantity × price_per_unit (no fees) */
+    public function dividendValue(): float
+    {
+        return (float) $this->quantity * (float) $this->price_per_unit;
+    }
 }
