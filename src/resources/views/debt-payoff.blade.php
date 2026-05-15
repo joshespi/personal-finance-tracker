@@ -38,14 +38,21 @@
                     </div>
                 @endif
 
+                {{-- Seed PHP data into JS vars so @json inside x-data="" doesn't break the HTML attribute --}}
+                <script>
+                    var __debtPayoffInputs   = @json(array_values($debts));
+                    var __debtPayoffSnowball = @json($snowball);
+                    var __debtPayoffAvalanche= @json($avalanche);
+                </script>
+
                 {{-- Alpine component wraps the interactive section --}}
                 <div
                     x-data="{
-                        debtInputs: @json(array_values($debts)),
+                        debtInputs: __debtPayoffInputs,
                         extraPayment: 0,
                         strategy: 'snowball',
-                        snowballResult: @json($snowball),
-                        avalancheResult: @json($avalanche),
+                        snowballResult: __debtPayoffSnowball,
+                        avalancheResult: __debtPayoffAvalanche,
                         chart: null,
                         _debounce: null,
 
@@ -152,8 +159,8 @@
                                 const isDark = document.documentElement.classList.contains('dark');
                                 const tickColor = isDark ? '#9ca3af' : '#6b7280';
                                 const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-                                const sData = @json($snowball['timeline']);
-                                const aData = @json($avalanche['timeline']);
+                                const sData = __debtPayoffSnowball.timeline;
+                                const aData = __debtPayoffAvalanche.timeline;
                                 const maxLen = Math.max(sData.length, aData.length);
                                 this.chart = new Chart(ctx, {
                                     type: 'line',
