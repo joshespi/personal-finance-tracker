@@ -6,7 +6,9 @@ use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AllTransactionsController;
+use App\Http\Controllers\DividendController;
 use App\Http\Controllers\BudgetRuleController;
+use App\Http\Controllers\AllocatorController;
 use App\Http\Controllers\DebtPayoffController;
 use App\Http\Controllers\CashAccountController;
 use App\Http\Controllers\CashTransactionController;
@@ -49,9 +51,12 @@ Route::get('/dashboard', DashboardController::class)
 Route::middleware('auth')->group(function () {
 
     Route::get('/transactions', AllTransactionsController::class)->name('transactions.all');
+    Route::get('/dividends', DividendController::class)->name('dividends');
     Route::get('/tax', TaxSummaryController::class)->name('tax.summary');
+    Route::get('/export', [ExportController::class, 'index'])->name('export.index');
     Route::get('/export/transactions', [ExportController::class, 'transactions'])->name('export.transactions');
     Route::get('/export/realized-gains', [ExportController::class, 'realizedGains'])->name('export.realized-gains');
+    Route::get('/export/backup', [ExportController::class, 'fullBackup'])->name('export.backup');
     Route::patch('assets/{asset}/reclassify', [AssetController::class, 'reclassify'])->name('assets.reclassify');
 
     Route::resource('portfolios', PortfolioController::class);
@@ -99,6 +104,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/spending-trends', SpendingTrendsController::class)->name('spending-trends');
     Route::get('/emergency-fund', EmergencyFundController::class)->name('emergency-fund');
     Route::get('/debt-payoff', DebtPayoffController::class)->name('debt-payoff');
+    Route::get('/allocator', AllocatorController::class)->name('allocator');
     Route::get('/budget-rule', BudgetRuleController::class)->name('budget-rule');
     Route::get('/forecast', ForecastController::class)->name('forecast');
     Route::get('/ready-to-assign', [ReadyToAssignController::class, 'index'])->name('ready-to-assign');
