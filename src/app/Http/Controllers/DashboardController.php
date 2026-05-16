@@ -64,10 +64,13 @@ class DashboardController extends Controller
             ];
         });
 
+        $portfolioValue   = round($summaries->sum('total_value'), 2);
         $totalCash        = round($request->user()->totalCash(), 2);
-        $totalAssets      = round($summaries->sum('total_value') + $totalCash, 2);
+        $totalAssets      = round($portfolioValue + $totalCash, 2);
         $userLiabilities  = $request->user()->liabilities()->with('latestBalance')->get();
         $totalDebt        = round($userLiabilities->sum(fn ($l) => $l->currentBalance()), 2);
+
+        $readyToAssign = $request->user()->readyToAssign();
 
         [$revolvingBalance, $interestBleedMonthly] = $userLiabilities
             ->filter(fn ($l) => $l->isRevolving() && $l->currentBalance() > 0)
@@ -82,17 +85,19 @@ class DashboardController extends Controller
         $interestBleedYearly  = round($interestBleedMonthly * 12, 2);
 
         $totals = [
-            'cost_basis'   => round($summaries->sum('cost_basis'), 2),
-            'market_value' => $summaries->contains(fn ($s) => $s['market_value'] !== null)
+            'cost_basis'      => round($summaries->sum('cost_basis'), 2),
+            'market_value'    => $summaries->contains(fn ($s) => $s['market_value'] !== null)
                 ? round($summaries->sum(fn ($s) => $s['market_value'] ?? $s['cost_basis']), 2)
                 : null,
-            'manual_value' => round($summaries->sum('manual_value'), 2),
-            'unrealized'   => $summaries->contains(fn ($s) => $s['unrealized'] !== null)
+            'manual_value'    => round($summaries->sum('manual_value'), 2),
+            'unrealized'      => $summaries->contains(fn ($s) => $s['unrealized'] !== null)
                 ? round($summaries->sum(fn ($s) => $s['unrealized'] ?? 0), 2)
                 : null,
-            'total_value'  => $totalAssets,
-            'total_debt'   => $totalDebt,
-            'net_worth'    => round($totalAssets - $totalDebt, 2),
+            'portfolio_value' => $portfolioValue,
+            'total_value'     => $totalAssets,
+            'total_debt'      => $totalDebt,
+            'net_worth'       => round($totalAssets - $totalDebt, 2),
+            'debt_to_asset'   => $totalAssets > 0 ? round($totalDebt / $totalAssets * 100, 1) : null,
         ];
 
         $allHoldings = $portfolioHoldings
@@ -134,7 +139,8 @@ class DashboardController extends Controller
 
         return view('dashboard', compact(
             'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'rebalancing', 'benchmarkData', 'budgetRuleData',
-            'revolvingBalance', 'interestBleedMonthly', 'interestBleedYearly'
+            'revolvingBalance', 'interestBleedMonthly', 'interestBleedYearly',
+            'totalCash', 'readyToAssign'
         ));
     }
 

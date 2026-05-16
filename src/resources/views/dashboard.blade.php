@@ -21,7 +21,7 @@
             @php
                 $hasPortfolios = ! $summaries->isEmpty();
                 $hasMoneyData  = $totals['total_value'] > 0 || $totals['total_debt'] > 0;
-                $showNetWorth  = $totals['total_debt'] > 0 || (! $hasPortfolios && $totals['total_value'] > 0);
+                $monthlySpend  = $budgetRuleData['monthly_mandatory'] + $budgetRuleData['monthly_discretionary'];
             @endphp
 
             <x-budget-rule-drift-banner :drift="$budgetRuleData['drift']" :ratios="$budgetRuleData['ratios']" />
@@ -64,64 +64,113 @@
                 </div>
             @else
 
-                @if ($showNetWorth)
-                    {{-- Net worth row --}}
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Assets</p>
-                            <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                ${{ number_format($totals['total_value'], 2) }}
-                            </p>
-                        </div>
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                <a href="{{ route('liabilities.index') }}" class="hover:underline">Total Debt</a>
-                            </p>
-                            <p class="mt-1 text-2xl font-semibold font-mono text-red-600 dark:text-red-400">
-                                −${{ number_format($totals['total_debt'], 2) }}
-                            </p>
-                        </div>
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4 ring-1 ring-indigo-500/20">
-                            <p class="text-xs text-indigo-600 dark:text-indigo-400 uppercase tracking-wide font-semibold">Net Worth</p>
-                            <p class="mt-1 text-2xl font-semibold font-mono {{ $totals['net_worth'] >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
-                                {{ $totals['net_worth'] < 0 ? '−' : '' }}${{ number_format(abs($totals['net_worth']), 2) }}
-                            </p>
+                @if ($hasPortfolios)
+                    {{-- Section 1: Investment Portfolio --}}
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Investment Portfolio</p>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <x-stat-tile>
+                                <x-slot:label>Tracked Assets</x-slot:label>
+                                <p id="tile-total-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                    ${{ number_format($totals['portfolio_value'], 2) }}
+                                </p>
+                            </x-stat-tile>
+                            <x-stat-tile>
+                                <x-slot:label>Cost Basis</x-slot:label>
+                                <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                    ${{ number_format($totals['cost_basis'], 2) }}
+                                </p>
+                            </x-stat-tile>
+                            @if ($totals['market_value'] !== null)
+                                @php $unr = $totals['unrealized'] ?? 0; @endphp
+                                <x-stat-tile>
+                                    <x-slot:label>Market Value</x-slot:label>
+                                    <p id="tile-market-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                        ${{ number_format($totals['market_value'], 2) }}
+                                    </p>
+                                </x-stat-tile>
+                                <x-stat-tile>
+                                    <x-slot:label>Unrealized P&L</x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono {{ $unr >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                        {{ $unr >= 0 ? '+$' : '-$' }}{{ number_format(abs($unr), 2) }}
+                                    </p>
+                                </x-stat-tile>
+                                <x-stat-tile>
+                                    <x-slot:label><span id="tile-pl-label">1Y Gain/Loss</span></x-slot:label>
+                                    <p id="tile-pl-value" class="mt-1 text-2xl font-semibold font-mono {{ $unr >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                        {{ $unr >= 0 ? '+$' : '-$' }}{{ number_format(abs($unr), 2) }}
+                                    </p>
+                                </x-stat-tile>
+                            @endif
                         </div>
                     </div>
                 @endif
 
-                @if ($hasPortfolios)
-                    {{-- Portfolio totals --}}
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Cost Basis</p>
-                            <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                ${{ number_format($totals['cost_basis'], 2) }}
-                            </p>
-                        </div>
-
-                        @if ($totals['market_value'] !== null)
-                            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Market Value</p>
-                                <p id="tile-market-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                    ${{ number_format($totals['market_value'], 2) }}
+                @if ($hasMoneyData)
+                    {{-- Section 2: Full Financial Picture --}}
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Full Financial Picture</p>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <x-stat-tile>
+                                <x-slot:label>Cash Balance</x-slot:label>
+                                <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                    ${{ number_format($totalCash, 2) }}
                                 </p>
-                            </div>
-
-                            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                                <p id="tile-pl-label" class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Unrealized P&L</p>
-                                @php $unr = $totals['unrealized'] ?? 0; @endphp
-                                <p id="tile-pl-value" class="mt-1 text-2xl font-semibold font-mono {{ $unr >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                    {{ $unr >= 0 ? '+' : '' }}${{ number_format($unr, 2) }}
+                            </x-stat-tile>
+                            <x-stat-tile>
+                                <x-slot:label>Total Assets</x-slot:label>
+                                <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                    ${{ number_format($totals['total_value'], 2) }}
                                 </p>
-                            </div>
-                        @endif
-
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Assets</p>
-                            <p id="tile-total-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                ${{ number_format($totals['total_value'], 2) }}
-                            </p>
+                            </x-stat-tile>
+                            <x-stat-tile>
+                                <x-slot:label><a href="{{ route('liabilities.index') }}" class="hover:underline">Total Debt</a></x-slot:label>
+                                <p class="mt-1 text-2xl font-semibold font-mono {{ $totals['total_debt'] > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100' }}">
+                                    {{ $totals['total_debt'] > 0 ? '−' : '' }}${{ number_format($totals['total_debt'], 2) }}
+                                </p>
+                            </x-stat-tile>
+                            <x-stat-tile :highlight="true">
+                                <x-slot:label>Net Worth</x-slot:label>
+                                <p class="mt-1 text-2xl font-semibold font-mono {{ $totals['net_worth'] >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
+                                    {{ $totals['net_worth'] < 0 ? '−' : '' }}${{ number_format(abs($totals['net_worth']), 2) }}
+                                </p>
+                            </x-stat-tile>
+                            @if ($totals['debt_to_asset'] !== null)
+                                <x-stat-tile>
+                                    <x-slot:label>Debt-to-Asset</x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                        {{ $totals['debt_to_asset'] }}%
+                                    </p>
+                                </x-stat-tile>
+                            @endif
+                            @if ($budgetRuleData['emergency_target'] > 0)
+                                @php
+                                    $efMonths = round(
+                                        $budgetRuleData['emergency_balance'] * $budgetRuleData['target_months'] / $budgetRuleData['emergency_target'],
+                                        1
+                                    );
+                                @endphp
+                                <x-stat-tile>
+                                    <x-slot:label>Emergency Fund</x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono {{ $budgetRuleData['emergency_funded'] ? 'text-green-600' : 'text-amber-500' }}">
+                                        {{ $efMonths }}<span class="text-sm font-normal text-gray-500 dark:text-gray-400"> / {{ $budgetRuleData['target_months'] }} mo</span>
+                                    </p>
+                                </x-stat-tile>
+                            @endif
+                            <x-stat-tile>
+                                <x-slot:label><a href="{{ route('ready-to-assign') }}" class="hover:underline">Ready to Assign</a></x-slot:label>
+                                <p class="mt-1 text-2xl font-semibold font-mono {{ $readyToAssign >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                    {{ $readyToAssign < 0 ? '−' : '' }}${{ number_format(abs($readyToAssign), 2) }}
+                                </p>
+                            </x-stat-tile>
+                            @if ($budgetRuleData['has_data'])
+                                <x-stat-tile>
+                                    <x-slot:label>Monthly Spend</x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                        ${{ number_format($monthlySpend, 2) }}
+                                    </p>
+                                </x-stat-tile>
+                            @endif
                         </div>
                     </div>
                 @endif
@@ -426,10 +475,6 @@
             const benchRaw    = @json($benchmarkData);
             const allocData   = @json($allocation);
 
-            // Initial PHP tile values for restoring on "All" range
-            const initMarketValue = {{ $totals['market_value'] ?? 'null' }};
-            const initUnrealized  = {{ $totals['unrealized'] ?? 'null' }};
-            const initTotal       = {{ $totals['total_value'] }};
 
             // Manual assets toggle (persisted in localStorage)
             let showManual = localStorage.getItem('dashShowManual') !== 'false';
@@ -520,19 +565,12 @@
                 const totEl = document.getElementById('tile-total-value');
                 if (totEl) totEl.textContent = fmtFull(last.value);
 
-                // P&L tile — period gain vs start of range; "All" uses PHP-computed unrealized
                 const plEl    = document.getElementById('tile-pl-value');
                 const plLabel = document.getElementById('tile-pl-label');
                 if (plEl) {
-                    let pl, label;
-                    if (range === 'All' && initUnrealized !== null) {
-                        pl    = initUnrealized;
-                        label = 'Unrealized P&L';
-                    } else {
-                        pl    = last.value - first.value;
-                        label = range + ' Gain/Loss';
-                    }
-                    const sign = pl >= 0 ? '+$' : '-$';
+                    const pl    = last.value - first.value;
+                    const label = range + ' Gain/Loss';
+                    const sign  = pl >= 0 ? '+$' : '-$';
                     plEl.textContent = sign + Math.abs(pl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     plEl.className   = 'mt-1 text-2xl font-semibold font-mono ' + (pl >= 0 ? 'text-green-600' : 'text-red-600');
                     if (plLabel) plLabel.textContent = label;
