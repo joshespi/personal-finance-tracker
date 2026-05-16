@@ -18,4 +18,11 @@ foreach ($testEnv as $key => $value) {
     putenv("$key=$value");
 }
 
+// Cached config bakes in APP_ENV from the last artisan config:cache run (usually 'local').
+// Delete it so env vars set above take effect when Laravel boots.
+$configCache = __DIR__.'/../bootstrap/cache/config.php';
+if (file_exists($configCache)) {
+    unlink($configCache);
+}
+
 require __DIR__.'/../vendor/autoload.php';
