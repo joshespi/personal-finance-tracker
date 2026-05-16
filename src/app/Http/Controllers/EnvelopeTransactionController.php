@@ -16,7 +16,7 @@ class EnvelopeTransactionController extends Controller
         abort_unless($envelope->user_id === $request->user()->id, 403);
 
         $validated = $request->validate([
-            'type'            => ['required', 'in:fund,spend'],
+            'type'            => ['required', 'in:fund'],
             'amount'          => ['required', 'numeric', 'gt:0'],
             'description'     => ['nullable', 'string', 'max:500'],
             'occurred_at'     => ['required', 'date'],
@@ -24,7 +24,7 @@ class EnvelopeTransactionController extends Controller
         ]);
 
         $cashAccount = null;
-        if (! empty($validated['cash_account_id']) && $validated['type'] === 'fund') {
+        if (! empty($validated['cash_account_id'])) {
             $cashAccount = CashAccount::find($validated['cash_account_id']);
             abort_unless($cashAccount && $cashAccount->user_id === $request->user()->id, 403);
         }

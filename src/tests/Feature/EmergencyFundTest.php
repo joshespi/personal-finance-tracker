@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\CashAccount;
+use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
 use App\Models\User;
@@ -28,8 +30,9 @@ class EmergencyFundTest extends TestCase
     public function test_shows_baseline_from_mandatory_envelope_spend(): void
     {
         $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
         $envelope = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create([
+        CashTransaction::factory()->for($account)->spend($envelope)->create([
             'amount'      => 600,
             'occurred_at' => now()->toDateString(),
         ]);
@@ -42,12 +45,13 @@ class EmergencyFundTest extends TestCase
 
     public function test_non_mandatory_envelopes_excluded_from_baseline(): void
     {
-        $user            = User::factory()->create();
-        $mandatory       = Envelope::factory()->for($user)->create(['name' => 'Rent', 'is_mandatory' => true]);
-        $nonMandatory    = Envelope::factory()->for($user)->create(['name' => 'Dining Out', 'is_mandatory' => false]);
+        $user         = User::factory()->create();
+        $account      = CashAccount::factory()->for($user)->create();
+        $mandatory    = Envelope::factory()->for($user)->create(['name' => 'Rent', 'is_mandatory' => true]);
+        $nonMandatory = Envelope::factory()->for($user)->create(['name' => 'Dining Out', 'is_mandatory' => false]);
 
-        EnvelopeTransaction::factory()->for($mandatory)->spend()->create(['amount' => 1000, 'occurred_at' => now()->toDateString()]);
-        EnvelopeTransaction::factory()->for($nonMandatory)->spend()->create(['amount' => 500, 'occurred_at' => now()->toDateString()]);
+        CashTransaction::factory()->for($account)->spend($mandatory)->create(['amount' => 1000, 'occurred_at' => now()->toDateString()]);
+        CashTransaction::factory()->for($account)->spend($nonMandatory)->create(['amount' => 500, 'occurred_at' => now()->toDateString()]);
 
         $this->actingAs($user)
             ->get(route('emergency-fund'))
@@ -58,12 +62,13 @@ class EmergencyFundTest extends TestCase
 
     public function test_emergency_fund_envelope_balance_shown(): void
     {
-        $user     = User::factory()->create();
-        $savings  = Envelope::factory()->for($user)->create(['name' => 'Emergency Savings', 'is_emergency_fund' => true]);
+        $user      = User::factory()->create();
+        $account   = CashAccount::factory()->for($user)->create();
+        $savings   = Envelope::factory()->for($user)->create(['name' => 'Emergency Savings', 'is_emergency_fund' => true]);
         $mandatory = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
 
         EnvelopeTransaction::factory()->for($savings)->fund()->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
-        EnvelopeTransaction::factory()->for($mandatory)->spend()->create(['amount' => 500, 'occurred_at' => now()->toDateString()]);
+        CashTransaction::factory()->for($account)->spend($mandatory)->create(['amount' => 500, 'occurred_at' => now()->toDateString()]);
 
         $this->actingAs($user)
             ->get(route('emergency-fund'))
@@ -74,10 +79,11 @@ class EmergencyFundTest extends TestCase
 
     public function test_no_cross_user_data_leakage(): void
     {
-        $user  = User::factory()->create();
-        $other = User::factory()->create();
-        $env   = Envelope::factory()->for($other)->create(['name' => 'Other Rent', 'is_mandatory' => true]);
-        EnvelopeTransaction::factory()->for($env)->spend()->create(['amount' => 900, 'occurred_at' => now()->toDateString()]);
+        $user    = User::factory()->create();
+        $other   = User::factory()->create();
+        $account = CashAccount::factory()->for($other)->create();
+        $env     = Envelope::factory()->for($other)->create(['name' => 'Other Rent', 'is_mandatory' => true]);
+        CashTransaction::factory()->for($account)->spend($env)->create(['amount' => 900, 'occurred_at' => now()->toDateString()]);
 
         $this->actingAs($user)
             ->get(route('emergency-fund'))
@@ -87,8 +93,8 @@ class EmergencyFundTest extends TestCase
 
     public function test_is_emergency_fund_flag_exclusive_on_update(): void
     {
-        $user  = User::factory()->create();
-        $first = Envelope::factory()->for($user)->create(['is_emergency_fund' => true]);
+        $user   = User::factory()->create();
+        $first  = Envelope::factory()->for($user)->create(['is_emergency_fund' => true]);
         $second = Envelope::factory()->for($user)->create(['name' => 'New Savings', 'color' => '#ff0000']);
 
         $this->actingAs($user)->put(route('envelopes.update', $second), [
@@ -131,8 +137,9 @@ class EmergencyFundTest extends TestCase
     public function test_spend_older_than_6_months_excluded_from_baseline(): void
     {
         $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
         $envelope = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create([
+        CashTransaction::factory()->for($account)->spend($envelope)->create([
             'amount'      => 999,
             'occurred_at' => now()->subMonths(7)->toDateString(),
         ]);
@@ -146,10 +153,11 @@ class EmergencyFundTest extends TestCase
     public function test_baseline_calculation_averages_over_6_months(): void
     {
         $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
         $envelope = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
 
         // $600 spend this month only → avg = $600 / 6 = $100/mo
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create([
+        CashTransaction::factory()->for($account)->spend($envelope)->create([
             'amount'      => 600,
             'occurred_at' => now()->toDateString(),
         ]);

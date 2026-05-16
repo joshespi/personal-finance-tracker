@@ -25,10 +25,9 @@ class EnvelopeController extends Controller
         $envelopes = $request->user()
             ->envelopes()
             ->withSum(['transactions as funds_total' => fn ($q) => $q->where('type', 'fund')], 'amount')
-            ->withSum(['transactions as spends_total' => fn ($q) => $q->where('type', 'spend')], 'amount')
+            ->withSum('spendTransactions as spends_total', 'amount')
             ->withSum([
-                'transactions as month_spend_total' => fn ($q) => $q
-                    ->where('type', 'spend')
+                'spendTransactions as month_spend_total' => fn ($q) => $q
                     ->whereBetween('occurred_at', [$month, $endOfMonth]),
             ], 'amount')
             ->withSum([
@@ -81,8 +80,11 @@ class EnvelopeController extends Controller
     {
         abort_unless($envelope->user_id === $request->user()->id, 403);
 
-        $envelope->load(['transactions' => fn ($q) => $q->orderByDesc('occurred_at')->orderByDesc('id')]);
-        $envelope->current_balance = $envelope->balance();
+        $envelope->load([
+            'transactions'     => fn ($q) => $q->where('type', 'fund')->orderByDesc('occurred_at')->orderByDesc('id'),
+            'spendTransactions' => fn ($q) => $q->with('cashAccount:id,name')->orderByDesc('occurred_at')->orderByDesc('id'),
+        ]);
+        $envelope->current_balance  = $envelope->balance();
         $envelope->spent_this_month = $envelope->spentInMonth();
 
         $cashAccounts = $request->user()->cashAccounts()->orderBy('name')->get(['id', 'name']);

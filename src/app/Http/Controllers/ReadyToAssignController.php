@@ -15,7 +15,7 @@ class ReadyToAssignController extends Controller
 
         $envelopes = $user->envelopes()
             ->withSum(['transactions as funds_total' => fn ($q) => $q->where('type', 'fund')], 'amount')
-            ->withSum(['transactions as spends_total' => fn ($q) => $q->where('type', 'spend')], 'amount')
+            ->withSum('spendTransactions as spends_total', 'amount')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get()

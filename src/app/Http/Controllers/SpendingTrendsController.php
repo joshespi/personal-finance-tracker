@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\EnvelopeTransaction;
+use App\Models\CashTransaction;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -20,8 +20,8 @@ class SpendingTrendsController extends Controller
         $envelopes   = $request->user()->envelopes()->orderBy('sort_order')->get();
         $envelopeIds = $envelopes->pluck('id');
 
-        $spendRows = EnvelopeTransaction::whereIn('envelope_id', $envelopeIds)
-            ->where('type', 'spend')
+        $spendRows = CashTransaction::whereIn('envelope_id', $envelopeIds)
+            ->where('type', 'withdrawal')
             ->whereBetween('occurred_at', [$monthStarts->first(), $monthStarts->last()->endOfMonth()])
             ->get(['envelope_id', 'occurred_at', 'amount']);
 

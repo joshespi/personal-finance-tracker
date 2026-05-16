@@ -59,12 +59,15 @@ class CashAccountController extends Controller
     {
         abort_unless($cashAccount->user_id === $request->user()->id, 403);
 
-        $cashAccount->load(['transactions' => fn ($q) => $q->orderByDesc('occurred_at')->orderByDesc('id')]);
+        $cashAccount->load(['transactions' => fn ($q) => $q->with('envelope:id,name')->orderByDesc('occurred_at')->orderByDesc('id')]);
         $cashAccount->current_balance = $cashAccount->balance();
+
+        $envelopes = $request->user()->envelopes()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
 
         return view('cash-accounts.show', [
             'account'      => $cashAccount,
             'accountTypes' => self::ACCOUNT_TYPES,
+            'envelopes'    => $envelopes,
         ]);
     }
 

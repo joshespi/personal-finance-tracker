@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashTransaction;
 use App\Models\EnvelopeTransaction;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -17,8 +18,7 @@ class CashflowController extends Controller
 
         $envelopes = $user
             ->envelopes()
-            ->withSum(['transactions as spent_amount' => fn ($q) => $q
-                ->where('type', 'spend')
+            ->withSum(['spendTransactions as spent_amount' => fn ($q) => $q
                 ->whereBetween('occurred_at', [$month, $monthEnd])
             ], 'amount')
             ->orderBy('sort_order')
@@ -59,8 +59,8 @@ class CashflowController extends Controller
             ->select('cash_transactions.occurred_at', 'cash_transactions.amount')
             ->get();
 
-        $historySpent = EnvelopeTransaction::whereIn('envelope_id', $envelopeIds)
-            ->where('type', 'spend')
+        $historySpent = CashTransaction::whereIn('envelope_id', $envelopeIds)
+            ->where('type', 'withdrawal')
             ->whereBetween('occurred_at', [$historyStart, $historyEnd])
             ->get(['occurred_at', 'amount']);
 

@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\CashTransaction;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -33,26 +34,38 @@ class Envelope extends Model
         return $this->hasMany(EnvelopeTransaction::class);
     }
 
+    public function spendTransactions(): HasMany
+    {
+        return $this->hasMany(CashTransaction::class)->where('cash_transactions.type', 'withdrawal');
+    }
+
     public function balance(): float
     {
-        if ($this->relationLoaded('transactions')) {
-            return (float) $this->transactions->sum(
-                fn ($t) => $t->type === 'fund' ? (float) $t->amount : -(float) $t->amount
-            );
+        if ($this->relationLoaded('transactions') && $this->relationLoaded('spendTransactions')) {
+            $funded = $this->transactions->where('type', 'fund')->sum('amount');
+            $spent  = $this->spendTransactions->sum('amount');
+            return (float) $funded - (float) $spent;
         }
 
-        return (float) $this->transactions()
-            ->selectRaw("COALESCE(SUM(CASE WHEN type = 'fund' THEN amount ELSE -amount END), 0) AS bal")
-            ->value('bal');
+        $funded = (float) $this->transactions()->where('type', 'fund')->sum('amount');
+        $spent  = (float) $this->spendTransactions()->sum('amount');
+        return $funded - $spent;
     }
 
     public function spentInMonth(?CarbonInterface $month = null): float
     {
         $month ??= now();
+        $start = $month->copy()->startOfMonth();
+        $end   = $month->copy()->endOfMonth();
 
-        return (float) $this->transactions()
-            ->where('type', 'spend')
-            ->whereBetween('occurred_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])
+        if ($this->relationLoaded('spendTransactions')) {
+            return (float) $this->spendTransactions
+                ->filter(fn ($t) => $t->occurred_at >= $start && $t->occurred_at <= $end)
+                ->sum('amount');
+        }
+
+        return (float) $this->spendTransactions()
+            ->whereBetween('occurred_at', [$start, $end])
             ->sum('amount');
     }
 }

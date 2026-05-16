@@ -112,19 +112,9 @@
                 </div>
                 <div class="p-6">
                     <form method="POST" action="{{ route('envelopes.transactions.store', $envelope) }}"
-                          x-data="{ type: '{{ old('type', 'fund') }}' }"
                           class="flex flex-wrap items-end gap-4">
                         @csrf
-
-                        <div>
-                            <x-input-label for="type" value="Type" />
-                            <select id="type" name="type" x-model="type"
-                                    class="mt-1 block w-36 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                                <option value="fund">Fund</option>
-                                <option value="spend">Spend</option>
-                            </select>
-                            <x-input-error :messages="$errors->get('type')" class="mt-2" />
-                        </div>
+                        <input type="hidden" name="type" value="fund">
 
                         <div>
                             <x-input-label for="amount" value="Amount" />
@@ -172,12 +162,29 @@
             </div>
 
             {{-- Transaction History --}}
+            @php
+                $allRows = $envelope->transactions->map(fn ($t) => [
+                    'date'        => $t->occurred_at,
+                    'type'        => 'fund',
+                    'description' => $t->description,
+                    'amount'      => (float) $t->amount,
+                    'source'      => null,
+                    'delete_url'  => route('envelopes.transactions.destroy', $t),
+                ])->concat($envelope->spendTransactions->map(fn ($t) => [
+                    'date'        => $t->occurred_at,
+                    'type'        => 'spend',
+                    'description' => $t->description,
+                    'amount'      => (float) $t->amount,
+                    'source'      => $t->cashAccount?->name,
+                    'delete_url'  => route('cash-accounts.transactions.destroy', $t),
+                ]))->sortByDesc(fn ($r) => $r['date']->timestamp)->values();
+            @endphp
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
                 <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Transactions</h3>
                 </div>
 
-                @if ($envelope->transactions->isEmpty())
+                @if ($allRows->isEmpty())
                     <div class="p-6 text-sm text-gray-500 dark:text-gray-400">No transactions yet.</div>
                 @else
                     <div class="overflow-x-auto">
@@ -187,27 +194,29 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Description</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Account</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Amount</th>
                                     <th class="px-6 py-3"></th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-                                @foreach ($envelope->transactions as $t)
+                                @foreach ($allRows as $row)
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td class="px-6 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ $t->occurred_at->format('M j, Y') }}</td>
+                                        <td class="px-6 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ $row['date']->format('M j, Y') }}</td>
                                         <td class="px-6 py-3">
-                                            @if ($t->type === 'fund')
+                                            @if ($row['type'] === 'fund')
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">Fund</span>
                                             @else
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300">Spend</span>
                                             @endif
                                         </td>
-                                        <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $t->description ?? '—' }}</td>
-                                        <td class="px-6 py-3 text-right font-mono font-semibold {{ $t->type === 'fund' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
-                                            {{ $t->type === 'fund' ? '+' : '−' }}{{ number_format((float)$t->amount, 2) }}
+                                        <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $row['description'] ?? '—' }}</td>
+                                        <td class="px-6 py-3 text-gray-400 dark:text-gray-500 text-xs">{{ $row['source'] ?? '—' }}</td>
+                                        <td class="px-6 py-3 text-right font-mono font-semibold {{ $row['type'] === 'fund' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                            {{ $row['type'] === 'fund' ? '+' : '−' }}{{ number_format($row['amount'], 2) }}
                                         </td>
                                         <td class="px-6 py-3 text-right">
-                                            <form method="POST" action="{{ route('envelopes.transactions.destroy', $t) }}" class="inline"
+                                            <form method="POST" action="{{ $row['delete_url'] }}" class="inline"
                                                   onsubmit="return confirm('Delete this transaction?')">
                                                 @csrf
                                                 @method('DELETE')

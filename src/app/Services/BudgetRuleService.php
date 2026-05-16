@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CashTransaction;
 use App\Models\EnvelopeTransaction;
 use App\Models\User;
 use Carbon\Carbon;
@@ -41,8 +42,8 @@ class BudgetRuleService
         }
 
         $monthlyMandatory = $mandatoryIds->isEmpty() ? 0.0 : round(
-            (float) EnvelopeTransaction::whereIn('envelope_id', $mandatoryIds)
-                ->where('type', 'spend')
+            (float) CashTransaction::whereIn('envelope_id', $mandatoryIds)
+                ->where('type', 'withdrawal')
                 ->whereBetween('occurred_at', [$windowStart, $windowEnd])
                 ->sum('amount') / self::WINDOW_MONTHS,
             2
@@ -50,11 +51,15 @@ class BudgetRuleService
 
         $monthlySavings = 0.0;
         if ($savingsIds->isNotEmpty()) {
-            $net = EnvelopeTransaction::whereIn('envelope_id', $savingsIds)
+            $funded = (float) EnvelopeTransaction::whereIn('envelope_id', $savingsIds)
+                ->where('type', 'fund')
                 ->whereBetween('occurred_at', [$windowStart, $windowEnd])
-                ->selectRaw("COALESCE(SUM(CASE WHEN type = 'fund' THEN amount ELSE -amount END), 0) AS net")
-                ->value('net');
-            $monthlySavings = round(((float) $net) / self::WINDOW_MONTHS, 2);
+                ->sum('amount');
+            $spent = (float) CashTransaction::whereIn('envelope_id', $savingsIds)
+                ->where('type', 'withdrawal')
+                ->whereBetween('occurred_at', [$windowStart, $windowEnd])
+                ->sum('amount');
+            $monthlySavings = round(($funded - $spent) / self::WINDOW_MONTHS, 2);
         }
 
         $monthlyDiscretionary = round($monthlyIncome - $monthlyMandatory - $monthlySavings, 2);

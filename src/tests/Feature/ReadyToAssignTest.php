@@ -98,20 +98,34 @@ class ReadyToAssignTest extends TestCase
         $this->assertEquals(0.0, $user->readyToAssign());
     }
 
-    public function test_envelope_spend_increases_rta_when_no_paired_withdrawal(): void
+    public function test_tagged_withdrawal_debits_envelope_and_keeps_rta_balanced(): void
     {
-        $user    = User::factory()->create();
-        $account = CashAccount::factory()->for($user)->create();
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
         $envelope = Envelope::factory()->for($user)->create();
 
         CashTransaction::factory()->for($account)->deposit()->create(['amount' => 1000]);
         EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 800]);
-        // Paired: cash withdrawal + envelope spend → RTA unchanged
-        CashTransaction::factory()->for($account)->withdrawal()->create(['amount' => 200]);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create(['amount' => 200]);
+        // Tagged withdrawal: cash goes down, envelope balance goes down → RTA unchanged
+        CashTransaction::factory()->for($account)->spend($envelope)->create(['amount' => 200]);
 
         // Cash: 1000-200=800, Envelope: 800-200=600, RTA: 800-600=200
         $this->assertEquals(200.0, $user->readyToAssign());
+    }
+
+    public function test_untagged_withdrawal_reduces_rta(): void
+    {
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        CashTransaction::factory()->for($account)->deposit()->create(['amount' => 1000]);
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 800]);
+        // Untagged withdrawal: cash goes down, envelope balance unchanged → RTA drops
+        CashTransaction::factory()->for($account)->withdrawal()->create(['amount' => 200]);
+
+        // Cash: 1000-200=800, Envelope: 800, RTA: 800-800=0
+        $this->assertEquals(0.0, $user->readyToAssign());
     }
 
     public function test_income_entry_store_requires_auth(): void

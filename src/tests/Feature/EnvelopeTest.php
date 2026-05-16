@@ -96,21 +96,23 @@ class EnvelopeTest extends TestCase
     public function test_balance_reflects_funds_minus_spends(): void
     {
         $envelope = Envelope::factory()->create();
+        $account  = CashAccount::factory()->for($envelope->user)->create();
         EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 500, 'occurred_at' => '2026-04-01']);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create(['amount' => 75, 'occurred_at' => '2026-04-10']);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create(['amount' => 25, 'occurred_at' => '2026-04-15']);
+        CashTransaction::factory()->for($account)->spend($envelope)->create(['amount' => 75, 'occurred_at' => '2026-04-10']);
+        CashTransaction::factory()->for($account)->spend($envelope)->create(['amount' => 25, 'occurred_at' => '2026-04-15']);
 
-        $this->assertEquals(400.0, $envelope->balance());
+        $this->assertEquals(400.0, $envelope->fresh()->balance());
     }
 
     public function test_spent_in_month_only_counts_current_month(): void
     {
         $envelope = Envelope::factory()->create();
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create(['amount' => 100, 'occurred_at' => now()->startOfMonth()]);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create(['amount' => 50,  'occurred_at' => now()->endOfMonth()]);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create(['amount' => 999, 'occurred_at' => now()->subMonth()->startOfMonth()]);
+        $account  = CashAccount::factory()->for($envelope->user)->create();
+        CashTransaction::factory()->for($account)->spend($envelope)->create(['amount' => 100, 'occurred_at' => now()->startOfMonth()]);
+        CashTransaction::factory()->for($account)->spend($envelope)->create(['amount' => 50,  'occurred_at' => now()->endOfMonth()]);
+        CashTransaction::factory()->for($account)->spend($envelope)->create(['amount' => 999, 'occurred_at' => now()->subMonth()->startOfMonth()]);
 
-        $this->assertEquals(150.0, $envelope->spentInMonth());
+        $this->assertEquals(150.0, $envelope->fresh()->spentInMonth());
     }
 
     public function test_record_fund_transaction(): void
@@ -235,22 +237,19 @@ class EnvelopeTest extends TestCase
         $this->assertDatabaseMissing('envelope_transactions', ['envelope_id' => $envelope->id]);
     }
 
-    public function test_cash_account_id_ignored_for_spend_transactions(): void
+    public function test_spend_type_rejected_from_envelope_transaction_form(): void
     {
         $envelope = Envelope::factory()->create();
-        $account  = CashAccount::factory()->for($envelope->user)->create();
 
         $this->actingAs($envelope->user)
             ->post(route('envelopes.transactions.store', $envelope), [
-                'type'            => 'spend',
-                'amount'          => 50,
-                'occurred_at'     => '2026-04-26',
-                'cash_account_id' => $account->id,
+                'type'        => 'spend',
+                'amount'      => 50,
+                'occurred_at' => '2026-04-26',
             ])
-            ->assertRedirect();
+            ->assertSessionHasErrors('type');
 
-        $this->assertDatabaseMissing('cash_transactions', ['cash_account_id' => $account->id]);
-        $this->assertDatabaseHas('envelope_transactions', ['envelope_id' => $envelope->id, 'type' => 'spend']);
+        $this->assertDatabaseMissing('envelope_transactions', ['envelope_id' => $envelope->id]);
     }
 
     public function test_cascade_delete_transactions_when_envelope_deleted(): void
@@ -276,8 +275,9 @@ class EnvelopeTest extends TestCase
     public function test_index_month_param_scopes_spend_totals(): void
     {
         $envelope = Envelope::factory()->create();
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create(['amount' => 100, 'occurred_at' => '2026-03-15']);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create(['amount' => 50,  'occurred_at' => '2026-04-10']);
+        $account  = CashAccount::factory()->for($envelope->user)->create();
+        CashTransaction::factory()->for($account)->spend($envelope)->create(['amount' => 100, 'occurred_at' => '2026-03-15']);
+        CashTransaction::factory()->for($account)->spend($envelope)->create(['amount' => 50,  'occurred_at' => '2026-04-10']);
 
         $this->actingAs($envelope->user)
             ->get(route('envelopes.index', ['month' => '2026-03']))

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\EnvelopeTransaction;
+use App\Models\CashTransaction;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -30,8 +30,8 @@ class EmergencyFundController extends Controller
                 range(0, 5)
             );
 
-            $spendRows = EnvelopeTransaction::whereIn('envelope_id', $mandatoryEnvelopes->pluck('id'))
-                ->where('type', 'spend')
+            $spendRows = CashTransaction::whereIn('envelope_id', $mandatoryEnvelopes->pluck('id'))
+                ->where('type', 'withdrawal')
                 ->whereBetween('occurred_at', [$monthNow->copy()->subMonths(5), $monthNow->copy()->endOfMonth()])
                 ->get(['envelope_id', 'occurred_at', 'amount']);
 
