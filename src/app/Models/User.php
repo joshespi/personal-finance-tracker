@@ -7,6 +7,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -73,17 +74,23 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(IncomeEntry::class);
     }
 
+    public function cashDeposits(): Builder
+    {
+        return CashTransaction::query()
+            ->join('cash_accounts', 'cash_accounts.id', '=', 'cash_transactions.cash_account_id')
+            ->where('cash_accounts.user_id', $this->id)
+            ->where('cash_transactions.type', 'deposit');
+    }
+
     public function readyToAssign(): float
     {
-        $totalIncome = (float) $this->incomeEntries()->sum('amount');
-
-        $totalAssigned = (float) EnvelopeTransaction::query()
+        $envelopeBalance = (float) EnvelopeTransaction::query()
             ->join('envelopes', 'envelopes.id', '=', 'envelope_transactions.envelope_id')
             ->where('envelopes.user_id', $this->id)
-            ->where('envelope_transactions.type', 'fund')
-            ->sum('envelope_transactions.amount');
+            ->selectRaw("COALESCE(SUM(CASE WHEN envelope_transactions.type = 'fund' THEN envelope_transactions.amount ELSE -envelope_transactions.amount END), 0) AS bal")
+            ->value('bal');
 
-        return round($totalIncome - $totalAssigned, 2);
+        return round($this->totalCash() - $envelopeBalance, 2);
     }
 
     public function totalCash(): float

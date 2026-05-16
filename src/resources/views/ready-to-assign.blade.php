@@ -31,7 +31,7 @@
                     @if ($readyToAssign < 0)−@endif${{ number_format(abs($readyToAssign), 2) }}
                 </p>
                 @if ($readyToAssign < 0)
-                    <p class="mt-2 text-sm text-white/80">You've assigned more than you've recorded as income. Add an income entry to reconcile.</p>
+                    <p class="mt-2 text-sm text-white/80">Your envelope balances exceed your cash. Deposit money or reduce envelope funding to reconcile.</p>
                 @elseif ($readyToAssign == 0)
                     <p class="mt-2 text-sm text-white/80">All money assigned — your budget is balanced.</p>
                 @else
@@ -39,88 +39,12 @@
                 @endif
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                Ready to assign = total cash account balance minus total envelope balances.
+                <a href="{{ route('cash-accounts.index') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Add deposits in Cash Accounts</a> to increase this balance.
+            </p>
 
-                {{-- Left: Income log --}}
-                <div class="lg:col-span-2 space-y-4">
-
-                    {{-- Add income form --}}
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
-                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Record Income</h3>
-                        <form method="POST" action="{{ route('income-entries.store') }}" class="space-y-3">
-                            @csrf
-                            <div>
-                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Amount</label>
-                                <div class="relative">
-                                    <span class="absolute inset-y-0 left-3 flex items-center text-gray-500 dark:text-gray-400 text-sm">$</span>
-                                    <input type="number" name="amount" step="0.01" min="0.01" required
-                                           class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm pl-7"
-                                           placeholder="0.00"
-                                           value="{{ old('amount') }}">
-                                </div>
-                                @error('amount') <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
-                                <input type="text" name="description" maxlength="500"
-                                       class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                       placeholder="Paycheck, bonus, transfer…"
-                                       value="{{ old('description') }}">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
-                                <input type="date" name="occurred_at" required
-                                       class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                       value="{{ old('occurred_at', now()->toDateString()) }}">
-                                @error('occurred_at') <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
-                            </div>
-                            <button type="submit"
-                                    class="w-full inline-flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                Add Income
-                            </button>
-                        </form>
-                    </div>
-
-                    {{-- Income history --}}
-                    @if ($recentIncome->isNotEmpty())
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
-                            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-                                <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Recent Income</h3>
-                            </div>
-                            <ul class="divide-y divide-gray-100 dark:divide-gray-700">
-                                @foreach ($recentIncome as $entry)
-                                    <li class="px-6 py-3 flex items-center justify-between gap-3">
-                                        <div class="min-w-0">
-                                            <p class="text-sm text-gray-800 dark:text-gray-200 truncate">
-                                                {{ $entry->description ?: '—' }}
-                                            </p>
-                                            <p class="text-xs text-gray-400 dark:text-gray-500">{{ $entry->occurred_at->format('M j, Y') }}</p>
-                                        </div>
-                                        <div class="flex items-center gap-3 shrink-0">
-                                            <span class="text-sm font-mono text-green-700 dark:text-green-400">+${{ number_format($entry->amount, 2) }}</span>
-                                            <form method="POST" action="{{ route('income-entries.destroy', $entry) }}">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit"
-                                                        class="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition"
-                                                        onclick="return confirm('Remove this income entry?')"
-                                                        title="Remove">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                    </svg>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-                </div>
-
-                {{-- Right: Assign to envelopes --}}
-                <div class="lg:col-span-3">
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
                         <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Assign to Envelopes</h3>
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Enter amounts to fund envelopes from your ready-to-assign balance.</p>
@@ -182,8 +106,6 @@
                                 </div>
                             </form>
                         @endif
-                    </div>
-                </div>
             </div>
         </div>
     </div>

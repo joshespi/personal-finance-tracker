@@ -23,15 +23,9 @@ class ReadyToAssignController extends Controller
                 $e->current_balance = (float) ($e->funds_total ?? 0) - (float) ($e->spends_total ?? 0);
             });
 
-        $recentIncome = $user->incomeEntries()
-            ->orderByDesc('occurred_at')
-            ->orderByDesc('id')
-            ->take(30)
-            ->get();
+        $readyToAssign = round($user->totalCash() - $envelopes->sum('current_balance'), 2);
 
-        $readyToAssign = $user->readyToAssign();
-
-        return view('ready-to-assign', compact('readyToAssign', 'envelopes', 'recentIncome'));
+        return view('ready-to-assign', compact('readyToAssign', 'envelopes'));
     }
 
     public function assign(Request $request): RedirectResponse

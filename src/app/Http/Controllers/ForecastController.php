@@ -54,9 +54,9 @@ class ForecastController extends Controller
         $threeMonthsAgo = now()->subMonths(3)->startOfMonth();
         $lastMonthEnd   = now()->subMonth()->endOfMonth();
 
-        $income3m = (float) $user->incomeEntries()
-            ->whereBetween('occurred_at', [$threeMonthsAgo, $lastMonthEnd])
-            ->sum('amount');
+        $income3m = (float) $user->cashDeposits()
+            ->whereBetween('cash_transactions.occurred_at', [$threeMonthsAgo, $lastMonthEnd])
+            ->sum('cash_transactions.amount');
 
         $envelopeIds = $user->envelopes()->pluck('id');
         $spend3m = $envelopeIds->isNotEmpty()

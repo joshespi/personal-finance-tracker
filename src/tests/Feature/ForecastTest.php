@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\EnvelopeTransaction;
+use App\Models\CashAccount;
+use App\Models\CashTransaction;
 use App\Models\Envelope;
-use App\Models\IncomeEntry;
+use App\Models\EnvelopeTransaction;
 use App\Models\User;
 use Tests\TestCase;
 
@@ -80,12 +81,13 @@ class ForecastTest extends TestCase
     public function test_forecast_prefills_monthly_savings_from_cashflow(): void
     {
         $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
         $envelope = Envelope::factory()->for($user)->create();
 
-        // 3 months of income and spend — average net = (900 - 300) / 3 = 200/mo
+        // 3 months of deposits and spend — average net = (900 - 300) / 3 = 200/mo
         $months = [now()->subMonths(3), now()->subMonths(2), now()->subMonths(1)];
         foreach ($months as $m) {
-            IncomeEntry::factory()->for($user)->create(['amount' => 300, 'occurred_at' => $m->startOfMonth()]);
+            CashTransaction::factory()->for($account)->deposit()->create(['amount' => 300, 'occurred_at' => $m->startOfMonth()]);
             EnvelopeTransaction::factory()->for($envelope)->spend()->create(['amount' => 100, 'occurred_at' => $m->startOfMonth()]);
         }
 

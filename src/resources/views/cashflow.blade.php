@@ -26,7 +26,7 @@
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
             {{-- Summary tiles --}}
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Income</p>
                     <p class="mt-1 text-2xl font-semibold font-mono text-green-600 dark:text-green-400">
@@ -50,11 +50,11 @@
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
                 <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Income</h3>
-                    <a href="{{ route('ready-to-assign') }}"
-                       class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">+ Record income</a>
+                    <a href="{{ route('cash-accounts.index') }}"
+                       class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">+ Add deposit</a>
                 </div>
                 @if ($incomeRows->isEmpty())
-                    <div class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">No income recorded for this month.</div>
+                    <div class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">No deposits recorded for this month.</div>
                 @else
                     <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($incomeRows as $entry)
