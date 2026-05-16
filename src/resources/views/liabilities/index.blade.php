@@ -36,8 +36,8 @@
                 @else
                     <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($liabilities as $l)
-                            <div class="px-6 py-4 flex items-center justify-between">
-                                <div>
+                            <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div class="min-w-0">
                                     <a href="{{ route('liabilities.show', $l) }}"
                                        class="font-medium text-gray-900 dark:text-gray-100 hover:underline">{{ $l->name }}</a>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -51,7 +51,7 @@
                                         &bull; {{ $l->currency }}
                                     </p>
                                 </div>
-                                <div class="flex items-center gap-4">
+                                <div class="flex items-center justify-between sm:justify-end gap-4 shrink-0">
                                     <div class="text-right">
                                         @if ($l->latestBalance)
                                             <p class="font-mono text-red-600 dark:text-red-400 text-sm">−{{ number_format((float)$l->latestBalance->balance, 2) }}</p>
