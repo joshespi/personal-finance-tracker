@@ -7,6 +7,7 @@ services:
       - ./src:/var/www/html
     environment:
       FINNHUB_API_KEY: ${FINNHUB_API_KEY}
+      DONATE_BTC_ADDRESS: ${DONATE_BTC_ADDRESS:-}
       APP_URL: ${APP_URL}
       APP_NAME: ${APP_NAME}
       APP_ENV: ${APP_ENV}
@@ -18,6 +19,9 @@ services:
       DB_CONNECTION: mariadb
       DB_HOST: port-tracker-db
       DB_PORT: 3306
+      SESSION_DRIVER: database
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
       DB_DATABASE: ${DB_DATABASE}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
