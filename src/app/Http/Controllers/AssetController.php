@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AssetType;
+use App\Enums\PriceSource;
 use App\Models\Asset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,14 +21,23 @@ class AssetController extends Controller
         );
 
         $request->validate([
-            'asset_type' => ['required', Rule::enum(AssetType::class)],
+            'asset_type'   => ['sometimes', Rule::enum(AssetType::class)],
+            'price_source' => ['sometimes', 'nullable', Rule::enum(PriceSource::class)],
         ]);
 
-        $type = $request->input('asset_type');
-        $asset->update(['asset_type' => $type]);
+        if ($request->has('asset_type')) {
+            $type = $request->input('asset_type');
+            $asset->update(['asset_type' => $type]);
+            return back()->with('success', "{$asset->symbol} reclassified as " . AssetType::from($type)->label() . '.');
+        }
 
-        $label = AssetType::from($type)->label();
+        if ($request->has('price_source')) {
+            $source = $request->input('price_source') ?: null;
+            $asset->update(['price_source' => $source]);
+            $label = $source ? PriceSource::from($source)->label() : 'Auto';
+            return back()->with('success', "{$asset->symbol} price feed set to {$label}.");
+        }
 
-        return back()->with('success', "{$asset->symbol} reclassified as {$label}.");
+        return back();
     }
 }

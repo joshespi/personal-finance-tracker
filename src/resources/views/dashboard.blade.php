@@ -233,6 +233,9 @@
                                         <th @click="sort('asset_type')" class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
                                             Type<span x-text="arrow('asset_type')"></span>
                                         </th>
+                                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase select-none">
+                                            Feed
+                                        </th>
                                         <th @click="sort('quantity')" class="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
                                             Total Qty<span x-text="arrow('quantity')"></span>
                                         </th>

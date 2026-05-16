@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PriceSource;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,7 +12,12 @@ class Asset extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['symbol', 'name', 'asset_type', 'exchange', 'coingecko_id', 'polygon_ticker'];
+    protected $fillable = ['symbol', 'name', 'asset_type', 'price_source', 'exchange', 'coingecko_id', 'polygon_ticker'];
+
+    public function effectivePriceSource(): string
+    {
+        return $this->price_source ?? ($this->asset_type === 'crypto' ? PriceSource::CoinGecko->value : PriceSource::Finnhub->value);
+    }
 
     public function transactions(): HasMany
     {

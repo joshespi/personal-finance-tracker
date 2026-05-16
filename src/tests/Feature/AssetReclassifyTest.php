@@ -60,13 +60,48 @@ class AssetReclassifyTest extends TestCase
         $this->assertEquals('stock', $asset->fresh()->asset_type);
     }
 
-    public function test_reclassify_requires_asset_type(): void
+    public function test_empty_request_makes_no_changes(): void
     {
         [$user, $asset] = $this->userWithAsset();
 
         $this->actingAs($user)
             ->patch(route('assets.reclassify', $asset), [])
-            ->assertSessionHasErrors('asset_type');
+            ->assertRedirect();
+
+        $this->assertEquals('stock', $asset->fresh()->asset_type);
+        $this->assertNull($asset->fresh()->price_source);
+    }
+
+    public function test_user_can_set_price_source(): void
+    {
+        [$user, $asset] = $this->userWithAsset();
+
+        $this->actingAs($user)
+            ->patch(route('assets.reclassify', $asset), ['price_source' => 'finnhub'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('assets', ['id' => $asset->id, 'price_source' => 'finnhub']);
+    }
+
+    public function test_user_can_reset_price_source_to_auto(): void
+    {
+        [$user, $asset] = $this->userWithAsset();
+        $asset->update(['price_source' => 'finnhub']);
+
+        $this->actingAs($user)
+            ->patch(route('assets.reclassify', $asset), ['price_source' => ''])
+            ->assertRedirect();
+
+        $this->assertNull($asset->fresh()->price_source);
+    }
+
+    public function test_price_source_rejects_invalid_values(): void
+    {
+        [$user, $asset] = $this->userWithAsset();
+
+        $this->actingAs($user)
+            ->patch(route('assets.reclassify', $asset), ['price_source' => 'polygon'])
+            ->assertSessionHasErrors('price_source');
     }
 
     public function test_reclassify_flashes_success_message(): void
