@@ -12,6 +12,17 @@ class ManualAsset extends Model
 {
     use HasFactory;
 
+    public const ASSET_CLASSES = [
+        'real_estate' => 'Real Estate',
+        'stock'       => 'Stocks / Index Fund',
+        'bond'        => 'Bond Fund',
+        'crypto'      => 'Crypto Fund',
+        'vehicle'     => 'Vehicle',
+        'collectible' => 'Collectible',
+        'business'    => 'Business',
+        'other'       => 'Other',
+    ];
+
     protected $fillable = [
         'portfolio_id', 'name', 'description', 'asset_class', 'cost_basis', 'currency',
         'tracking_method', 'proxy_asset_id', 'anchor_value', 'anchor_date', 'anchor_synthetic_shares',

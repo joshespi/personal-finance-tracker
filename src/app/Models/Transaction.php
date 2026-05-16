@@ -11,6 +11,10 @@ class Transaction extends Model
 {
     use HasFactory;
 
+    public const INFLOW_TYPES   = ['buy', 'transfer_in', 'staking_reward'];
+    public const OUTFLOW_TYPES  = ['sell', 'transfer_out'];
+    public const POSITION_TYPES = ['buy', 'sell', 'transfer_in', 'transfer_out', 'staking_reward'];
+
     protected $fillable = [
         'portfolio_id', 'asset_id', 'type', 'quantity',
         'price_per_unit', 'fees', 'currency', 'notes', 'transacted_at',

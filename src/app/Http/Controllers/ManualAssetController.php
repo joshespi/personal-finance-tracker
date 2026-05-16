@@ -13,17 +13,6 @@ use Illuminate\View\View;
 
 class ManualAssetController extends Controller
 {
-    public const ASSET_CLASSES = [
-        'real_estate' => 'Real Estate',
-        'stock'       => 'Stocks / Index Fund',
-        'bond'        => 'Bond Fund',
-        'crypto'      => 'Crypto Fund',
-        'vehicle'     => 'Vehicle',
-        'collectible' => 'Collectible',
-        'business'    => 'Business',
-        'other'       => 'Other',
-    ];
-
     public function index(Request $request, Portfolio $portfolio): View
     {
         abort_unless($portfolio->user_id === $request->user()->id, 403);
@@ -39,7 +28,7 @@ class ManualAssetController extends Controller
 
         return view('manual-assets.create', [
             'portfolio'    => $portfolio,
-            'assetClasses' => self::ASSET_CLASSES,
+            'assetClasses' => ManualAsset::ASSET_CLASSES,
         ]);
     }
 
@@ -73,7 +62,7 @@ class ManualAssetController extends Controller
 
         return view('manual-assets.show', [
             'manualAsset'  => $manualAsset,
-            'assetClasses' => self::ASSET_CLASSES,
+            'assetClasses' => ManualAsset::ASSET_CLASSES,
         ]);
     }
 
@@ -86,7 +75,7 @@ class ManualAssetController extends Controller
         return view('manual-assets.edit', [
             'manualAsset'  => $manualAsset,
             'portfolio'    => $manualAsset->portfolio,
-            'assetClasses' => self::ASSET_CLASSES,
+            'assetClasses' => ManualAsset::ASSET_CLASSES,
         ]);
     }
 
@@ -123,7 +112,7 @@ class ManualAssetController extends Controller
         return $request->validate([
             'name'             => ['required', 'string', 'max:200'],
             'description'      => ['nullable', 'string', 'max:1000'],
-            'asset_class'      => ['required', 'in:' . implode(',', array_keys(self::ASSET_CLASSES))],
+            'asset_class'      => ['required', 'in:' . implode(',', array_keys(ManualAsset::ASSET_CLASSES))],
             'cost_basis'       => ['nullable', 'numeric', 'min:0'],
             'currency'         => ['required', 'string', 'size:3'],
             'include_in_chart' => ['boolean'],

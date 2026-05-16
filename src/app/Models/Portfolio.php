@@ -64,7 +64,7 @@ class Portfolio extends Model
         }
 
         return $this->transactions
-            ->filter(fn ($t) => in_array($t->type, ['buy', 'sell', 'transfer_in', 'transfer_out', 'staking_reward']))
+            ->filter(fn ($t) => in_array($t->type, Transaction::POSITION_TYPES))
             ->groupBy('asset_id')
             ->map(function ($txns) {
                 $asset     = $txns->first()->asset;
@@ -73,10 +73,10 @@ class Portfolio extends Model
 
                 foreach ($txns->sortBy('transacted_at') as $t) {
                     $qty = (float) $t->quantity;
-                    if (in_array($t->type, ['buy', 'transfer_in', 'staking_reward'])) {
+                    if (in_array($t->type, Transaction::INFLOW_TYPES)) {
                         $totalCost += $qty * (float) $t->price_per_unit + (float) $t->fees;
                         $totalQty  += $qty;
-                    } elseif (in_array($t->type, ['sell', 'transfer_out'])) {
+                    } elseif (in_array($t->type, Transaction::OUTFLOW_TYPES)) {
                         if ($totalQty > 0) {
                             $totalCost -= ($totalCost / $totalQty) * min($qty, $totalQty);
                         }

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Portfolio;
 use App\Models\PortfolioSnapshot;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class SnapshotPortfolios extends Command
 {
@@ -21,25 +22,27 @@ class SnapshotPortfolios extends Command
             return self::SUCCESS;
         }
 
-        foreach ($portfolios as $portfolio) {
-            $holdings = $portfolio->computeHoldings();
+        DB::transaction(function () use ($portfolios, $today) {
+            foreach ($portfolios as $portfolio) {
+                $holdings = $portfolio->computeHoldings();
 
-            $costBasis   = $holdings->sum('total_cost');
-            $marketValue = $holdings->sum('effective_value');
-            $manualValue = $portfolio->manualAssets->sum(fn ($ma) => $ma->currentValue());
+                $costBasis   = $holdings->sum('total_cost');
+                $marketValue = $holdings->sum('effective_value');
+                $manualValue = $portfolio->chartManualValue();
 
-            PortfolioSnapshot::updateOrCreate(
-                ['portfolio_id' => $portfolio->id, 'recorded_on' => $today],
-                [
-                    'cost_basis'   => $costBasis,
-                    'market_value' => $marketValue,
-                    'manual_value' => $manualValue,
-                ]
-            );
+                PortfolioSnapshot::updateOrCreate(
+                    ['portfolio_id' => $portfolio->id, 'recorded_on' => $today],
+                    [
+                        'cost_basis'   => $costBasis,
+                        'market_value' => $marketValue,
+                        'manual_value' => $manualValue,
+                    ]
+                );
 
-            $total = round($marketValue + $manualValue, 2);
-            $this->line("  {$portfolio->name}: \${$total}");
-        }
+                $total = round($marketValue + $manualValue, 2);
+                $this->line("  {$portfolio->name}: \${$total}");
+            }
+        });
 
         $this->info('Snapshots recorded for ' . $portfolios->count() . ' portfolio(s).');
 

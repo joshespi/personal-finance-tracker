@@ -21,7 +21,6 @@ class AllocatorController extends Controller
             $remaining = $amount;
             $user      = $request->user();
 
-            // 1. Emergency fund gap
             $budget = $budgetRule->compute($user);
             if (! $budget['emergency_funded'] && $budget['emergency_target'] > 0) {
                 $gap = max(0.0, $budget['emergency_target'] - $budget['emergency_balance']);
@@ -38,7 +37,6 @@ class AllocatorController extends Controller
                 }
             }
 
-            // 2. Revolving debt by APR desc (avalanche priority)
             if ($remaining > 0.01) {
                 $liabilities = $user->liabilities()
                     ->with('latestBalance')
@@ -64,7 +62,6 @@ class AllocatorController extends Controller
                 }
             }
 
-            // 3. Savings envelope goals — closest goal date first, undated last
             if ($remaining > 0.01) {
                 $envelopes = $user->envelopes()
                     ->whereNotNull('goal_amount')

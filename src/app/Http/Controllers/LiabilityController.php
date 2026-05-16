@@ -27,7 +27,7 @@ class LiabilityController extends Controller
             ->orderBy('name')
             ->get();
 
-        $totalDebt = $liabilities->sum(fn ($l) => $l->latestBalance ? (float) $l->latestBalance->balance : 0);
+        $totalDebt = $liabilities->sum(fn ($l) => $l->currentBalance());
 
         return view('liabilities.index', [
             'liabilities'    => $liabilities,
@@ -38,9 +38,7 @@ class LiabilityController extends Controller
 
     public function create(Request $request): View
     {
-        $manualAssets = ManualAsset::whereHas('portfolio', fn ($q) => $q->where('user_id', $request->user()->id))
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $manualAssets = $this->userManualAssets($request);
 
         return view('liabilities.create', [
             'liabilityTypes' => self::LIABILITY_TYPES,
@@ -80,9 +78,7 @@ class LiabilityController extends Controller
     {
         abort_unless($liability->user_id === $request->user()->id, 403);
 
-        $manualAssets = ManualAsset::whereHas('portfolio', fn ($q) => $q->where('user_id', $request->user()->id))
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $manualAssets = $this->userManualAssets($request);
 
         return view('liabilities.edit', [
             'liability'      => $liability,
@@ -133,6 +129,13 @@ class LiabilityController extends Controller
             : null;
 
         return $validated;
+    }
+
+    private function userManualAssets(Request $request)
+    {
+        return ManualAsset::whereHas('portfolio', fn ($q) => $q->where('user_id', $request->user()->id))
+            ->orderBy('name')
+            ->get(['id', 'name']);
     }
 
     private function ensureOwnsManualAsset(Request $request, int $manualAssetId): void

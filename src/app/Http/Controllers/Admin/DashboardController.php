@@ -3,28 +3,37 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\ActivityLog;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     public function __invoke(): View
     {
+        $u = DB::table('users')->selectRaw(
+            'COUNT(*) as total,
+             SUM(CASE WHEN is_admin = 1 THEN 1 ELSE 0 END) as admins,
+             SUM(CASE WHEN email_verified_at IS NULL THEN 1 ELSE 0 END) as unverified,
+             SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as new_7d,
+             SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as new_30d',
+            [now()->subDays(7), now()->subDays(30)]
+        )->first();
+
         $stats = [
-            'total_users'        => User::count(),
-            'admin_count'        => User::where('is_admin', true)->count(),
-            'unverified_count'   => User::whereNull('email_verified_at')->count(),
+            'total_users'        => (int) $u->total,
+            'admin_count'        => (int) $u->admins,
+            'unverified_count'   => (int) $u->unverified,
             'total_portfolios'   => Portfolio::count(),
             'total_transactions' => Transaction::count(),
-            'new_users_7d'       => User::where('created_at', '>=', now()->subDays(7))->count(),
-            'new_users_30d'      => User::where('created_at', '>=', now()->subDays(30))->count(),
+            'new_users_7d'       => (int) $u->new_7d,
+            'new_users_30d'      => (int) $u->new_30d,
         ];
 
-        $recentActivity = ActivityLog::with('user')->latest('created_at')->limit(15)->get();
+        $recentUsers = User::latest()->limit(8)->get();
 
-        return view('admin.dashboard', compact('stats', 'recentActivity'));
+        return view('admin.dashboard', compact('stats', 'recentUsers'));
     }
 }

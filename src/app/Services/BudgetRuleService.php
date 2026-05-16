@@ -37,10 +37,6 @@ class BudgetRuleService
             ->sum('cash_transactions.amount');
         $monthlyIncome = round($incomeTotal / self::WINDOW_MONTHS, 2);
 
-        if ($monthlyIncome <= 0 && $envelopes->isEmpty()) {
-            return $this->emptyPayload($windowStart, $windowEnd, $user);
-        }
-
         $monthlyMandatory = $mandatoryIds->isEmpty() ? 0.0 : round(
             (float) CashTransaction::whereIn('envelope_id', $mandatoryIds)
                 ->where('type', 'withdrawal')
@@ -107,31 +103,4 @@ class BudgetRuleService
         ];
     }
 
-    private function emptyPayload(Carbon $windowStart, Carbon $windowEnd, User $user): array
-    {
-        return [
-            'has_data'              => false,
-            'monthly_income'        => 0.0,
-            'monthly_mandatory'     => 0.0,
-            'monthly_discretionary' => 0.0,
-            'monthly_savings'       => 0.0,
-            'ratios'                => ['mandatory' => null, 'discretionary' => null, 'savings' => null],
-            'targets'               => [
-                'mandatory'     => self::MANDATORY_TARGET,
-                'discretionary' => self::DISCRETIONARY_TARGET,
-                'savings'       => self::SAVINGS_TARGET,
-            ],
-            'drift'                 => ['mandatory_over' => false, 'savings_under' => false],
-            'phase'                 => 'building',
-            'emergency_envelope'    => null,
-            'emergency_balance'     => 0.0,
-            'emergency_target'      => 0.0,
-            'emergency_funded'      => false,
-            'target_months'         => (int) ($user->emergency_fund_target_months ?: 6),
-            'window_start'          => $windowStart->copy(),
-            'window_end'            => $windowEnd->copy(),
-            'window_months'         => self::WINDOW_MONTHS,
-            'other_savings'         => collect(),
-        ];
-    }
 }

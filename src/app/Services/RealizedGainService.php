@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Portfolio;
+use App\Models\Transaction;
 
 class RealizedGainService
 {
@@ -13,7 +14,7 @@ class RealizedGainService
         }
 
         $txns = $portfolio->transactions
-            ->filter(fn ($t) => in_array($t->type, ['buy', 'sell', 'transfer_in', 'transfer_out', 'staking_reward']))
+            ->filter(fn ($t) => in_array($t->type, Transaction::POSITION_TYPES))
             ->sortBy('transacted_at');
 
         $lots     = collect();
@@ -22,7 +23,7 @@ class RealizedGainService
         foreach ($txns as $t) {
             $assetId = $t->asset_id;
 
-            if (in_array($t->type, ['buy', 'transfer_in', 'staking_reward'])) {
+            if (in_array($t->type, Transaction::INFLOW_TYPES)) {
                 $costPerUnit = (float) $t->price_per_unit + ((float) $t->fees / max(1, (float) $t->quantity));
                 $openLots[$assetId][] = [
                     'qty'           => (float) $t->quantity,
@@ -30,7 +31,7 @@ class RealizedGainService
                     'date'          => $t->transacted_at,
                     'asset'         => $t->asset,
                 ];
-            } elseif (in_array($t->type, ['sell', 'transfer_out'])) {
+            } elseif (in_array($t->type, Transaction::OUTFLOW_TYPES)) {
                 $remainingToSell = (float) $t->quantity;
                 $sellPrice       = (float) $t->price_per_unit;
                 $sellDate        = $t->transacted_at;
@@ -96,13 +97,21 @@ class RealizedGainService
             return ['total_pct' => null, 'annualized_pct' => null, 'first_date' => null];
         }
 
-        // Grab cash flows from transactions (buys/transfers_in = positive, sells/transfers_out = negative)
-        $txns = $portfolio->transactions()
-            ->whereIn('type', ['buy', 'sell', 'transfer_in', 'transfer_out'])
-            ->orderBy('transacted_at')
-            ->get(['type', 'quantity', 'price_per_unit', 'fees', 'transacted_at']);
+        $twrTypes = array_merge(Transaction::INFLOW_TYPES, Transaction::OUTFLOW_TYPES);
+        $twrTypes = array_diff($twrTypes, ['staking_reward']);
 
-        // Build a map of date => net cash flow
+        if ($portfolio->relationLoaded('transactions')) {
+            $txns = $portfolio->transactions
+                ->filter(fn ($t) => in_array($t->type, $twrTypes))
+                ->sortBy('transacted_at')
+                ->values();
+        } else {
+            $txns = $portfolio->transactions()
+                ->whereIn('type', $twrTypes)
+                ->orderBy('transacted_at')
+                ->get(['type', 'quantity', 'price_per_unit', 'fees', 'transacted_at']);
+        }
+
         $cashflows = [];
         foreach ($txns as $t) {
             $date      = $t->transacted_at->toDateString();
@@ -111,7 +120,6 @@ class RealizedGainService
             $cashflows[$date] = ($cashflows[$date] ?? 0) + $sign * $amount;
         }
 
-        // Compute sub-period returns and chain-link
         $twr       = 1.0;
         $prevValue = null;
         $firstDate = null;
@@ -141,7 +149,6 @@ class RealizedGainService
 
         $totalPct = round(($twr - 1) * 100, 2);
 
-        // Annualize
         $days          = \Carbon\Carbon::parse($firstDate)->diffInDays(\Carbon\Carbon::parse($lastDate));
         $annualizedPct = $days > 0
             ? round((pow($twr, 365 / $days) - 1) * 100, 2)

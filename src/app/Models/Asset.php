@@ -14,9 +14,13 @@ class Asset extends Model
 
     protected $fillable = ['symbol', 'name', 'asset_type', 'price_source', 'exchange', 'coingecko_id', 'polygon_ticker'];
 
-    public function effectivePriceSource(): string
+    public function effectivePriceSource(): PriceSource
     {
-        return $this->price_source ?? ($this->asset_type === 'crypto' ? PriceSource::CoinGecko->value : PriceSource::Finnhub->value);
+        if ($this->price_source) {
+            return PriceSource::from($this->price_source);
+        }
+
+        return $this->asset_type === 'crypto' ? PriceSource::CoinGecko : PriceSource::Finnhub;
     }
 
     public function transactions(): HasMany

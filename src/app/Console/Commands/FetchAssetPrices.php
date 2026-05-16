@@ -28,8 +28,8 @@ class FetchAssetPrices extends Command
             return self::SUCCESS;
         }
 
-        $cryptos = $assets->filter(fn ($a) => $a->effectivePriceSource() === PriceSource::CoinGecko->value);
-        $stocks  = $assets->filter(fn ($a) => $a->effectivePriceSource() === PriceSource::Finnhub->value);
+        $cryptos = $assets->filter(fn ($a) => $a->effectivePriceSource() === PriceSource::CoinGecko);
+        $stocks  = $assets->filter(fn ($a) => $a->effectivePriceSource() === PriceSource::Finnhub);
 
         $this->info('Fetching prices...');
 

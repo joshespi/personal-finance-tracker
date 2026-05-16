@@ -138,6 +138,20 @@ class DashboardController extends Controller
         ));
     }
 
+    private function manualAssetBuckets(Collection $portfolios): array
+    {
+        $buckets = ['stock' => 0.0, 'crypto' => 0.0, 'real_estate' => 0.0, 'bond' => 0.0, 'other' => 0.0];
+
+        foreach ($portfolios as $p) {
+            foreach ($p->manualAssets->where('include_in_chart', true) as $ma) {
+                $key = array_key_exists($ma->asset_class, $buckets) ? $ma->asset_class : 'other';
+                $buckets[$key] += $ma->currentValue();
+            }
+        }
+
+        return $buckets;
+    }
+
     private function buildAllocation(Collection $allHoldings, Collection $portfolios): array
     {
         $stockValue      = 0.0;
@@ -155,19 +169,12 @@ class DashboardController extends Controller
             };
         }
 
-        $otherManualValue = 0.0;
-        foreach ($portfolios as $p) {
-            foreach ($p->manualAssets as $ma) {
-                $val = $ma->currentValue();
-                match ($ma->asset_class) {
-                    'real_estate' => $realEstateValue += $val,
-                    'stock'       => $stockValue      += $val,
-                    'bond'        => $bondValue        += $val,
-                    'crypto'      => $cryptoValue      += $val,
-                    default       => $otherManualValue += $val,
-                };
-            }
-        }
+        $ma = $this->manualAssetBuckets($portfolios);
+        $stockValue      += $ma['stock'];
+        $cryptoValue     += $ma['crypto'];
+        $realEstateValue += $ma['real_estate'];
+        $bondValue       += $ma['bond'];
+        $otherManualValue = $ma['other'];
 
         $total = $stockValue + $cryptoValue + $realEstateValue + $bondValue + $otherManualValue;
 
@@ -208,12 +215,8 @@ class DashboardController extends Controller
             $current[array_key_exists($type, $current) ? $type : 'other'] += $val;
         }
 
-        foreach ($portfolios as $p) {
-            foreach ($p->manualAssets as $ma) {
-                $val  = $ma->currentValue();
-                $type = $ma->asset_class;
-                $current[array_key_exists($type, $current) ? $type : 'other'] += $val;
-            }
+        foreach ($this->manualAssetBuckets($portfolios) as $type => $val) {
+            $current[array_key_exists($type, $current) ? $type : 'other'] += $val;
         }
 
         $total = array_sum($current);
