@@ -84,13 +84,19 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function readyToAssign(): float
     {
-        $envelopeBalance = (float) EnvelopeTransaction::query()
+        $funded = (float) EnvelopeTransaction::query()
             ->join('envelopes', 'envelopes.id', '=', 'envelope_transactions.envelope_id')
             ->where('envelopes.user_id', $this->id)
-            ->selectRaw("COALESCE(SUM(CASE WHEN envelope_transactions.type = 'fund' THEN envelope_transactions.amount ELSE -envelope_transactions.amount END), 0) AS bal")
-            ->value('bal');
+            ->where('envelope_transactions.type', 'fund')
+            ->sum('envelope_transactions.amount');
 
-        return round($this->totalCash() - $envelopeBalance, 2);
+        $spent = (float) CashTransaction::query()
+            ->join('envelopes', 'envelopes.id', '=', 'cash_transactions.envelope_id')
+            ->where('envelopes.user_id', $this->id)
+            ->where('cash_transactions.type', 'withdrawal')
+            ->sum('cash_transactions.amount');
+
+        return round($this->totalCash() - ($funded - $spent), 2);
     }
 
     public function totalCash(): float

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\EnvelopeTransaction;
+use App\Models\CashTransaction;
 use App\Models\PortfolioSnapshot;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -60,8 +60,8 @@ class ForecastController extends Controller
 
         $envelopeIds = $user->envelopes()->pluck('id');
         $spend3m = $envelopeIds->isNotEmpty()
-            ? (float) EnvelopeTransaction::whereIn('envelope_id', $envelopeIds)
-                ->where('type', 'spend')
+            ? (float) CashTransaction::whereIn('envelope_id', $envelopeIds)
+                ->where('type', 'withdrawal')
                 ->whereBetween('occurred_at', [$threeMonthsAgo, $lastMonthEnd])
                 ->sum('amount')
             : 0.0;

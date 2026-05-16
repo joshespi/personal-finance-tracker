@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
-use App\Models\EnvelopeTransaction;
 use App\Models\User;
 use Tests\TestCase;
 
@@ -37,8 +36,9 @@ class CashflowTest extends TestCase
     public function test_shows_envelope_spending_breakdown(): void
     {
         $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
         $envelope = Envelope::factory()->for($user)->create(['name' => 'Groceries']);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create([
+        CashTransaction::factory()->for($account)->spend($envelope)->create([
             'amount'      => 250,
             'occurred_at' => now()->toDateString(),
         ]);
@@ -59,7 +59,7 @@ class CashflowTest extends TestCase
         CashTransaction::factory()->for($account)->deposit()->create([
             'amount' => 2000, 'occurred_at' => now()->toDateString(),
         ]);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create([
+        CashTransaction::factory()->for($account)->spend($envelope)->create([
             'amount' => 600, 'occurred_at' => now()->toDateString(),
         ]);
 
@@ -116,7 +116,7 @@ class CashflowTest extends TestCase
         CashTransaction::factory()->for($account)->deposit()->create([
             'amount' => 4000, 'occurred_at' => $targetMonth->toDateString(),
         ]);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create([
+        CashTransaction::factory()->for($account)->spend($envelope)->create([
             'amount' => 1200, 'occurred_at' => $targetMonth->toDateString(),
         ]);
 

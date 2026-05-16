@@ -57,15 +57,16 @@
                 </div>
                 <div class="p-6 space-y-3">
                     <form method="POST" action="{{ route('cash-accounts.transactions.store', $account) }}"
+                          x-data="{ type: '{{ old('type', 'deposit') }}' }"
                           class="flex flex-wrap items-end gap-4">
                         @csrf
 
                         <div>
                             <x-input-label for="type" value="Type" />
-                            <select id="type" name="type"
+                            <select id="type" name="type" x-model="type"
                                     class="mt-1 block w-36 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                                <option value="deposit" @selected(old('type') === 'deposit')>Deposit</option>
-                                <option value="withdrawal" @selected(old('type') === 'withdrawal')>Withdrawal</option>
+                                <option value="deposit">Deposit</option>
+                                <option value="withdrawal">Withdrawal</option>
                             </select>
                             <x-input-error :messages="$errors->get('type')" class="mt-2" />
                         </div>
@@ -91,6 +92,20 @@
                                           :value="old('description')" maxlength="500" placeholder="Paycheck, rent, groceries…" />
                             <x-input-error :messages="$errors->get('description')" class="mt-2" />
                         </div>
+
+                        @if ($envelopes->isNotEmpty())
+                            <div x-show="type === 'withdrawal'" x-cloak>
+                                <x-input-label for="envelope_id" value="Charge to envelope (optional)" />
+                                <select id="envelope_id" name="envelope_id"
+                                        class="mt-1 block w-52 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option value="">— None —</option>
+                                    @foreach ($envelopes as $env)
+                                        <option value="{{ $env->id }}" @selected((string)old('envelope_id') === (string)$env->id)>{{ $env->name }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('envelope_id')" class="mt-2" />
+                            </div>
+                        @endif
 
                         <div class="pb-0.5">
                             <x-primary-button>Record</x-primary-button>
@@ -143,6 +158,7 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Description</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Envelope</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Amount</th>
                                     <th class="px-6 py-3"></th>
                                 </tr>
@@ -164,6 +180,14 @@
                                             @endif
                                         </td>
                                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $t->description ?? '—' }}</td>
+                                        <td class="px-6 py-3 text-gray-500 dark:text-gray-400">
+                                            @if ($t->envelope)
+                                                <a href="{{ route('envelopes.show', $t->envelope) }}"
+                                                   class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">{{ $t->envelope->name }}</a>
+                                            @else
+                                                <span class="text-gray-300 dark:text-gray-600">—</span>
+                                            @endif
+                                        </td>
                                         <td class="px-6 py-3 text-right font-mono font-semibold {{ $t->type === 'deposit' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
                                             {{ $t->type === 'deposit' ? '+' : '−' }}{{ number_format((float)$t->amount, 2) }}
                                         </td>

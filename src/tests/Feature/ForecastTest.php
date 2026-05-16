@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
-use App\Models\EnvelopeTransaction;
 use App\Models\User;
 use Tests\TestCase;
 
@@ -88,7 +87,7 @@ class ForecastTest extends TestCase
         $months = [now()->subMonths(3), now()->subMonths(2), now()->subMonths(1)];
         foreach ($months as $m) {
             CashTransaction::factory()->for($account)->deposit()->create(['amount' => 300, 'occurred_at' => $m->startOfMonth()]);
-            EnvelopeTransaction::factory()->for($envelope)->spend()->create(['amount' => 100, 'occurred_at' => $m->startOfMonth()]);
+            CashTransaction::factory()->for($account)->spend($envelope)->create(['amount' => 100, 'occurred_at' => $m->startOfMonth()]);
         }
 
         $response = $this->actingAs($user)->get(route('forecast'))->assertOk();

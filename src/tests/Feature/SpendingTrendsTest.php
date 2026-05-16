@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\CashAccount;
+use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
 use App\Models\User;
@@ -17,8 +19,9 @@ class SpendingTrendsTest extends TestCase
     public function test_shows_envelope_spend_for_current_user(): void
     {
         $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
         $envelope = Envelope::factory()->for($user)->create(['name' => 'Groceries']);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create([
+        CashTransaction::factory()->for($account)->spend($envelope)->create([
             'amount'      => 150,
             'occurred_at' => now()->toDateString(),
         ]);
@@ -31,10 +34,11 @@ class SpendingTrendsTest extends TestCase
 
     public function test_does_not_show_other_users_envelope_spend(): void
     {
-        $user  = User::factory()->create();
-        $other = User::factory()->create();
+        $user     = User::factory()->create();
+        $other    = User::factory()->create();
+        $account  = CashAccount::factory()->for($other)->create();
         $envelope = Envelope::factory()->for($other)->create(['name' => 'Other Groceries']);
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create([
+        CashTransaction::factory()->for($account)->spend($envelope)->create([
             'amount'      => 200,
             'occurred_at' => now()->toDateString(),
         ]);
@@ -94,9 +98,10 @@ class SpendingTrendsTest extends TestCase
     public function test_transactions_outside_range_excluded(): void
     {
         $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
         $envelope = Envelope::factory()->for($user)->create(['name' => 'Travel']);
         // 13 months ago — outside the default 6-month window
-        EnvelopeTransaction::factory()->for($envelope)->spend()->create([
+        CashTransaction::factory()->for($account)->spend($envelope)->create([
             'amount'      => 500,
             'occurred_at' => now()->subMonths(13)->toDateString(),
         ]);

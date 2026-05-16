@@ -40,7 +40,7 @@ class BudgetRuleTest extends TestCase
         $savings   = Envelope::factory()->for($user)->create(['is_savings' => true]);
 
         // $3000 mandatory spend / 6 = $500 (50%)
-        EnvelopeTransaction::factory()->for($mandatory)->spend()->create([
+        CashTransaction::factory()->for($account)->spend($mandatory)->create([
             'amount' => 3000, 'occurred_at' => now()->toDateString(),
         ]);
         // $1500 net savings funding / 6 = $250 (25%)
@@ -69,7 +69,7 @@ class BudgetRuleTest extends TestCase
 
         $mandatory = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
         // $4200 / 6 = $700 = 70% of $1000 income
-        EnvelopeTransaction::factory()->for($mandatory)->spend()->create([
+        CashTransaction::factory()->for($account)->spend($mandatory)->create([
             'amount' => 4200, 'occurred_at' => now()->toDateString(),
         ]);
 
@@ -119,7 +119,7 @@ class BudgetRuleTest extends TestCase
         CashTransaction::factory()->for($account)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
 
         $mandatory = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
-        EnvelopeTransaction::factory()->for($mandatory)->spend()->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
+        CashTransaction::factory()->for($account)->spend($mandatory)->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
         // baseline = $500/mo, target (6mo) = $3000
 
         $ef = Envelope::factory()->for($user)->create(['is_emergency_fund' => true]);
@@ -140,7 +140,7 @@ class BudgetRuleTest extends TestCase
         CashTransaction::factory()->for($account)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
 
         $mandatory = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
-        EnvelopeTransaction::factory()->for($mandatory)->spend()->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
+        CashTransaction::factory()->for($account)->spend($mandatory)->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
         // baseline = $500/mo, target (3mo) = $1500
 
         $ef = Envelope::factory()->for($user)->create(['is_emergency_fund' => true]);
@@ -159,7 +159,7 @@ class BudgetRuleTest extends TestCase
         CashTransaction::factory()->for($account)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
 
         $m = Envelope::factory()->for($user12)->create(['is_mandatory' => true]);
-        EnvelopeTransaction::factory()->for($m)->spend()->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
+        CashTransaction::factory()->for($account)->spend($m)->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
 
         $data = (new BudgetRuleService())->compute($user12->fresh());
         // baseline $500 * 12 = $6000 target
@@ -189,7 +189,7 @@ class BudgetRuleTest extends TestCase
         CashTransaction::factory()->for($otherAccount)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
 
         $env = Envelope::factory()->for($other)->create(['is_mandatory' => true]);
-        EnvelopeTransaction::factory()->for($env)->spend()->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
+        CashTransaction::factory()->for($otherAccount)->spend($env)->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
 
         $data = (new BudgetRuleService())->compute($user->fresh());
 
@@ -277,7 +277,7 @@ class BudgetRuleTest extends TestCase
         CashTransaction::factory()->for($account)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
 
         $m = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
-        EnvelopeTransaction::factory()->for($m)->spend()->create(['amount' => 4200, 'occurred_at' => now()->toDateString()]);
+        CashTransaction::factory()->for($account)->spend($m)->create(['amount' => 4200, 'occurred_at' => now()->toDateString()]);
 
         $this->actingAs($user)
             ->get(route('dashboard'))

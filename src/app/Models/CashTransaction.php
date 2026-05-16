@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Envelope;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CashTransaction extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['cash_account_id', 'type', 'amount', 'description', 'occurred_at'];
+    protected $fillable = ['cash_account_id', 'envelope_id', 'type', 'amount', 'description', 'occurred_at'];
 
     protected $casts = [
         'occurred_at' => 'date',
@@ -20,5 +21,10 @@ class CashTransaction extends Model
     public function cashAccount(): BelongsTo
     {
         return $this->belongsTo(CashAccount::class);
+    }
+
+    public function envelope(): BelongsTo
+    {
+        return $this->belongsTo(Envelope::class);
     }
 }
