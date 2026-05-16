@@ -146,6 +146,9 @@
                         <x-dropdown-link :href="route('export.index')">
                             {{ __('Export & Backup') }}
                         </x-dropdown-link>
+                        <x-dropdown-link :href="route('donate')">
+                            {{ __('Support') }}
+                        </x-dropdown-link>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <x-dropdown-link :href="route('logout')"
@@ -259,6 +262,9 @@
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('export.index')" :active="request()->routeIs('export.*')">
                     {{ __('Export & Backup') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('donate')" :active="request()->routeIs('donate')">
+                    {{ __('Support') }}
                 </x-responsive-nav-link>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
