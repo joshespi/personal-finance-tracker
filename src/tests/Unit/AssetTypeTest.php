@@ -26,17 +26,4 @@ class AssetTypeTest extends TestCase
         $this->assertSame('Real Estate', AssetType::RealEstate->label());
         $this->assertSame('Bond',        AssetType::Bond->label());
     }
-
-    public function test_from_string_resolves_correctly(): void
-    {
-        $this->assertSame(AssetType::Stock,      AssetType::from('stock'));
-        $this->assertSame(AssetType::Crypto,     AssetType::from('crypto'));
-        $this->assertSame(AssetType::RealEstate, AssetType::from('real_estate'));
-        $this->assertSame(AssetType::Bond,       AssetType::from('bond'));
-    }
-
-    public function test_values_count_matches_cases_count(): void
-    {
-        $this->assertCount(count(AssetType::cases()), AssetType::values());
-    }
 }

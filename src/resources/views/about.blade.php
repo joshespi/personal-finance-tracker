@@ -76,6 +76,19 @@
                 </div>
             </section>
 
+            {{-- Support --}}
+            <section>
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">Support this project</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                    The app is free and self-hosted. If it's saved you money or time, consider tipping —
+                    Bitcoin or GitHub Sponsors are both welcome.
+                </p>
+                <a href="{{ route('donate') }}"
+                   class="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                    Donate / Support &rarr;
+                </a>
+            </section>
+
             {{-- Self-host --}}
             <section>
                 <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">Self-host your own instance</h3>

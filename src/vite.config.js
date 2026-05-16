@@ -9,6 +9,7 @@ export default defineConfig({
                 'resources/js/app.js',
                 'resources/js/chartjs.js',
                 'resources/js/editor.js',
+                'resources/js/donate.js',
             ],
             refresh: true,
         }),

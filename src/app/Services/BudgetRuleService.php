@@ -31,9 +31,9 @@ class BudgetRuleService
             ->sortBy([['sort_order', 'asc'], ['name', 'asc']])
             ->values();
 
-        $incomeTotal = (float) $user->incomeEntries()
-            ->whereBetween('occurred_at', [$windowStart, $windowEnd])
-            ->sum('amount');
+        $incomeTotal = (float) $user->cashDeposits()
+            ->whereBetween('cash_transactions.occurred_at', [$windowStart, $windowEnd])
+            ->sum('cash_transactions.amount');
         $monthlyIncome = round($incomeTotal / self::WINDOW_MONTHS, 2);
 
         if ($monthlyIncome <= 0 && $envelopes->isEmpty()) {

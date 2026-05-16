@@ -9,7 +9,7 @@
             </div>
             <div class="flex items-center gap-2" x-data="{ importOpen: false }">
                 <a href="{{ route('transfers.create') }}"
-                   class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                   class="hidden sm:inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                     Portfolio Transfer
                 </a>
                 <button @click="importOpen = true"

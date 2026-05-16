@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\EnvelopeTransaction;
-use App\Models\IncomeEntry;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -27,10 +26,11 @@ class CashflowController extends Controller
 
         $envelopeIds = $envelopes->pluck('id');
 
-        $incomeRows = $user->incomeEntries()
-            ->whereBetween('occurred_at', [$month, $monthEnd])
-            ->orderByDesc('occurred_at')
-            ->orderByDesc('id')
+        $incomeRows = $user->cashDeposits()
+            ->whereBetween('cash_transactions.occurred_at', [$month, $monthEnd])
+            ->orderByDesc('cash_transactions.occurred_at')
+            ->orderByDesc('cash_transactions.id')
+            ->select('cash_transactions.*')
             ->get();
 
         $income     = round((float) $incomeRows->sum('amount'), 2);
@@ -54,9 +54,10 @@ class CashflowController extends Controller
         $incomeByMonth = [$currentYm => $income];
         $spentByMonth  = [$currentYm => $totalSpent];
 
-        $historyIncome = IncomeEntry::where('user_id', $user->id)
-            ->whereBetween('occurred_at', [$historyStart, $historyEnd])
-            ->get(['occurred_at', 'amount']);
+        $historyIncome = $user->cashDeposits()
+            ->whereBetween('cash_transactions.occurred_at', [$historyStart, $historyEnd])
+            ->select('cash_transactions.occurred_at', 'cash_transactions.amount')
+            ->get();
 
         $historySpent = EnvelopeTransaction::whereIn('envelope_id', $envelopeIds)
             ->where('type', 'spend')

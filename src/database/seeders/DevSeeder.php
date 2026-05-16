@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\PriceSource;
 use App\Models\Asset;
 use App\Models\AssetPrice;
 use App\Models\CashAccount;
@@ -65,12 +66,13 @@ class DevSeeder extends Seeder
         );
 
         $assets = [
-            ['symbol' => 'AAPL', 'name' => 'Apple Inc.',            'type' => 'stock',        'price' => 185.00, 'portfolio' => $taxable],
-            ['symbol' => 'MSFT', 'name' => 'Microsoft Corp.',       'type' => 'stock',        'price' => 415.00, 'portfolio' => $taxable],
-            ['symbol' => 'VOO',  'name' => 'Vanguard S&P 500',      'type' => 'stock',        'price' => 530.00, 'portfolio' => $ira],
-            ['symbol' => 'BTC',  'name' => 'Bitcoin',               'type' => 'crypto',       'price' => 68000.00, 'portfolio' => $taxable],
-            ['symbol' => 'VNQ',  'name' => 'Vanguard Real Estate',  'type' => 'real_estate',  'price' => 85.00,  'portfolio' => $taxable],
-            ['symbol' => 'BND',  'name' => 'Vanguard Total Bond',   'type' => 'bond',         'price' => 72.50,  'portfolio' => $ira],
+            ['symbol' => 'AAPL', 'name' => 'Apple Inc.',            'type' => 'stock',        'price' => 185.00,   'portfolio' => $taxable, 'price_source' => null],
+            ['symbol' => 'MSFT', 'name' => 'Microsoft Corp.',       'type' => 'stock',        'price' => 415.00,   'portfolio' => $taxable, 'price_source' => null],
+            ['symbol' => 'VOO',  'name' => 'Vanguard S&P 500',      'type' => 'stock',        'price' => 530.00,   'portfolio' => $ira,     'price_source' => null],
+            ['symbol' => 'BTC',  'name' => 'Bitcoin',               'type' => 'crypto',       'price' => 68000.00, 'portfolio' => $taxable, 'price_source' => null],
+            ['symbol' => 'ARKB', 'name' => 'ARK 21Shares Bitcoin ETF', 'type' => 'crypto',   'price' => 75.00,    'portfolio' => $taxable, 'price_source' => PriceSource::Finnhub->value],
+            ['symbol' => 'VNQ',  'name' => 'Vanguard Real Estate',  'type' => 'real_estate',  'price' => 85.00,    'portfolio' => $taxable, 'price_source' => null],
+            ['symbol' => 'BND',  'name' => 'Vanguard Total Bond',   'type' => 'bond',         'price' => 72.50,    'portfolio' => $ira,     'price_source' => null],
         ];
 
         $today = CarbonImmutable::now();
@@ -78,7 +80,7 @@ class DevSeeder extends Seeder
         foreach ($assets as $i => $row) {
             $asset = Asset::firstOrCreate(
                 ['symbol' => $row['symbol']],
-                ['name' => $row['name'], 'asset_type' => $row['type']],
+                ['name' => $row['name'], 'asset_type' => $row['type'], 'price_source' => $row['price_source']],
             );
 
             AssetPrice::updateOrCreate(
@@ -169,6 +171,7 @@ class DevSeeder extends Seeder
                 'manual_asset_id' => $home->id,
                 'liability_type'  => 'mortgage',
                 'interest_rate'   => 6.25,
+                'minimum_payment' => 1650,
                 'currency'        => 'USD',
             ],
         );
@@ -188,9 +191,10 @@ class DevSeeder extends Seeder
         $cc = Liability::firstOrCreate(
             ['user_id' => $user->id, 'name' => 'Visa Card'],
             [
-                'liability_type' => 'credit_card',
-                'interest_rate'  => 21.99,
-                'currency'       => 'USD',
+                'liability_type'  => 'credit_card',
+                'interest_rate'   => 21.99,
+                'minimum_payment' => 35,
+                'currency'        => 'USD',
             ],
         );
         LiabilityBalance::updateOrCreate(

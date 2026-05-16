@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\CashAccount;
+use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
-use App\Models\IncomeEntry;
 use App\Models\User;
 use App\Services\BudgetRuleService;
 use Tests\TestCase;
@@ -28,11 +29,11 @@ class BudgetRuleTest extends TestCase
 
     public function test_ratios_compute_against_income_average_and_drift_clear_within_targets(): void
     {
-        $user = User::factory()->create();
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
         // $6000 income / 6 = $1000 monthly avg
-        IncomeEntry::factory()->for($user)->create([
-            'amount' => 6000,
-            'occurred_at' => now()->toDateString(),
+        CashTransaction::factory()->for($account)->deposit()->create([
+            'amount' => 6000, 'occurred_at' => now()->toDateString(),
         ]);
 
         $mandatory = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
@@ -62,8 +63,9 @@ class BudgetRuleTest extends TestCase
 
     public function test_drift_fires_when_mandatory_over_60(): void
     {
-        $user = User::factory()->create();
-        IncomeEntry::factory()->for($user)->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+        CashTransaction::factory()->for($account)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
 
         $mandatory = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
         // $4200 / 6 = $700 = 70% of $1000 income
@@ -78,8 +80,9 @@ class BudgetRuleTest extends TestCase
 
     public function test_drift_fires_when_savings_under_20(): void
     {
-        $user = User::factory()->create();
-        IncomeEntry::factory()->for($user)->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+        CashTransaction::factory()->for($account)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
 
         $savings = Envelope::factory()->for($user)->create(['is_savings' => true]);
         // $600 / 6 = $100 = 10% of $1000 income (under 20%)
@@ -94,8 +97,9 @@ class BudgetRuleTest extends TestCase
 
     public function test_emergency_fund_envelope_counts_as_savings(): void
     {
-        $user = User::factory()->create();
-        IncomeEntry::factory()->for($user)->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+        CashTransaction::factory()->for($account)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
 
         // EF envelope without explicit is_savings flag should still count
         $ef = Envelope::factory()->for($user)->create(['is_emergency_fund' => true]);
@@ -110,8 +114,9 @@ class BudgetRuleTest extends TestCase
 
     public function test_phase_is_building_when_ef_below_target(): void
     {
-        $user = User::factory()->create(['emergency_fund_target_months' => 6]);
-        IncomeEntry::factory()->for($user)->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
+        $user    = User::factory()->create(['emergency_fund_target_months' => 6]);
+        $account = CashAccount::factory()->for($user)->create();
+        CashTransaction::factory()->for($account)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
 
         $mandatory = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
         EnvelopeTransaction::factory()->for($mandatory)->spend()->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
@@ -130,8 +135,9 @@ class BudgetRuleTest extends TestCase
 
     public function test_phase_is_funded_when_ef_meets_target(): void
     {
-        $user = User::factory()->create(['emergency_fund_target_months' => 3]);
-        IncomeEntry::factory()->for($user)->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
+        $user    = User::factory()->create(['emergency_fund_target_months' => 3]);
+        $account = CashAccount::factory()->for($user)->create();
+        CashTransaction::factory()->for($account)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
 
         $mandatory = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
         EnvelopeTransaction::factory()->for($mandatory)->spend()->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
@@ -148,8 +154,10 @@ class BudgetRuleTest extends TestCase
 
     public function test_target_months_setting_changes_target(): void
     {
-        $user12 = User::factory()->create(['emergency_fund_target_months' => 12]);
-        IncomeEntry::factory()->for($user12)->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
+        $user12  = User::factory()->create(['emergency_fund_target_months' => 12]);
+        $account = CashAccount::factory()->for($user12)->create();
+        CashTransaction::factory()->for($account)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
+
         $m = Envelope::factory()->for($user12)->create(['is_mandatory' => true]);
         EnvelopeTransaction::factory()->for($m)->spend()->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
 
@@ -161,8 +169,9 @@ class BudgetRuleTest extends TestCase
 
     public function test_window_excludes_old_transactions(): void
     {
-        $user = User::factory()->create();
-        IncomeEntry::factory()->for($user)->create([
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+        CashTransaction::factory()->for($account)->deposit()->create([
             'amount' => 99999, 'occurred_at' => now()->subMonths(8)->toDateString(),
         ]);
 
@@ -174,9 +183,10 @@ class BudgetRuleTest extends TestCase
 
     public function test_cross_user_data_does_not_leak(): void
     {
-        $user  = User::factory()->create();
-        $other = User::factory()->create();
-        IncomeEntry::factory()->for($other)->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
+        $user        = User::factory()->create();
+        $other       = User::factory()->create();
+        $otherAccount = CashAccount::factory()->for($other)->create();
+        CashTransaction::factory()->for($otherAccount)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
 
         $env = Envelope::factory()->for($other)->create(['is_mandatory' => true]);
         EnvelopeTransaction::factory()->for($env)->spend()->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
@@ -262,8 +272,10 @@ class BudgetRuleTest extends TestCase
 
     public function test_dashboard_shows_drift_banner_when_drift_exists(): void
     {
-        $user = User::factory()->create();
-        IncomeEntry::factory()->for($user)->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+        CashTransaction::factory()->for($account)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
+
         $m = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
         EnvelopeTransaction::factory()->for($m)->spend()->create(['amount' => 4200, 'occurred_at' => now()->toDateString()]);
 
