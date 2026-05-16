@@ -12,15 +12,10 @@ class Portfolio extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'name', 'description', 'currency', 'is_tax_advantaged', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'target_manual_pct'];
+    protected $fillable = ['user_id', 'name', 'description', 'currency', 'is_tax_advantaged'];
 
     protected $casts = [
-        'is_tax_advantaged'      => 'boolean',
-        'target_stock_pct'       => 'integer',
-        'target_crypto_pct'      => 'integer',
-        'target_real_estate_pct' => 'integer',
-        'target_bond_pct'        => 'integer',
-        'target_manual_pct'      => 'integer',
+        'is_tax_advantaged' => 'boolean',
     ];
 
     public function user(): BelongsTo
@@ -46,6 +41,16 @@ class Portfolio extends Model
     public function journalEntries(): HasMany
     {
         return $this->hasMany(JournalEntry::class)->orderByDesc('entry_date')->orderByDesc('id');
+    }
+
+    public function slices(): HasMany
+    {
+        return $this->hasMany(PortfolioSlice::class);
+    }
+
+    public function chartManualValue(): float
+    {
+        return (float) $this->manualAssets->where('include_in_chart', true)->sum(fn ($ma) => $ma->currentValue());
     }
 
     /**

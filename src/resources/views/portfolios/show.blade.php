@@ -399,54 +399,100 @@
                 </div>
             @endif
 
-            {{-- Rebalancing --}}
-            @if (!empty($rebalancing))
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
-                    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Rebalancing</h3>
-                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                            Target allocations set in
-                            <a href="{{ route('portfolios.edit', $portfolio) }}" class="text-indigo-500 hover:underline">portfolio settings</a>
-                        </p>
+            {{-- Pie / Rebalancing --}}
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg" x-data="{ addOpen: false }">
+                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Portfolio Pie</h3>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Target allocations per ticker — shows drift and rebalancing amounts.</p>
                     </div>
+                    <button @click="addOpen = !addOpen"
+                            class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+                        + Add slice
+                    </button>
+                </div>
+
+                {{-- Add slice form --}}
+                <div x-show="addOpen" x-cloak class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/40">
+                    <form method="POST" action="{{ route('portfolios.slices.store', $portfolio) }}"
+                          class="flex flex-wrap items-end gap-3">
+                        @csrf
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Symbol</label>
+                            <x-text-input name="symbol" type="text" class="w-32 uppercase"
+                                          placeholder="e.g. VOO" maxlength="20" required />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Target %</label>
+                            <x-text-input name="target_pct" type="number" class="w-24"
+                                          placeholder="80" min="0.01" max="100" step="0.01" required />
+                        </div>
+                        <x-primary-button type="submit">Save</x-primary-button>
+                    </form>
+                    @if ($errors->any())
+                        <p class="text-sm text-red-600 dark:text-red-400 mt-2">{{ $errors->first() }}</p>
+                    @endif
+                </div>
+
+                @if (!empty($rebalancing))
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
                             <thead class="bg-gray-50 dark:bg-gray-700">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Asset Class</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Symbol</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Current Value</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Current %</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Target %</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Drift</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Action</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">To Buy / Sell</th>
+                                    <th class="px-6 py-3"></th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach ($rebalancing as $row)
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td class="px-6 py-3 font-medium text-gray-900 dark:text-gray-100">{{ $row['label'] }}</td>
+                                        <td class="px-6 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $row['symbol'] }}</td>
                                         <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ number_format($row['current_val'], 2) }}</td>
                                         <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ $row['current_pct'] }}%</td>
-                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ $row['target_pct'] }}%</td>
-                                        <td class="px-6 py-3 text-right font-mono font-semibold {{ abs($row['current_pct'] - $row['target_pct']) < 2 ? 'text-gray-400' : ($row['current_pct'] > $row['target_pct'] ? 'text-red-500' : 'text-amber-500') }}">
-                                            {{ $row['current_pct'] >= $row['target_pct'] ? '+' : '' }}{{ number_format($row['current_pct'] - $row['target_pct'], 1) }}%
+                                        <td class="px-6 py-3 text-right font-mono text-gray-500 dark:text-gray-400">{{ $row['target_pct'] }}%</td>
+                                        <td class="px-6 py-3 text-right font-mono font-semibold {{ abs($row['drift_pct']) < 3 ? 'text-gray-400' : ($row['drift_pct'] > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400') }}">
+                                            {{ $row['drift_pct'] >= 0 ? '+' : '' }}{{ $row['drift_pct'] }}%
                                         </td>
                                         <td class="px-6 py-3 text-right font-mono font-semibold">
                                             @if (abs($row['diff']) < 1)
-                                                <span class="text-green-500 text-xs">Balanced</span>
+                                                <span class="text-green-500 text-xs">On target</span>
                                             @elseif ($row['diff'] > 0)
-                                                <span class="text-green-600">Buy ${{ number_format($row['diff'], 2) }}</span>
+                                                <span class="text-green-600 dark:text-green-400">
+                                                    +${{ number_format($row['diff'], 2) }} buy
+                                                </span>
                                             @else
-                                                <span class="text-red-500">Sell ${{ number_format(abs($row['diff']), 2) }}</span>
+                                                <span class="text-red-500 dark:text-red-400">
+                                                    -${{ number_format(abs($row['diff']), 2) }} sell
+                                                </span>
                                             @endif
+                                        </td>
+                                        <td class="px-6 py-3 text-right">
+                                            <form method="POST"
+                                                  action="{{ route('portfolios.slices.destroy', [$portfolio, $row['slice_id']]) }}"
+                                                  onsubmit="return confirm('Remove this slice?')">
+                                                @csrf @method('DELETE')
+                                                <button type="submit"
+                                                        class="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition">
+                                                    Remove
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
                     </div>
-                </div>
-            @endif
+                @else
+                    <div class="px-6 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                        No slices yet. Add your target allocations above to see rebalancing guidance.
+                    </div>
+                @endif
+            </div>
 
             {{-- Dividend / Income --}}
             @if ($incomeByAsset->isNotEmpty())

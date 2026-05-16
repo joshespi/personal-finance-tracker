@@ -3,8 +3,8 @@
 <div x-data="{
     type: '{{ old('type', $s?->type ?? 'envelope_fund') }}',
     needsEnvelope()  { return ['envelope_fund','envelope_spend'].includes(this.type); },
-    needsCash()      { return ['cash_deposit','cash_withdrawal','envelope_fund'].includes(this.type); },
-    cashRequired()   { return ['cash_deposit','cash_withdrawal'].includes(this.type); },
+    needsCash()      { return ['cash_deposit','cash_withdrawal','envelope_fund','envelope_spend'].includes(this.type); },
+    cashRequired()   { return ['cash_deposit','cash_withdrawal','envelope_spend'].includes(this.type); },
 }" class="space-y-5">
 
     {{-- Description --}}
@@ -90,7 +90,7 @@
             @endforeach
         </select>
         <x-input-error :messages="$errors->get('cash_account_id')" class="mt-2" />
-        <p x-show="type === 'envelope_fund' && needsCash()" class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+        <p x-show="type === 'envelope_fund'" class="mt-1 text-xs text-gray-400 dark:text-gray-500">
             Pairing a cash account will create a matching withdrawal there each time this runs.
         </p>
     </div>

@@ -80,21 +80,24 @@ class ScheduledTransactionTest extends TestCase
     public function test_can_create_envelope_spend_scheduled_transaction(): void
     {
         $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
         $envelope = Envelope::factory()->for($user)->create();
 
         $this->actingAs($user)->post(route('scheduled-transactions.store'), [
-            'description' => 'Netflix',
-            'amount'      => '15.99',
-            'type'        => 'envelope_spend',
-            'recurrence'  => 'monthly',
-            'next_due_at' => today()->addMonth()->toDateString(),
-            'envelope_id' => $envelope->id,
+            'description'    => 'Netflix',
+            'amount'         => '15.99',
+            'type'           => 'envelope_spend',
+            'recurrence'     => 'monthly',
+            'next_due_at'    => today()->addMonth()->toDateString(),
+            'envelope_id'    => $envelope->id,
+            'cash_account_id' => $account->id,
         ])->assertRedirect(route('scheduled-transactions.index'));
 
         $this->assertDatabaseHas('scheduled_transactions', [
-            'user_id'     => $user->id,
-            'type'        => 'envelope_spend',
-            'envelope_id' => $envelope->id,
+            'user_id'         => $user->id,
+            'type'            => 'envelope_spend',
+            'envelope_id'     => $envelope->id,
+            'cash_account_id' => $account->id,
         ]);
     }
 
@@ -255,18 +258,20 @@ class ScheduledTransactionTest extends TestCase
 
     public function test_materialize_creates_envelope_spend(): void
     {
-        $user      = User::factory()->create();
-        $envelope  = Envelope::factory()->for($user)->create();
-        ScheduledTransaction::factory()->envelopeSpend()->for($user)->for($envelope, 'envelope')->pastDue()->create([
-            'description' => 'Streaming',
-        ]);
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
+        $envelope = Envelope::factory()->for($user)->create();
+        ScheduledTransaction::factory()->envelopeSpend()
+            ->for($user)->for($envelope, 'envelope')->for($account, 'cashAccount')->pastDue()
+            ->create(['description' => 'Streaming']);
 
         app(ScheduledTransactionService::class)->materializeForUser($user);
 
-        $this->assertDatabaseHas('envelope_transactions', [
-            'envelope_id' => $envelope->id,
-            'type'        => 'spend',
-            'description' => 'Streaming',
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $account->id,
+            'envelope_id'     => $envelope->id,
+            'type'            => 'withdrawal',
+            'description'     => 'Streaming',
         ]);
     }
 

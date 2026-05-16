@@ -121,10 +121,11 @@ class DevSeeder extends Seeder
         $home = ManualAsset::firstOrCreate(
             ['portfolio_id' => $portfolio->id, 'name' => 'Primary Residence'],
             [
-                'asset_class'     => 'real_estate',
-                'cost_basis'      => 320000,
-                'currency'        => 'USD',
-                'tracking_method' => 'static',
+                'asset_class'      => 'real_estate',
+                'cost_basis'       => 320000,
+                'currency'         => 'USD',
+                'tracking_method'  => 'static',
+                'include_in_chart' => false,
             ],
         );
 
@@ -243,6 +244,8 @@ class DevSeeder extends Seeder
 
     private function seedEnvelopes(User $user): void
     {
+        $checking = CashAccount::where('user_id', $user->id)->where('name', 'Checking')->first();
+
         $envelopes = [
             ['name' => 'Rent',         'monthly_target' => 1850, 'color' => '#ef4444', 'sort_order' => 0, 'spend' => 1850, 'is_mandatory' => true,  'is_emergency_fund' => false],
             ['name' => 'Groceries',    'monthly_target' => 600,  'color' => '#10b981', 'sort_order' => 1, 'spend' => 540,  'is_mandatory' => true,  'is_emergency_fund' => false],
@@ -272,10 +275,10 @@ class DevSeeder extends Seeder
                     ['amount' => $row['monthly_target'], 'description' => 'Monthly fund'],
                 );
 
-                if ($row['spend'] > 0) {
-                    EnvelopeTransaction::firstOrCreate(
-                        ['envelope_id' => $env->id, 'occurred_at' => $date->addDays(15)->startOfDay()->toDateTimeString(), 'type' => 'spend'],
-                        ['amount' => $row['spend'], 'description' => $row['name'] . ' spend'],
+                if ($row['spend'] > 0 && $checking) {
+                    CashTransaction::firstOrCreate(
+                        ['cash_account_id' => $checking->id, 'envelope_id' => $env->id, 'occurred_at' => $date->addDays(15)->startOfDay()->toDateTimeString()],
+                        ['type' => 'withdrawal', 'amount' => $row['spend'], 'description' => $row['name'] . ' spend'],
                     );
                 }
             }
@@ -322,10 +325,10 @@ class DevSeeder extends Seeder
             );
         }
 
-        if ($rent) {
+        if ($rent && $checking) {
             ScheduledTransaction::firstOrCreate(
                 ['user_id' => $user->id, 'description' => 'Rent', 'type' => 'envelope_spend', 'envelope_id' => $rent->id],
-                ['amount' => 1850, 'recurrence' => 'monthly', 'next_due_at' => CarbonImmutable::now()->addMonth()->startOfMonth()->toDateString(), 'is_active' => true],
+                ['cash_account_id' => $checking->id, 'amount' => 1850, 'recurrence' => 'monthly', 'next_due_at' => CarbonImmutable::now()->addMonth()->startOfMonth()->toDateString(), 'is_active' => true],
             );
         }
     }

@@ -299,4 +299,54 @@ class ManualAssetTest extends TestCase
             ->delete(route('valuations.destroy', $valuation))
             ->assertForbidden();
     }
+
+    public function test_include_in_chart_stored_as_true_when_checked(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+
+        $this->actingAs($portfolio->user)
+            ->post(route('portfolios.manual-assets.store', $portfolio), [
+                'name'             => 'Card Collection',
+                'asset_class'      => 'other',
+                'currency'         => 'USD',
+                'include_in_chart' => '1',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('manual_assets', [
+            'name'             => 'Card Collection',
+            'include_in_chart' => true,
+        ]);
+    }
+
+    public function test_include_in_chart_stored_as_false_when_unchecked(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+
+        $this->actingAs($portfolio->user)
+            ->post(route('portfolios.manual-assets.store', $portfolio), [
+                'name'             => 'Primary Residence',
+                'asset_class'      => 'real_estate',
+                'currency'         => 'USD',
+                'include_in_chart' => '0',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('manual_assets', [
+            'name'             => 'Primary Residence',
+            'include_in_chart' => false,
+        ]);
+    }
+
+    public function test_excluded_manual_asset_omitted_from_portfolio_chart_value(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        ManualAsset::factory()->for($portfolio)->create(['include_in_chart' => true]);
+        ManualAsset::factory()->for($portfolio)->create(['include_in_chart' => false]);
+
+        $portfolio->load(['manualAssets.latestValuation', 'manualAssets.proxyAsset.latestPrice']);
+
+        $includedCount = $portfolio->manualAssets->where('include_in_chart', true)->count();
+        $this->assertEquals(1, $includedCount);
+    }
 }

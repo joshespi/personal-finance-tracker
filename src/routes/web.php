@@ -31,6 +31,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ManualAssetController;
 use App\Http\Controllers\ManualValuationController;
 use App\Http\Controllers\PortfolioController;
+use App\Http\Controllers\PortfolioSliceController;
 use App\Http\Controllers\PortfolioTransferController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TickerSearchController;
@@ -83,6 +84,9 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('portfolios.manual-assets', ManualAssetController::class)->shallow();
 
+    Route::post('portfolios/{portfolio}/slices', [PortfolioSliceController::class, 'store'])->name('portfolios.slices.store');
+    Route::delete('portfolios/{portfolio}/slices/{slice}', [PortfolioSliceController::class, 'destroy'])->name('portfolios.slices.destroy');
+
     Route::resource('manual-assets.valuations', ManualValuationController::class)
         ->shallow()
         ->only(['store', 'destroy']);
@@ -134,6 +138,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/targets', [ProfileController::class, 'updateTargets'])->name('profile.targets');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Stop impersonation — must be outside admin group so impersonated non-admin users can reach it

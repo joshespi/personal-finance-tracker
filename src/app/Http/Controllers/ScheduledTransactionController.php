@@ -87,7 +87,7 @@ class ScheduledTransactionController extends Controller
             'envelope_id'    => in_array($type, ['envelope_fund', 'envelope_spend'])
                 ? ['required', $envelopeRule]
                 : 'nullable',
-            'cash_account_id' => in_array($type, ['cash_deposit', 'cash_withdrawal'])
+            'cash_account_id' => in_array($type, ['cash_deposit', 'cash_withdrawal', 'envelope_spend'])
                 ? ['required', $cashAccountRule]
                 : ['nullable', $cashAccountRule],
             'is_active'      => 'boolean',

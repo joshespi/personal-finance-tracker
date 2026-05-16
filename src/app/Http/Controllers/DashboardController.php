@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PortfolioSnapshot;
+use App\Models\User;
 use App\Services\BenchmarkService;
 use App\Services\BudgetRuleService;
 use Illuminate\Http\Request;
@@ -49,7 +50,7 @@ class DashboardController extends Controller
             $costBasis    = $holdings->sum('total_cost');
             $marketValue  = $holdings->filter(fn ($h) => $h['current_value'] !== null)->sum('current_value');
             $unpricedCost = $holdings->filter(fn ($h) => $h['current_value'] === null)->sum('total_cost');
-            $manualValue  = $portfolio->manualAssets->sum(fn ($ma) => $ma->currentValue());
+            $manualValue  = $portfolio->chartManualValue();
             $unrealized = $holdings->filter(fn ($h) => $h['unrealized_gain'] !== null)->sum('unrealized_gain');
             $hasPrice   = $holdings->contains(fn ($h) => $h['current_value'] !== null);
 
@@ -126,12 +127,13 @@ class DashboardController extends Controller
             return $h;
         });
 
-        $allocation = $this->buildAllocation($allHoldings, $portfolios);
+        $allocation  = $this->buildAllocation($allHoldings, $portfolios);
+        $rebalancing = $this->buildGlobalRebalancing($allHoldings, $portfolios, $request->user());
 
         $budgetRuleData = $budgetRule->compute($request->user());
 
         return view('dashboard', compact(
-            'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'benchmarkData', 'budgetRuleData',
+            'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'rebalancing', 'benchmarkData', 'budgetRuleData',
             'revolvingBalance', 'interestBleedMonthly', 'interestBleedYearly'
         ));
     }
@@ -183,5 +185,61 @@ class DashboardController extends Controller
             'values' => $entries->pluck('value')->values()->all(),
             'total'  => round($total, 2),
         ];
+    }
+
+    private function buildGlobalRebalancing(Collection $allHoldings, Collection $portfolios, User $user): array
+    {
+        $targets = [
+            'stock'       => (int) $user->target_stock_pct,
+            'crypto'      => (int) $user->target_crypto_pct,
+            'real_estate' => (int) $user->target_real_estate_pct,
+            'bond'        => (int) $user->target_bond_pct,
+        ];
+
+        if (array_sum($targets) === 0) {
+            return [];
+        }
+
+        $current = ['stock' => 0.0, 'crypto' => 0.0, 'real_estate' => 0.0, 'bond' => 0.0, 'other' => 0.0];
+
+        foreach ($allHoldings as $h) {
+            $val  = (float) $h['effective_value'];
+            $type = $h['asset']->asset_type;
+            $current[array_key_exists($type, $current) ? $type : 'other'] += $val;
+        }
+
+        foreach ($portfolios as $p) {
+            foreach ($p->manualAssets as $ma) {
+                $val  = $ma->currentValue();
+                $type = $ma->asset_class;
+                $current[array_key_exists($type, $current) ? $type : 'other'] += $val;
+            }
+        }
+
+        $total = array_sum($current);
+        if ($total <= 0) {
+            return [];
+        }
+
+        $labels = ['stock' => 'Stocks', 'crypto' => 'Crypto', 'real_estate' => 'Real Estate', 'bond' => 'Bonds'];
+
+        $rows = [];
+        foreach ($targets as $type => $targetPct) {
+            $currentVal  = round($current[$type], 2);
+            $targetVal   = round($total * $targetPct / 100, 2);
+            $currentPct  = round($currentVal / $total * 100, 1);
+            $diff        = round($targetVal - $currentVal, 2);
+            $rows[]      = [
+                'label'      => $labels[$type],
+                'current_pct' => $currentPct,
+                'target_pct'  => $targetPct,
+                'current_val' => $currentVal,
+                'target_val'  => $targetVal,
+                'diff'        => $diff,
+                'drift_pct'   => round($currentPct - $targetPct, 1),
+            ];
+        }
+
+        return $rows;
     }
 }

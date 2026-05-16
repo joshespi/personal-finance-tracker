@@ -43,6 +43,17 @@
     <x-input-error :messages="$errors->get('currency')" class="mt-2" />
 </div>
 
+<div class="flex items-center gap-3">
+    <input type="hidden" name="include_in_chart" value="0">
+    <input type="checkbox" id="include_in_chart" name="include_in_chart" value="1"
+           class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+           @checked(old('include_in_chart', $m?->include_in_chart ?? true)) />
+    <div>
+        <x-input-label for="include_in_chart" value="Include in portfolio charts" class="cursor-pointer" />
+        <p class="text-xs text-gray-500 dark:text-gray-400">Uncheck to exclude this asset from chart totals (e.g. primary residence).</p>
+    </div>
+</div>
+
 {{-- Valuation method --}}
 <div x-data="{ tracking: '{{ old('tracking_method', $m?->tracking_method ?? 'static') }}' }">
     <x-input-label value="Valuation Method" />

@@ -30,8 +30,7 @@ class ScheduledTransactionFactory extends Factory
     public function envelopeSpend(): static
     {
         return $this->state(fn () => [
-            'type'            => 'envelope_spend',
-            'cash_account_id' => null,
+            'type' => 'envelope_spend',
         ]);
     }
 

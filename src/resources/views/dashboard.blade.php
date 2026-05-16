@@ -201,6 +201,51 @@
                     </div>
                 @endif
 
+                {{-- Global rebalancing --}}
+                @if (!empty($rebalancing))
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Global Rebalancing</h3>
+                            <a href="{{ route('profile.edit') }}#investment-targets"
+                               class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Edit targets</a>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm">
+                                <thead>
+                                    <tr class="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                                        <th class="text-left py-2 pr-4">Class</th>
+                                        <th class="text-right py-2 px-4">Current</th>
+                                        <th class="text-right py-2 px-4">Target</th>
+                                        <th class="text-right py-2 px-4">Drift</th>
+                                        <th class="text-right py-2 pl-4">To Buy / Sell</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    @foreach ($rebalancing as $row)
+                                        <tr>
+                                            <td class="py-2 pr-4 font-medium text-gray-900 dark:text-gray-100">{{ $row['label'] }}</td>
+                                            <td class="py-2 px-4 text-right font-mono text-gray-700 dark:text-gray-300">
+                                                ${{ number_format($row['current_val'], 0) }}
+                                                <span class="text-gray-400">({{ $row['current_pct'] }}%)</span>
+                                            </td>
+                                            <td class="py-2 px-4 text-right font-mono text-gray-500 dark:text-gray-400">
+                                                {{ $row['target_pct'] }}%
+                                            </td>
+                                            <td class="py-2 px-4 text-right font-mono {{ abs($row['drift_pct']) >= 3 ? ($row['drift_pct'] < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400') : 'text-gray-400' }}">
+                                                {{ $row['drift_pct'] > 0 ? '+' : '' }}{{ number_format($row['drift_pct'], 1) }}%
+                                            </td>
+                                            <td class="py-2 pl-4 text-right font-mono {{ $row['diff'] < 0 ? 'text-red-600 dark:text-red-400' : ($row['diff'] > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-400') }}">
+                                                {{ $row['diff'] >= 0 ? '+' : '' }}${{ number_format(abs($row['diff']), 0) }}
+                                                <span class="text-xs text-gray-400">{{ $row['diff'] > 0 ? 'buy' : ($row['diff'] < 0 ? 'sell' : '—') }}</span>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- All Holdings --}}
                 @if ($allHoldings->isNotEmpty())
                     @php

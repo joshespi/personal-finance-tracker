@@ -49,6 +49,7 @@ class ManualAssetController extends Controller
 
         $validated = $this->validatePayload($request);
         $validated['tracking_method'] ??= 'static';
+        $validated['include_in_chart'] = $request->boolean('include_in_chart');
 
         $asset = $portfolio->manualAssets()->create(array_merge(
             array_diff_key($validated, ['proxy_symbol' => null]),
@@ -95,6 +96,7 @@ class ManualAssetController extends Controller
 
         $validated = $this->validatePayload($request);
         $validated['tracking_method'] ??= 'static';
+        $validated['include_in_chart'] = $request->boolean('include_in_chart');
 
         $manualAsset->update(array_merge(
             array_diff_key($validated, ['proxy_symbol' => null]),
@@ -124,6 +126,7 @@ class ManualAssetController extends Controller
             'asset_class'      => ['required', 'in:' . implode(',', array_keys(self::ASSET_CLASSES))],
             'cost_basis'       => ['nullable', 'numeric', 'min:0'],
             'currency'         => ['required', 'string', 'size:3'],
+            'include_in_chart' => ['boolean'],
             'tracking_method'  => ['nullable', 'in:static,proxy_ticker'],
             'proxy_symbol'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'string', 'max:20'],
             'anchor_value'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'numeric', 'gt:0'],

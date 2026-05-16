@@ -79,8 +79,9 @@ class ScheduledTransactionService
 
     private function envelopeSpend(ScheduledTransaction $s, Carbon $date): void
     {
-        $s->envelope->transactions()->create([
-            'type'        => 'spend',
+        $s->cashAccount->transactions()->create([
+            'type'        => 'withdrawal',
+            'envelope_id' => $s->envelope_id,
             'amount'      => $s->amount,
             'description' => $s->description,
             'occurred_at' => $date,

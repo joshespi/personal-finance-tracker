@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Asset;
+use App\Models\AssetPrice;
+use App\Models\ManualAsset;
 use App\Models\Portfolio;
 use App\Models\User;
 use Tests\TestCase;
@@ -143,5 +146,18 @@ class PortfolioTest extends TestCase
             ->assertForbidden();
 
         $this->assertNotNull($portfolio->fresh());
+    }
+
+    public function test_show_loads_proxy_ticker_manual_asset_without_lazy_loading(): void
+    {
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+        $proxy     = Asset::factory()->stock()->create(['symbol' => 'SPY']);
+        AssetPrice::factory()->for($proxy)->create(['price' => 500.00, 'recorded_at' => now()]);
+        ManualAsset::factory()->proxyTracked($proxy, 50000.0, '2026-01-01', 100.0)->for($portfolio)->create();
+
+        $this->actingAs($user)
+            ->get(route('portfolios.show', $portfolio))
+            ->assertOk();
     }
 }
