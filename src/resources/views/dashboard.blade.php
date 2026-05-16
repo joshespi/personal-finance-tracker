@@ -4,7 +4,7 @@
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Dashboard</h2>
             <div class="flex items-center gap-2">
                 <a href="{{ route('transfers.create') }}"
-                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                   class="hidden sm:inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                     Portfolio Transfer
                 </a>
                 <a href="{{ route('portfolios.create') }}"
@@ -181,14 +181,14 @@
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
                         <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Asset Allocation</h3>
                         <div class="flex flex-col sm:flex-row items-center gap-8">
-                            <div class="w-64 h-64 shrink-0 relative"><canvas id="allocationDonut"></canvas></div>
+                            <div class="w-56 h-56 sm:w-64 sm:h-64 mx-auto sm:mx-0 shrink-0 relative"><canvas id="allocationDonut"></canvas></div>
                             <div class="space-y-2 text-sm">
                                 @foreach ($allocation['labels'] as $i => $label)
                                     @php $val = $allocation['values'][$i]; @endphp
                                     @if ($val > 0)
                                         <div class="flex items-center gap-3">
                                             <span class="w-3 h-3 rounded-full shrink-0" style="background:{{ $allocation['colors'][$i] }}"></span>
-                                            <span class="text-gray-700 dark:text-gray-300 w-28">{{ $label }}</span>
+                                            <span class="text-gray-700 dark:text-gray-300 min-w-[5rem]">{{ $label }}</span>
                                             <span class="font-mono text-gray-900 dark:text-gray-100">${{ number_format($val, 2) }}</span>
                                             <span class="text-gray-400 dark:text-gray-500">
                                                 ({{ $allocation['total'] > 0 ? number_format($val / $allocation['total'] * 100, 1) : 0 }}%)
@@ -207,6 +207,7 @@
                         $holdingsRows = $allHoldings->map(fn ($h) => [
                             'symbol'          => $h['asset']->symbol,
                             'asset_type'      => $h['asset']->asset_type,
+                            'price_source'    => $h['asset']->price_source,
                             'asset_id'        => $h['asset']->id,
                             'quantity'        => (float) $h['quantity'],
                             'total_cost'      => (float) $h['total_cost'],
@@ -279,6 +280,20 @@
                                                         <option value="crypto"      :selected="h.asset_type === 'crypto'">Crypto</option>
                                                         <option value="real_estate" :selected="h.asset_type === 'real_estate'">Real Estate</option>
                                                         <option value="bond"        :selected="h.asset_type === 'bond'">Bond</option>
+                                                    </select>
+                                                </form>
+                                            </td>
+                                            <td class="px-5 py-3">
+                                                <form :action="h.reclassify_url" method="POST" class="inline">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                                                    <input type="hidden" name="_method" value="PATCH">
+                                                    <select name="price_source"
+                                                            @change="$el.form.submit()"
+                                                            title="Override price feed"
+                                                            class="text-xs border-0 rounded px-2 py-0.5 cursor-pointer focus:ring-1 focus:ring-indigo-500 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                                        <option value=""          :selected="!h.price_source">Auto</option>
+                                                        <option value="finnhub"   :selected="h.price_source === 'finnhub'">Finnhub</option>
+                                                        <option value="coingecko" :selected="h.price_source === 'coingecko'">CoinGecko</option>
                                                     </select>
                                                 </form>
                                             </td>

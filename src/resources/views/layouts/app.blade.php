@@ -61,7 +61,7 @@
 
             <footer class="mt-12 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400 dark:text-gray-500">
-                    <span>Portfolio Tracker &mdash; <a href="{{ route('about') }}" class="hover:text-gray-600 dark:hover:text-gray-300 transition">About</a></span>
+                    <span>Portfolio Tracker &mdash; <a href="{{ route('about') }}" class="hover:text-gray-600 dark:hover:text-gray-300 transition">About</a> &middot; <a href="{{ route('donate') }}" class="hover:text-gray-600 dark:hover:text-gray-300 transition">Support</a></span>
                     <a href="https://github.com/joshespi/portfolio-tracker" target="_blank" rel="noopener"
                        class="inline-flex items-center gap-1.5 hover:text-gray-600 dark:hover:text-gray-300 transition">
                         <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">

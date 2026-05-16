@@ -228,4 +228,75 @@ class ManualAssetTest extends TestCase
             ])
             ->assertSessionHasErrors(['proxy_symbol', 'anchor_value', 'anchor_date']);
     }
+
+    public function test_can_add_valuation(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = ManualAsset::factory()->for($portfolio)->create();
+
+        $this->actingAs($portfolio->user)
+            ->post(route('manual-assets.valuations.store', $asset), [
+                'value'     => 425000,
+                'valued_at' => now()->toDateString(),
+                'notes'     => 'Zillow estimate',
+            ])
+            ->assertRedirect(route('manual-assets.show', $asset));
+
+        $this->assertDatabaseHas('manual_valuations', [
+            'manual_asset_id' => $asset->id,
+            'value'           => 425000,
+        ]);
+    }
+
+    public function test_cannot_add_valuation_to_another_users_asset(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = ManualAsset::factory()->for($portfolio)->create();
+        $other     = \App\Models\User::factory()->create();
+
+        $this->actingAs($other)
+            ->post(route('manual-assets.valuations.store', $asset), [
+                'value'     => 100000,
+                'valued_at' => now()->toDateString(),
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_valuation_validates_non_negative_value(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = ManualAsset::factory()->for($portfolio)->create();
+
+        $this->actingAs($portfolio->user)
+            ->post(route('manual-assets.valuations.store', $asset), [
+                'value'     => -1000,
+                'valued_at' => now()->toDateString(),
+            ])
+            ->assertSessionHasErrors('value');
+    }
+
+    public function test_owner_can_delete_valuation(): void
+    {
+        $portfolio  = Portfolio::factory()->create();
+        $asset      = ManualAsset::factory()->for($portfolio)->create();
+        $valuation  = ManualValuation::factory()->for($asset)->create();
+
+        $this->actingAs($portfolio->user)
+            ->delete(route('valuations.destroy', $valuation))
+            ->assertRedirect(route('manual-assets.show', $asset->id));
+
+        $this->assertDatabaseMissing('manual_valuations', ['id' => $valuation->id]);
+    }
+
+    public function test_non_owner_cannot_delete_valuation(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = ManualAsset::factory()->for($portfolio)->create();
+        $valuation = ManualValuation::factory()->for($asset)->create();
+        $other     = \App\Models\User::factory()->create();
+
+        $this->actingAs($other)
+            ->delete(route('valuations.destroy', $valuation))
+            ->assertForbidden();
+    }
 }
