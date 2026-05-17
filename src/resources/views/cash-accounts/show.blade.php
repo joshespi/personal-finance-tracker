@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between" x-data>
             <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                     <a href="{{ route('cash-accounts.index') }}" class="hover:underline">Spending Accounts</a>
