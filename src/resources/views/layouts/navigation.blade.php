@@ -114,6 +114,16 @@
             </div>
 
             <div class="hidden sm:flex sm:items-center sm:ms-6 gap-2">
+                <!-- Quick add -->
+                @auth
+                <button @click="$dispatch('open-quick-add')"
+                        class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        title="Quick add">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </button>
+                @endauth
                 <!-- Theme toggle -->
                 <button @click="dark = !dark"
                         class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
@@ -161,6 +171,16 @@
             </div>
 
             <div class="-me-2 flex items-center sm:hidden gap-1">
+                <!-- Mobile quick add -->
+                @auth
+                <button @click="$dispatch('open-quick-add')"
+                        class="p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        title="Quick add">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </button>
+                @endauth
                 <!-- Mobile theme toggle -->
                 <button @click="dark = !dark"
                         class="p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
@@ -277,3 +297,199 @@
         </div>
     </div>
 </nav>
+
+@auth
+@php
+    $qaAccounts   = Auth::user()->cashAccounts()->orderBy('name')->get(['id', 'name']);
+    $qaEnvelopes  = Auth::user()->envelopes()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+    $qaPortfolios = Auth::user()->portfolios()->orderBy('name')->get(['id', 'name']);
+    $qaToday      = now()->format('Y-m-d');
+@endphp
+<div x-data="{
+        open: false,
+        tab: 'cash',
+        cashAccount: {{ $qaAccounts->first()?->id ?? 'null' }},
+        cashType: 'withdrawal',
+        envelope: {{ $qaEnvelopes->first()?->id ?? 'null' }},
+        portfolio: {{ $qaPortfolios->first()?->id ?? 'null' }},
+        get cashAction() { return this.cashAccount ? `/cash-accounts/${this.cashAccount}/transactions` : '#'; },
+        get fundAction() { return this.envelope ? `/envelopes/${this.envelope}/transactions` : '#'; },
+        get buyAction()  { return this.portfolio ? `/portfolios/${this.portfolio}/transactions` : '#'; },
+    }"
+    @open-quick-add.window="open = true; tab = 'cash'"
+    @keydown.escape.window="open = false">
+
+    <div x-show="open" x-cloak @click="open = false"
+         class="fixed inset-0 z-40 bg-black/40" style="display:none;"></div>
+
+    <div x-show="open" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
+        <div @click.stop class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Quick Add</h3>
+                <button @click="open = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex border-b border-gray-100 dark:border-gray-700 px-5">
+                <button @click="tab = 'cash'"
+                        :class="tab === 'cash' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+                        class="py-3 px-1 mr-6 text-sm font-medium border-b-2 -mb-px transition">Cash</button>
+                <button @click="tab = 'fund'"
+                        :class="tab === 'fund' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+                        class="py-3 px-1 mr-6 text-sm font-medium border-b-2 -mb-px transition">Fund Envelope</button>
+                <button @click="tab = 'buy'"
+                        :class="tab === 'buy' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+                        class="py-3 px-1 text-sm font-medium border-b-2 -mb-px transition">Log Buy</button>
+            </div>
+
+            <div class="p-5">
+
+                {{-- Cash Tab --}}
+                <div x-show="tab === 'cash'" style="display:none;">
+                    @if ($qaAccounts->isNotEmpty())
+                        <form :action="cashAction" method="POST" class="space-y-4">
+                            @csrf
+                            <input type="hidden" name="type" :value="cashType">
+                            <div class="flex gap-2">
+                                <button type="button" @click="cashType = 'withdrawal'"
+                                        :class="cashType === 'withdrawal' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-red-300 dark:border-red-700' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600'"
+                                        class="flex-1 py-2 text-sm font-medium border rounded-md transition">Withdrawal</button>
+                                <button type="button" @click="cashType = 'deposit'"
+                                        :class="cashType === 'deposit' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border-green-300 dark:border-green-700' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600'"
+                                        class="flex-1 py-2 text-sm font-medium border rounded-md transition">Deposit</button>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Account</label>
+                                <select x-model="cashAccount" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                    @foreach ($qaAccounts as $a)
+                                        <option value="{{ $a->id }}">{{ $a->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Amount</label>
+                                <input type="number" name="amount" step="0.01" min="0.01" required placeholder="0.00"
+                                       class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Description</label>
+                                <input type="text" name="description" maxlength="500" placeholder="Optional"
+                                       class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Date</label>
+                                <input type="date" name="occurred_at" required value="{{ $qaToday }}"
+                                       class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <button type="submit" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-md transition">Record</button>
+                        </form>
+                    @else
+                        <p class="text-sm text-gray-500 dark:text-gray-400 py-2">
+                            No spending accounts yet.
+                            <a href="{{ route('cash-accounts.create') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Create one</a> first.
+                        </p>
+                    @endif
+                </div>
+
+                {{-- Fund Envelope Tab --}}
+                <div x-show="tab === 'fund'" style="display:none;">
+                    @if ($qaEnvelopes->isNotEmpty())
+                        <form :action="fundAction" method="POST" class="space-y-4">
+                            @csrf
+                            <input type="hidden" name="type" value="fund">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Envelope</label>
+                                <select x-model="envelope" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                    @foreach ($qaEnvelopes as $e)
+                                        <option value="{{ $e->id }}">{{ $e->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Amount</label>
+                                <input type="number" name="amount" step="0.01" min="0.01" required placeholder="0.00"
+                                       class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Date</label>
+                                <input type="date" name="occurred_at" required value="{{ $qaToday }}"
+                                       class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <button type="submit" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-md transition">Fund</button>
+                        </form>
+                    @else
+                        <p class="text-sm text-gray-500 dark:text-gray-400 py-2">
+                            No envelopes yet.
+                            <a href="{{ route('envelopes.create') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Create one</a> first.
+                        </p>
+                    @endif
+                </div>
+
+                {{-- Log Buy Tab --}}
+                <div x-show="tab === 'buy'" style="display:none;">
+                    @if ($qaPortfolios->isNotEmpty())
+                        <form :action="buyAction" method="POST" class="space-y-4">
+                            @csrf
+                            <input type="hidden" name="type" value="buy">
+                            <input type="hidden" name="currency" value="USD">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Portfolio</label>
+                                <select x-model="portfolio" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                    @foreach ($qaPortfolios as $p)
+                                        <option value="{{ $p->id }}">{{ $p->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="flex gap-3">
+                                <div class="flex-1">
+                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Symbol</label>
+                                    <input type="text" name="symbol" maxlength="20" required placeholder="AAPL"
+                                           class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm uppercase focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div class="w-28">
+                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Asset type</label>
+                                    <select name="asset_type" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="stock">Stock</option>
+                                        <option value="crypto">Crypto</option>
+                                        <option value="bond">Bond</option>
+                                        <option value="real_estate">Real Estate</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <div class="flex-1">
+                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Quantity</label>
+                                    <input type="number" name="quantity" step="any" min="0.000001" required placeholder="10"
+                                           class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Price / unit</label>
+                                    <input type="number" name="price_per_unit" step="any" min="0" required placeholder="150.00"
+                                           class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Date</label>
+                                <input type="date" name="transacted_at" required value="{{ $qaToday }}"
+                                       class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <button type="submit" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-md transition">Log Buy</button>
+                        </form>
+                    @else
+                        <p class="text-sm text-gray-500 dark:text-gray-400 py-2">
+                            No portfolios yet.
+                            <a href="{{ route('portfolios.create') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Create one</a> first.
+                        </p>
+                    @endif
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+@endauth

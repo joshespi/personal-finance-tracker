@@ -38,6 +38,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TickerSearchController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\TransactionImportController;
+use App\Http\Controllers\YnabImportController;
 use App\Http\Controllers\WatchlistController;
 use Illuminate\Support\Facades\Route;
 
@@ -57,6 +58,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/dividends', DividendController::class)->name('dividends');
     Route::get('/tax', TaxSummaryController::class)->name('tax.summary');
     Route::get('/export', [ExportController::class, 'index'])->name('export.index');
+    Route::get('/import/ynab', [YnabImportController::class, 'index'])->name('import.ynab');
+    Route::post('/import/ynab/upload', [YnabImportController::class, 'upload'])->name('import.ynab.upload');
+    Route::get('/import/ynab/preview', [YnabImportController::class, 'preview'])->name('import.ynab.preview');
+    Route::post('/import/ynab/commit', [YnabImportController::class, 'commit'])->name('import.ynab.commit');
+    Route::post('/import/ynab/cancel', [YnabImportController::class, 'cancel'])->name('import.ynab.cancel');
     Route::get('/export/transactions', [ExportController::class, 'transactions'])->name('export.transactions');
     Route::get('/export/realized-gains', [ExportController::class, 'realizedGains'])->name('export.realized-gains');
     Route::get('/export/backup', [ExportController::class, 'fullBackup'])->name('export.backup');

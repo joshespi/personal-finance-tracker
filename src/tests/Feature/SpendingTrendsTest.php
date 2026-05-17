@@ -109,6 +109,6 @@ class SpendingTrendsTest extends TestCase
         $this->actingAs($user)
             ->get(route('spending-trends'))
             ->assertOk()
-            ->assertDontSee('Travel');
+            ->assertSee('No envelope spending recorded');
     }
 }

@@ -57,7 +57,7 @@ class EmergencyFundTest extends TestCase
             ->get(route('emergency-fund'))
             ->assertOk()
             ->assertSee('Rent')
-            ->assertDontSee('Dining Out');
+            ->assertSee('1,000');  // baseline includes mandatory spend only, not the $500 Dining Out
     }
 
     public function test_emergency_fund_envelope_balance_shown(): void

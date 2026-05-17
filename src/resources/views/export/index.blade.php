@@ -54,6 +54,24 @@
                 </a>
             </div>
 
+            {{-- YNAB import --}}
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 flex items-start justify-between gap-6 border-t-2 border-indigo-100 dark:border-indigo-900/40 mt-4">
+                <div>
+                    <p class="font-semibold text-gray-900 dark:text-gray-100">Import from YNAB <span class="ml-1.5 text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">CSV</span></p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Migrate historical transactions from YNAB. Upload your YNAB "All Transactions" CSV export,
+                        map accounts, and import into your spending accounts with a preview before committing.
+                    </p>
+                </div>
+                <a href="{{ route('import.ynab') }}"
+                   class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-md border border-gray-300 dark:border-gray-600 transition">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                    </svg>
+                    Import
+                </a>
+            </div>
+
             <p class="text-xs text-gray-400 dark:text-gray-500 px-1">
                 All exports contain only your own data. No telemetry. Store the full backup somewhere off-server (local disk, cloud storage) so you have a copy independent of the database.
             </p>
