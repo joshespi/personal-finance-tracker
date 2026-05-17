@@ -58,6 +58,15 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit')->with('status', 'targets-updated');
     }
 
+    public function updateNotifications(Request $request): RedirectResponse
+    {
+        $request->user()->update([
+            'notify_scheduled_transactions' => $request->boolean('notify_scheduled_transactions'),
+        ]);
+
+        return Redirect::route('profile.edit')->with('status', 'notifications-updated');
+    }
+
     /**
      * Delete the user's account.
      */

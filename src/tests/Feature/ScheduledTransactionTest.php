@@ -225,9 +225,9 @@ class ScheduledTransactionTest extends TestCase
             'amount' => 500,
         ]);
 
-        $count = app(ScheduledTransactionService::class)->materializeForUser($user);
+        $fired = app(ScheduledTransactionService::class)->materializeForUser($user);
 
-        $this->assertEquals(1, $count);
+        $this->assertCount(1, $fired);
         $this->assertDatabaseHas('cash_transactions', [
             'cash_account_id' => $account->id,
             'type'            => 'deposit',
@@ -292,9 +292,9 @@ class ScheduledTransactionTest extends TestCase
         $account   = CashAccount::factory()->for($user)->create();
         ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->inactive()->pastDue()->create();
 
-        $count = app(ScheduledTransactionService::class)->materializeForUser($user);
+        $fired = app(ScheduledTransactionService::class)->materializeForUser($user);
 
-        $this->assertEquals(0, $count);
+        $this->assertCount(0, $fired);
         $this->assertDatabaseCount('cash_transactions', 0);
     }
 
@@ -304,9 +304,9 @@ class ScheduledTransactionTest extends TestCase
         $account   = CashAccount::factory()->for($user)->create();
         ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->future()->create();
 
-        $count = app(ScheduledTransactionService::class)->materializeForUser($user);
+        $fired = app(ScheduledTransactionService::class)->materializeForUser($user);
 
-        $this->assertEquals(0, $count);
+        $this->assertCount(0, $fired);
     }
 
     public static function recurrenceAdvanceProvider(): array
@@ -343,9 +343,8 @@ class ScheduledTransactionTest extends TestCase
             'recurrence'  => 'weekly',
         ]);
 
-        $count = app(ScheduledTransactionService::class)->materializeForUser($user);
+        app(ScheduledTransactionService::class)->materializeForUser($user);
 
-        $this->assertEquals(3, $count);
         $this->assertDatabaseCount('cash_transactions', 3);
     }
 }

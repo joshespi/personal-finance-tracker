@@ -13,7 +13,7 @@ class ScheduledTransactionController extends Controller
 {
     public function index(Request $request, ScheduledTransactionService $service): View
     {
-        $count = $service->materializeForUser($request->user());
+        $count = $service->materializeForUser($request->user())->count();
 
         $scheduled = $request->user()
             ->scheduledTransactions()

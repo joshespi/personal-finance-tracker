@@ -5,12 +5,13 @@ namespace App\Services;
 use App\Models\ScheduledTransaction;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ScheduledTransactionService
 {
-    /** Materialize all due transactions for a user. Returns count of transactions created. */
-    public function materializeForUser(User $user): int
+    /** Materialize all due transactions for a user. Returns the ScheduledTransaction models that fired. */
+    public function materializeForUser(User $user): Collection
     {
         $due = $user->scheduledTransactions()
             ->where('is_active', true)
@@ -18,15 +19,13 @@ class ScheduledTransactionService
             ->with(['envelope', 'cashAccount'])
             ->get();
 
-        $created = 0;
-
-        DB::transaction(function () use ($due, &$created) {
+        DB::transaction(function () use ($due) {
             foreach ($due as $scheduled) {
-                $created += $this->materializeOne($scheduled);
+                $this->materializeOne($scheduled);
             }
         });
 
-        return $created;
+        return $due;
     }
 
     private function materializeOne(ScheduledTransaction $scheduled): int

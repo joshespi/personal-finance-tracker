@@ -77,4 +77,27 @@ class ProfileTest extends TestCase
 
         $this->assertNotNull($user->fresh());
     }
+
+    public function test_user_can_disable_scheduled_transaction_emails(): void
+    {
+        $user = User::factory()->create(['notify_scheduled_transactions' => true]);
+
+        $this->actingAs($user)
+            ->patch(route('profile.notifications'), ['notify_scheduled_transactions' => '0'])
+            ->assertRedirect(route('profile.edit'))
+            ->assertSessionHas('status', 'notifications-updated');
+
+        $this->assertFalse($user->fresh()->notify_scheduled_transactions);
+    }
+
+    public function test_user_can_enable_scheduled_transaction_emails(): void
+    {
+        $user = User::factory()->create(['notify_scheduled_transactions' => false]);
+
+        $this->actingAs($user)
+            ->patch(route('profile.notifications'), ['notify_scheduled_transactions' => '1'])
+            ->assertRedirect(route('profile.edit'));
+
+        $this->assertTrue($user->fresh()->notify_scheduled_transactions);
+    }
 }
