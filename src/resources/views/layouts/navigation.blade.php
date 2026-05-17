@@ -147,7 +147,7 @@
                             {{ __('Export & Backup') }}
                         </x-dropdown-link>
                         <x-dropdown-link :href="route('donate')">
-                            {{ __('Support') }}
+                            {{ __('Donate') }}
                         </x-dropdown-link>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
@@ -264,7 +264,7 @@
                     {{ __('Export & Backup') }}
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('donate')" :active="request()->routeIs('donate')">
-                    {{ __('Support') }}
+                    {{ __('Donate') }}
                 </x-responsive-nav-link>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
