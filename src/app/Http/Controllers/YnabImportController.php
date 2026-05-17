@@ -21,10 +21,7 @@ class YnabImportController extends Controller
             'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
         ]);
 
-        $uploadedPath = $request->file('csv_file')->getRealPath();
-        $jsonPath     = $importer->parseAndStore($uploadedPath, $request->user()->id);
-
-        $rows = $importer->load($jsonPath);
+        [$jsonPath, $rows] = $importer->parseAndStore($request->file('csv_file')->getRealPath(), $request->user()->id);
 
         if (empty($rows)) {
             Storage::delete($jsonPath);
@@ -38,9 +35,7 @@ class YnabImportController extends Controller
 
     public function preview(Request $request, YnabImportService $importer): View|RedirectResponse
     {
-        $jsonPath = session('ynab_json_path');
-
-        if (!$jsonPath || !Storage::exists($jsonPath)) {
+        if (!$jsonPath = $this->activeImportPath()) {
             return redirect()->route('import.ynab')
                 ->withErrors(['csv_file' => 'No import in progress. Please upload your CSV again.']);
         }
@@ -54,9 +49,7 @@ class YnabImportController extends Controller
 
     public function commit(Request $request, YnabImportService $importer): RedirectResponse
     {
-        $jsonPath = session('ynab_json_path');
-
-        if (!$jsonPath || !Storage::exists($jsonPath)) {
+        if (!$jsonPath = $this->activeImportPath()) {
             return redirect()->route('import.ynab')
                 ->withErrors(['csv_file' => 'Import session expired. Please upload again.']);
         }
@@ -78,12 +71,21 @@ class YnabImportController extends Controller
 
     public function cancel(): RedirectResponse
     {
-        $jsonPath = session('ynab_json_path');
-        if ($jsonPath) {
+        $jsonPath = session()->get('ynab_json_path');
+        if (is_string($jsonPath)) {
             Storage::delete($jsonPath);
             session()->forget('ynab_json_path');
         }
 
         return redirect()->route('import.ynab');
+    }
+
+    private function activeImportPath(): ?string
+    {
+        $path = session()->get('ynab_json_path');
+        if (!is_string($path) || !Storage::exists($path)) {
+            return null;
+        }
+        return $path;
     }
 }

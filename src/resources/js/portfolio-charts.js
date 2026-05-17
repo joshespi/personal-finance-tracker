@@ -5,7 +5,7 @@ import {
     PieController, ArcElement,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import { filterByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow } from './chart-utils';
+import { filterByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow, buildNorm, benchTickerColors } from './chart-utils';
 
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
 
@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const gridColor  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
     const labelColor = isDark ? '#9ca3af' : '#6b7280';
 
-    // Portfolio Value Chart
     const portChartEl = document.getElementById('portChart');
     if (portChartEl) {
         let portRange = '1Y';
@@ -55,25 +54,9 @@ document.addEventListener('DOMContentLoaded', function () {
         updatePortChart(portRange);
     }
 
-    // Benchmark Chart
     const benchEl = document.getElementById('portBenchChart');
     if (benchEl && Object.keys(benchRaw).length > 0) {
         let benchRange = '1Y';
-        const benchColors = { 'This Portfolio': '#6366f1', SPY: '#10b981', BTC: '#f59e0b' };
-
-        function buildPortNorm(range) {
-            const f = filterByRange(allData, range);
-            if (!f.length) return [];
-            const base = f[0].value;
-            return f.map(r => ({ x: new Date(r.date).getTime(), y: parseFloat(((r.value / base - 1) * 100).toFixed(2)) }));
-        }
-
-        function buildBenchNorm(ticker, range) {
-            const f = filterByRange(benchRaw[ticker] || [], range);
-            if (!f.length) return [];
-            const base = f[0].price;
-            return f.map(r => ({ x: new Date(r.date).getTime(), y: parseFloat(((r.price / base - 1) * 100).toFixed(2)) }));
-        }
 
         const benchChart = new Chart(benchEl, {
             type: 'line',
@@ -91,9 +74,9 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         function updateBenchChart(range) {
-            const datasets = [{ label: 'This Portfolio', data: buildPortNorm(range), borderColor: benchColors['This Portfolio'], fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 }];
+            const datasets = [{ label: 'This Portfolio', data: buildNorm(allData, 'value', range), borderColor: '#6366f1', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 }];
             Object.keys(benchRaw).forEach(t => datasets.push({
-                label: t, data: buildBenchNorm(t, range), borderColor: benchColors[t] || '#9ca3af', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0,
+                label: t, data: buildNorm(benchRaw[t] || [], 'price', range), borderColor: benchTickerColors[t] || '#9ca3af', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0,
             }));
             benchChart.data.datasets = datasets;
             benchChart.update();
@@ -106,7 +89,6 @@ document.addEventListener('DOMContentLoaded', function () {
         updateBenchChart(benchRange);
     }
 
-    // Allocation Pie
     const donutEl = document.getElementById('portAllocationDonut');
     if (donutEl && allocData.total > 0) {
         const labels = allocData.holdings.map(h => h.symbol);

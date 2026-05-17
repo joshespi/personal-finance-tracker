@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\CashAccount;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -10,12 +9,13 @@ use Illuminate\Support\Facades\Storage;
 
 class YnabImportService
 {
-    public function parseAndStore(string $uploadedPath, int $userId): string
+    /** @return array{0: string, 1: list<array<string, string>>} */
+    public function parseAndStore(string $uploadedPath, int $userId): array
     {
         $rows     = $this->parseCsv($uploadedPath);
         $jsonPath = "ynab-imports/parsed-{$userId}.json";
         Storage::put($jsonPath, json_encode($rows));
-        return $jsonPath;
+        return [$jsonPath, $rows];
     }
 
     public function load(string $jsonPath): array
@@ -73,7 +73,6 @@ class YnabImportService
     {
         $handle = fopen($path, 'r');
 
-        // Strip UTF-8 BOM if present
         $bom = fread($handle, 3);
         if ($bom !== "\xEF\xBB\xBF") {
             fseek($handle, 0);

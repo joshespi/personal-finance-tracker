@@ -67,3 +67,13 @@ export function makeLegendOpts(labelColor) {
 export function pointFromRow(r, key) {
     return { x: new Date(r.date).getTime(), y: r[key] };
 }
+
+export function buildNorm(data, key, range) {
+    const f = filterByRange(data, range);
+    if (!f.length) return [];
+    const base = f[0][key];
+    if (!base) return [];
+    return f.map(r => ({ x: new Date(r.date).getTime(), y: parseFloat(((r[key] / base - 1) * 100).toFixed(2)) }));
+}
+
+export const benchTickerColors = { SPY: '#10b981', BTC: '#f59e0b' };

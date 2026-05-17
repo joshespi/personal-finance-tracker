@@ -454,10 +454,9 @@
                                 <div class="w-28">
                                     <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Asset type</label>
                                     <select name="asset_type" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                                        <option value="stock">Stock</option>
-                                        <option value="crypto">Crypto</option>
-                                        <option value="bond">Bond</option>
-                                        <option value="real_estate">Real Estate</option>
+                                        @foreach (\App\Enums\AssetType::cases() as $type)
+                                            <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                                        @endforeach
                                     </select>
                                 </div>
                             </div>

@@ -5,7 +5,7 @@ import {
     PieController, ArcElement,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import { filterByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow } from './chart-utils';
+import { filterByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow, buildNorm, benchTickerColors } from './chart-utils';
 
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
 
@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const labelColor = isDark ? '#9ca3af' : '#6b7280';
 
     let showManual = localStorage.getItem('dashShowManual') !== 'false';
-    let allData    = showManual ? allDataFull : allDataMkt;
 
     const manualBtn = document.getElementById('manual-toggle');
     function syncManualToggle() {
@@ -35,7 +34,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (manualBtn) {
         manualBtn.addEventListener('click', () => {
             showManual = !showManual;
-            allData = showManual ? allDataFull : allDataMkt;
             localStorage.setItem('dashShowManual', showManual);
             syncManualToggle();
             updateDashChart(dashRange);
@@ -63,7 +61,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Portfolio Value Chart
     let dashRange = '1Y';
     const dashChartEl = document.getElementById('dashChart');
     if (dashChartEl) {
@@ -88,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         function updateDashChart(range) {
-            const filtered = filterByRange(allData, range);
+            const filtered = filterByRange(showManual ? allDataFull : allDataMkt, range);
             dashChart.data.datasets[0].data = filtered.map(r => pointFromRow(r, 'value'));
             dashChart.data.datasets[1].data = filtered.map(r => pointFromRow(r, 'cost'));
             dashChart.update();
@@ -102,26 +99,9 @@ document.addEventListener('DOMContentLoaded', function () {
         updateDashChart(dashRange);
     }
 
-    // Benchmark Chart
     const benchEl = document.getElementById('benchmarkChart');
     if (benchEl && Object.keys(benchRaw).length > 0) {
         let benchRange = '1Y';
-        const benchColors = { 'My Portfolio': '#6366f1', SPY: '#10b981', BTC: '#f59e0b' };
-
-        function buildPortfolioNorm(range) {
-            const f = filterByRange(allData, range);
-            if (!f.length) return [];
-            const base = f[0].value;
-            return f.map(r => ({ x: new Date(r.date).getTime(), y: parseFloat(((r.value / base - 1) * 100).toFixed(2)) }));
-        }
-
-        function buildBenchNorm(ticker, range) {
-            const f = filterByRange(benchRaw[ticker] || [], range);
-            if (!f.length) return [];
-            const base = f[0].price;
-            if (!base) return [];
-            return f.map(r => ({ x: new Date(r.date).getTime(), y: parseFloat(((r.price / base - 1) * 100).toFixed(2)) }));
-        }
 
         const benchChart = new Chart(benchEl, {
             type: 'line',
@@ -139,9 +119,9 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         function updateBenchChart(range) {
-            const datasets = [{ label: 'My Portfolio', data: buildPortfolioNorm(range), borderColor: benchColors['My Portfolio'], fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 }];
+            const datasets = [{ label: 'My Portfolio', data: buildNorm(showManual ? allDataFull : allDataMkt, 'value', range), borderColor: '#6366f1', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 }];
             Object.keys(benchRaw).forEach(t => datasets.push({
-                label: t, data: buildBenchNorm(t, range), borderColor: benchColors[t] || '#9ca3af', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0,
+                label: t, data: buildNorm(benchRaw[t] || [], 'price', range), borderColor: benchTickerColors[t] || '#9ca3af', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0,
             }));
             benchChart.data.datasets = datasets;
             benchChart.update();
@@ -154,7 +134,6 @@ document.addEventListener('DOMContentLoaded', function () {
         updateBenchChart(benchRange);
     }
 
-    // Allocation Donut
     const donutEl = document.getElementById('allocationDonut');
     if (donutEl && allocData.total > 0) {
         new Chart(donutEl, {
