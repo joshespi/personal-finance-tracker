@@ -87,13 +87,13 @@
                              @click="open = false">
                             <div class="rounded-md ring-1 ring-black ring-opacity-5 dark:ring-gray-700 py-1 bg-white dark:bg-gray-800">
                                 <x-dropdown-link :href="route('ready-to-assign')">{{ __('Ready to Assign') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('cash-accounts.index')">{{ __('Spending Accounts') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('cashflow')">{{ __('Cashflow') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('spending-trends')">{{ __('Spending Trends') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('emergency-fund')">{{ __('Emergency Fund') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('debt-payoff')">{{ __('Debt Payoff') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('allocator')">{{ __('Extra-Cash Allocator') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('budget-rule')">{{ __('50/30/20 Rule') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('cash-accounts.index')">{{ __('Spending Accounts') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('envelopes.index')">{{ __('Budget Envelopes') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('scheduled-transactions.index')">{{ __('Scheduled') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('liabilities.index')">{{ __('Liabilities') }}</x-dropdown-link>
