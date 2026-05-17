@@ -28,6 +28,11 @@ class CashAccount extends Model
         return $this->hasMany(CashTransaction::class);
     }
 
+    public function scheduledTransactions(): HasMany
+    {
+        return $this->hasMany(ScheduledTransaction::class);
+    }
+
     public function balance(): float
     {
         return (float) $this->transactions()

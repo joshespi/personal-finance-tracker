@@ -60,7 +60,10 @@ class CashAccountController extends Controller
     {
         abort_unless($cashAccount->user_id === $request->user()->id, 403);
 
-        $cashAccount->load(['transactions' => fn ($q) => $q->with('envelope:id,name')->orderByDesc('occurred_at')->orderByDesc('id')]);
+        $cashAccount->load([
+            'transactions'         => fn ($q) => $q->with('envelope:id,name')->orderByDesc('occurred_at')->orderByDesc('id'),
+            'scheduledTransactions' => fn ($q) => $q->where('is_active', true)->with('envelope:id,name,color')->orderBy('next_due_at'),
+        ]);
         $cashAccount->current_balance = $cashAccount->transactions->sum(
             fn ($t) => $t->type === 'deposit' ? (float) $t->amount : -(float) $t->amount
         );
