@@ -31,7 +31,7 @@
                     <option value="{{ $m }}" {{ (int) old('emergency_fund_target_months', $user->emergency_fund_target_months ?? 6) === $m ? 'selected' : '' }}>{{ $m }} months</option>
                 @endforeach
             </select>
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Used by the 60/30/20 calculator to size your emergency fund target.</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Used by the 50/30/20 calculator to size your emergency fund target.</p>
             <x-input-error class="mt-2" :messages="$errors->get('emergency_fund_target_months')" />
         </div>
 

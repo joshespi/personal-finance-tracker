@@ -24,7 +24,7 @@ class CashAccountTest extends TestCase
         $this->actingAs($user)
             ->get(route('cash-accounts.index'))
             ->assertOk()
-            ->assertSee('No cash accounts yet.');
+            ->assertSee('No spending accounts yet.');
     }
 
     public function test_create_account(): void
@@ -163,6 +163,99 @@ class CashAccountTest extends TestCase
             ->assertRedirect(route('cash-accounts.show', $account));
 
         $this->assertDatabaseMissing('cash_transactions', ['id' => $tx->id]);
+    }
+
+    public function test_reconcile_creates_deposit_when_actual_exceeds_tracked(): void
+    {
+        $account = CashAccount::factory()->create();
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create(['amount' => 1000]);
+
+        $this->actingAs($account->user)
+            ->post(route('cash-accounts.reconcile', $account), [
+                'actual_balance' => '1050.75',
+                'occurred_at'    => '2026-05-17',
+            ])
+            ->assertRedirect(route('cash-accounts.show', $account));
+
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $account->id,
+            'type'            => 'deposit',
+            'amount'          => '50.75',
+            'description'     => 'Reconciliation adjustment',
+        ]);
+        $this->assertEquals(1050.75, $account->fresh()->balance());
+    }
+
+    public function test_reconcile_creates_withdrawal_when_actual_below_tracked(): void
+    {
+        $account = CashAccount::factory()->create();
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create(['amount' => 1000]);
+
+        $this->actingAs($account->user)
+            ->post(route('cash-accounts.reconcile', $account), [
+                'actual_balance' => '980.00',
+                'occurred_at'    => '2026-05-17',
+            ])
+            ->assertRedirect(route('cash-accounts.show', $account));
+
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $account->id,
+            'type'            => 'withdrawal',
+            'amount'          => '20.00',
+            'description'     => 'Reconciliation adjustment',
+        ]);
+        $this->assertEquals(980.0, $account->fresh()->balance());
+    }
+
+    public function test_reconcile_with_matching_balance_creates_no_transaction(): void
+    {
+        $account = CashAccount::factory()->create();
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create(['amount' => 500]);
+
+        $this->actingAs($account->user)
+            ->post(route('cash-accounts.reconcile', $account), [
+                'actual_balance' => '500.00',
+                'occurred_at'    => '2026-05-17',
+            ])
+            ->assertRedirect(route('cash-accounts.show', $account))
+            ->assertSessionHas('success');
+
+        $this->assertCount(1, $account->fresh()->transactions);
+    }
+
+    public function test_reconcile_forbidden_for_other_user(): void
+    {
+        $account = CashAccount::factory()->create();
+        $other   = User::factory()->create();
+
+        $this->actingAs($other)
+            ->post(route('cash-accounts.reconcile', $account), [
+                'actual_balance' => '0',
+                'occurred_at'    => '2026-05-17',
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_credit_card_account_stores_interest_rate_and_billing_day(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('cash-accounts.store'), [
+                'name'          => 'Visa Rewards',
+                'account_type'  => 'credit_card',
+                'currency'      => 'USD',
+                'interest_rate' => '22.99',
+                'billing_day'   => '15',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('cash_accounts', [
+            'user_id'       => $user->id,
+            'account_type'  => 'credit_card',
+            'interest_rate' => '22.99',
+            'billing_day'   => 15,
+        ]);
     }
 
     public function test_cascade_delete_transactions_when_account_deleted(): void

@@ -92,8 +92,8 @@
                                 <x-dropdown-link :href="route('emergency-fund')">{{ __('Emergency Fund') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('debt-payoff')">{{ __('Debt Payoff') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('allocator')">{{ __('Extra-Cash Allocator') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('budget-rule')">{{ __('60/30/20 Rule') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('cash-accounts.index')">{{ __('Cash Accounts') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('budget-rule')">{{ __('50/30/20 Rule') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('cash-accounts.index')">{{ __('Spending Accounts') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('envelopes.index')">{{ __('Budget Envelopes') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('scheduled-transactions.index')">{{ __('Scheduled') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('liabilities.index')">{{ __('Liabilities') }}</x-dropdown-link>
@@ -224,10 +224,10 @@
                 {{ __('Extra-Cash Allocator') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('budget-rule')" :active="request()->routeIs('budget-rule')">
-                {{ __('60/30/20 Rule') }}
+                {{ __('50/30/20 Rule') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('cash-accounts.index')" :active="request()->routeIs('cash-accounts.*')">
-                {{ __('Cash Accounts') }}
+                {{ __('Spending Accounts') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('envelopes.index')" :active="request()->routeIs('envelopes.*')">
                 {{ __('Budget Envelopes') }}

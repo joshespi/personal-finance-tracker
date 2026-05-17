@@ -101,6 +101,8 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('cash-accounts', CashAccountController::class);
 
+    Route::post('cash-accounts/{cashAccount}/reconcile', [CashAccountController::class, 'reconcile'])
+        ->name('cash-accounts.reconcile');
     Route::post('cash-accounts/{cashAccount}/transactions', [CashTransactionController::class, 'store'])
         ->name('cash-accounts.transactions.store');
     Route::delete('cash-transactions/{transaction}', [CashTransactionController::class, 'destroy'])

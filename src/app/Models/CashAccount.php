@@ -11,7 +11,12 @@ class CashAccount extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'name', 'account_type', 'currency', 'notes'];
+    protected $fillable = ['user_id', 'name', 'account_type', 'currency', 'notes', 'interest_rate', 'billing_day'];
+
+    protected $casts = [
+        'interest_rate' => 'decimal:2',
+        'billing_day'   => 'integer',
+    ];
 
     public function user(): BelongsTo
     {

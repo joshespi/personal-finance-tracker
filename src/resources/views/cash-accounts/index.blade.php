@@ -2,8 +2,8 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <div>
-                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Cash Accounts</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Checking, savings, and other cash holdings.</p>
+                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Spending Accounts</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Checking, savings, credit cards, and other spending accounts.</p>
             </div>
             <a href="{{ route('cash-accounts.create') }}"
                class="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 dark:hover:bg-gray-600 transition">
@@ -23,7 +23,7 @@
 
             @if ($accounts->isNotEmpty())
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Cash</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Balance</p>
                     <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
                         ${{ number_format($totalCash, 2) }}
                     </p>
@@ -32,7 +32,7 @@
 
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
                 @if ($accounts->isEmpty())
-                    <div class="p-6 text-sm text-gray-500 dark:text-gray-400 text-center">No cash accounts yet.</div>
+                    <div class="p-6 text-sm text-gray-500 dark:text-gray-400 text-center">No spending accounts yet.</div>
                 @else
                     <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($accounts as $a)

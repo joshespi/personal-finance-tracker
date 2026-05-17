@@ -3,10 +3,10 @@
 @if ($drift['mandatory_over'] || $drift['savings_under'])
     <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-5 {{ $detailed ? 'py-4 space-y-1.5' : 'py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2' }} text-sm text-amber-800 dark:text-amber-300">
         @if ($detailed)
-            <p class="font-semibold">Your allocation is drifting from the 60/30/20 target:</p>
+            <p class="font-semibold">Your allocation is drifting from the 50/30/20 target:</p>
             <ul class="list-disc list-inside space-y-0.5">
                 @if ($drift['mandatory_over'])
-                    <li>Mandatory spend is <strong>{{ $ratios['mandatory'] }}%</strong> of income — over the 60% ceiling. Either income is too low for your fixed costs, or some expenses tagged mandatory may not really be.</li>
+                    <li>Mandatory spend is <strong>{{ $ratios['mandatory'] }}%</strong> of income — over the 50% ceiling. Either income is too low for your fixed costs, or some expenses tagged mandatory may not really be.</li>
                 @endif
                 @if ($drift['savings_under'])
                     <li>Savings is <strong>{{ $ratios['savings'] }}%</strong> of income — under the 20% target. Funding into savings envelopes (incl. emergency fund) hasn't kept pace.</li>
@@ -14,9 +14,9 @@
             </ul>
         @else
             <div>
-                <span class="font-semibold">60/30/20 drift:</span>
+                <span class="font-semibold">50/30/20 drift:</span>
                 @if ($drift['mandatory_over'])
-                    Mandatory spend is {{ $ratios['mandatory'] }}% of income (target ≤ 60%).
+                    Mandatory spend is {{ $ratios['mandatory'] }}% of income (target ≤ 50%).
                 @endif
                 @if ($drift['savings_under'])
                     Savings is {{ $ratios['savings'] }}% of income (target ≥ 20%).

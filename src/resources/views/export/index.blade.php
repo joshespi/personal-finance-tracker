@@ -11,7 +11,7 @@
                 <div>
                     <p class="font-semibold text-gray-900 dark:text-gray-100">Full Backup <span class="ml-1.5 text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">JSON</span></p>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Every portfolio, transaction, envelope, cash account, liability, income entry, and scheduled transaction — all in one file.
+                        Every portfolio, transaction, envelope, spending account, liability, income entry, and scheduled transaction — all in one file.
                         Download regularly and store somewhere safe.
                     </p>
                 </div>

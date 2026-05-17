@@ -2,9 +2,9 @@
     <x-slot name="header">
         <div>
             <p class="text-sm text-gray-500 dark:text-gray-400">
-                <a href="{{ route('cash-accounts.index') }}" class="hover:underline">Cash Accounts</a>
+                <a href="{{ route('cash-accounts.index') }}" class="hover:underline">Spending Accounts</a>
             </p>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Add Cash Account</h2>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Add Spending Account</h2>
         </div>
     </x-slot>
 

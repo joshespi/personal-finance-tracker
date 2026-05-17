@@ -91,7 +91,7 @@
         </select>
         <x-input-error :messages="$errors->get('cash_account_id')" class="mt-2" />
         <p x-show="type === 'envelope_fund'" class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-            Pairing a cash account will create a matching withdrawal there each time this runs.
+            Pairing a spending account will create a matching withdrawal there each time this runs.
         </p>
     </div>
 

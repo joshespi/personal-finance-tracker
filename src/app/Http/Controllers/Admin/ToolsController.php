@@ -25,9 +25,12 @@ class ToolsController extends Controller
 
         $args = ['--no-interaction' => true];
 
-        if ($request->filled('from'))      { $args['--from']      = $request->input('from'); }
-        if ($request->filled('to'))        { $args['--to']        = $request->input('to'); }
-        if ($request->filled('portfolio')) { $args['--portfolio'] = $request->input('portfolio'); }
+        foreach (['from', 'to', 'portfolio'] as $field) {
+            if ($request->filled($field)) {
+                $args['--' . $field] = $request->input($field);
+            }
+        }
+
         if ($request->boolean('skip_fetch')) { $args['--skip-fetch'] = true; }
         if ($request->boolean('dry_run'))    { $args['--dry-run']    = true; }
 

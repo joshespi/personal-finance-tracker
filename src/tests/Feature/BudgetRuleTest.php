@@ -61,7 +61,7 @@ class BudgetRuleTest extends TestCase
         $this->assertFalse($data['drift']['savings_under']);
     }
 
-    public function test_drift_fires_when_mandatory_over_60(): void
+    public function test_drift_fires_when_mandatory_over_50(): void
     {
         $user    = User::factory()->create();
         $account = CashAccount::factory()->for($user)->create();
@@ -282,7 +282,7 @@ class BudgetRuleTest extends TestCase
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('60/30/20 drift');
+            ->assertSee('50/30/20 drift');
     }
 
     public function test_dashboard_hides_drift_banner_when_no_drift(): void
@@ -293,6 +293,6 @@ class BudgetRuleTest extends TestCase
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertDontSee('60/30/20 drift');
+            ->assertDontSee('50/30/20 drift');
     }
 }

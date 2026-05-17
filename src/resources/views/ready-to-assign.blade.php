@@ -40,8 +40,8 @@
             </div>
 
             <p class="text-xs text-gray-500 dark:text-gray-400">
-                Ready to assign = total cash account balance minus total envelope balances.
-                <a href="{{ route('cash-accounts.index') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Add deposits in Cash Accounts</a> to increase this balance.
+                Ready to assign = total spending account balance minus total envelope balances.
+                <a href="{{ route('cash-accounts.index') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Add deposits in Spending Accounts</a> to increase this balance.
             </p>
 
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">

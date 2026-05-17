@@ -3,7 +3,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                    <a href="{{ route('cash-accounts.index') }}" class="hover:underline">Cash Accounts</a>
+                    <a href="{{ route('cash-accounts.index') }}" class="hover:underline">Spending Accounts</a>
                 </p>
                 <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">{{ $account->name }}</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
@@ -11,6 +11,10 @@
                 </p>
             </div>
             <div class="flex items-center gap-2">
+                <button type="button" @click="$store.reconcile.open = true"
+                        class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                    Reconcile
+                </button>
                 <a href="{{ route('cash-accounts.edit', $account) }}"
                    class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                     Edit
@@ -43,6 +47,30 @@
                     {{ $account->current_balance < 0 ? '−' : '' }}${{ number_format(abs($account->current_balance), 2) }}
                 </p>
             </div>
+
+            @if ($account->account_type === 'credit_card' && ($account->interest_rate || $account->billing_day))
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4 flex flex-wrap gap-6 text-sm">
+                    @if ($account->interest_rate)
+                        @php $monthlyInterest = round(abs($account->current_balance) * ((float)$account->interest_rate / 100) / 12, 2); @endphp
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">APR</p>
+                            <p class="mt-0.5 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $account->interest_rate }}%</p>
+                        </div>
+                        @if ($account->current_balance < 0)
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Est. monthly interest</p>
+                                <p class="mt-0.5 font-mono font-semibold text-red-600 dark:text-red-400">${{ number_format($monthlyInterest, 2) }}</p>
+                            </div>
+                        @endif
+                    @endif
+                    @if ($account->billing_day)
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Statement closes</p>
+                            <p class="mt-0.5 font-semibold text-gray-900 dark:text-gray-100">{{ $account->billing_day }}{{ match(true) { $account->billing_day === 1 => 'st', $account->billing_day === 2 => 'nd', $account->billing_day === 3 => 'rd', default => 'th' } }} of month</p>
+                        </div>
+                    @endif
+                </div>
+            @endif
 
             @if ($account->notes)
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
@@ -214,8 +242,77 @@
         </div>
     </div>
 
+    <div x-data="{
+            close() { $store.reconcile.open = false; $store.reconcile.actualBalance = '' },
+            get diff() {
+                const a = parseFloat($store.reconcile.actualBalance);
+                const c = {{ $account->current_balance }};
+                if (isNaN(a)) return null;
+                return Math.round((a - c) * 100) / 100;
+            }
+         }"
+         x-show="$store.reconcile.open"
+         @keydown.escape.window="close()"
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         x-cloak>
+        <div class="absolute inset-0 bg-black/50" @click="close()"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 space-y-5">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Reconcile Account</h3>
+
+            <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-500 dark:text-gray-400">Tracked balance</span>
+                <span class="font-mono font-semibold text-gray-900 dark:text-gray-100">
+                    {{ $account->current_balance < 0 ? '−' : '' }}${{ number_format(abs($account->current_balance), 2) }}
+                </span>
+            </div>
+
+            <form method="POST" action="{{ route('cash-accounts.reconcile', $account) }}" class="space-y-4">
+                @csrf
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Actual balance
+                    </label>
+                    <input type="number" name="actual_balance" step="0.01" placeholder="0.00" required
+                           x-model="$store.reconcile.actualBalance"
+                           class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm font-mono" />
+                </div>
+
+                <div x-show="diff !== null && diff !== 0" class="rounded-md px-3 py-2 text-sm"
+                     :class="diff > 0 ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'">
+                    Will record a
+                    <span class="font-semibold font-mono" x-text="'$' + Math.abs(diff).toFixed(2)"></span>
+                    <span x-text="diff > 0 ? 'deposit' : 'withdrawal'"></span>
+                    adjustment.
+                </div>
+                <div x-show="diff === 0" class="rounded-md px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                    Already balanced — no adjustment needed.
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+                    <input type="date" name="occurred_at" required value="{{ now()->format('Y-m-d') }}"
+                           class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+                </div>
+
+                <div class="flex justify-end gap-3 pt-1">
+                    <button type="button" @click="close()"
+                            class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-600 border border-transparent rounded-md text-sm font-semibold text-white hover:bg-gray-700 dark:hover:bg-gray-500 transition">
+                        Confirm
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
     document.addEventListener('alpine:init', () => {
+        Alpine.store('reconcile', { open: false, actualBalance: '' });
+
         Alpine.data('cashFilter', (opts = {}) => ({
             windowDays:   opts.windowDays ?? 30,
             entryAmount:  '',

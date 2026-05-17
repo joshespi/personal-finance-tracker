@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div>
             <p class="text-sm text-gray-500 dark:text-gray-400">Money</p>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">60/30/20 Budget Rule</h2>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">50/30/20 Budget Rule</h2>
         </div>
     </x-slot>
 
@@ -18,8 +18,8 @@
 
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-sm text-gray-600 dark:text-gray-400 space-y-2">
                 <p class="text-gray-700 dark:text-gray-300">
-                    The 60/30/20 rule allocates monthly income across three buckets:
-                    <strong>60% mandatory</strong> (rent, utilities, groceries, insurance),
+                    The 50/30/20 rule allocates monthly income across three buckets:
+                    <strong>50% mandatory</strong> (rent, utilities, groceries, insurance),
                     <strong>30% discretionary</strong> (everything else you spend),
                     and <strong>20% savings</strong> (emergency fund, then investing).
                 </p>

@@ -204,12 +204,14 @@ class AdminTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_view_settings(): void
+    public function test_admin_cannot_impersonate_other_admin(): void
     {
-        $this->actingAs(User::factory()->admin()->create())
-            ->get(route('admin.settings'))
-            ->assertOk()
-            ->assertSee('registration');
+        $admin       = User::factory()->admin()->create();
+        $otherAdmin  = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->post(route('admin.impersonate', $otherAdmin))
+            ->assertForbidden();
     }
 
     public function test_admin_can_disable_registration(): void

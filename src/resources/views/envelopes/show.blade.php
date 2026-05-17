@@ -132,7 +132,7 @@
 
                         @if ($cashAccounts->isNotEmpty())
                             <div x-show="type === 'fund'" x-cloak>
-                                <x-input-label for="cash_account_id" value="From cash account (optional)" />
+                                <x-input-label for="cash_account_id" value="From spending account (optional)" />
                                 <select id="cash_account_id" name="cash_account_id"
                                         class="mt-1 block w-48 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                                     <option value="">— None —</option>
@@ -156,7 +156,7 @@
                         </div>
                     </form>
                     @if ($cashAccounts->isNotEmpty())
-                        <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Choosing a cash account will create a paired withdrawal there.</p>
+                        <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Choosing a spending account will create a paired withdrawal there.</p>
                     @endif
                 </div>
             </div>

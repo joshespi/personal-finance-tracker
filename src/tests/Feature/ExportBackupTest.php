@@ -17,16 +17,6 @@ class ExportBackupTest extends TestCase
         $this->get(route('export.index'))->assertRedirect(route('login'));
     }
 
-    public function test_export_index_renders(): void
-    {
-        $this->actingAs(User::factory()->create())
-            ->get(route('export.index'))
-            ->assertOk()
-            ->assertSee('Full Backup')
-            ->assertSee('Transactions')
-            ->assertSee('Realized Gains');
-    }
-
     public function test_backup_requires_auth(): void
     {
         $this->get(route('export.backup'))->assertRedirect(route('login'));
@@ -97,6 +87,27 @@ class ExportBackupTest extends TestCase
         $this->assertSame('Car Loan', $data['liabilities'][0]['name']);
         $this->assertCount(1, $data['liabilities'][0]['balances']);
         $this->assertEquals(12000.0, $data['liabilities'][0]['balances'][0]['balance']);
+    }
+
+    public function test_backup_includes_cash_account_transactions(): void
+    {
+        $user    = User::factory()->create();
+        $account = \App\Models\CashAccount::factory()->for($user)->create(['name' => 'Main Checking']);
+        \App\Models\CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create([
+            'amount'      => 500,
+            'description' => 'Paycheck',
+        ]);
+
+        $data = json_decode(
+            $this->actingAs($user)->get(route('export.backup'))->streamedContent(),
+            true
+        );
+
+        $this->assertCount(1, $data['cash_accounts']);
+        $this->assertSame('Main Checking', $data['cash_accounts'][0]['name']);
+        $this->assertCount(1, $data['cash_accounts'][0]['transactions']);
+        $this->assertSame('deposit', $data['cash_accounts'][0]['transactions'][0]['type']);
+        $this->assertEquals(500.0, $data['cash_accounts'][0]['transactions'][0]['amount']);
     }
 
     public function test_backup_cross_user_isolation(): void

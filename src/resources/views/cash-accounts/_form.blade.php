@@ -1,5 +1,7 @@
 @php $a = $account ?? null; @endphp
 
+<div x-data="{ accountType: '{{ old('account_type', $a?->account_type ?? '') }}' }" class="contents">
+
 <div>
     <x-input-label for="name" value="Name" />
     <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
@@ -11,6 +13,7 @@
 <div>
     <x-input-label for="account_type" value="Type" />
     <select id="account_type" name="account_type"
+            x-model="accountType"
             class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
         @foreach ($accountTypes as $value => $label)
             <option value="{{ $value }}" @selected(old('account_type', $a?->account_type) === $value)>{{ $label }}</option>
@@ -27,10 +30,29 @@
     <x-input-error :messages="$errors->get('currency')" class="mt-2" />
 </div>
 
+<div x-show="accountType === 'credit_card'" x-cloak class="grid grid-cols-2 gap-4">
+    <div>
+        <x-input-label for="interest_rate" value="APR (%)" />
+        <x-text-input id="interest_rate" name="interest_rate" type="number" class="mt-1 block w-full"
+                      :value="old('interest_rate', $a?->interest_rate)" min="0" max="999.99" step="0.01"
+                      placeholder="24.99" />
+        <x-input-error :messages="$errors->get('interest_rate')" class="mt-2" />
+    </div>
+    <div>
+        <x-input-label for="billing_day" value="Statement closes (day of month)" />
+        <x-text-input id="billing_day" name="billing_day" type="number" class="mt-1 block w-full"
+                      :value="old('billing_day', $a?->billing_day)" min="1" max="28" step="1"
+                      placeholder="15" />
+        <x-input-error :messages="$errors->get('billing_day')" class="mt-2" />
+    </div>
+</div>
+
 <div>
     <x-input-label for="notes" value="Notes (optional)" />
     <textarea id="notes" name="notes"
               class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
               rows="3" maxlength="1000">{{ old('notes', $a?->notes) }}</textarea>
     <x-input-error :messages="$errors->get('notes')" class="mt-2" />
+</div>
+
 </div>

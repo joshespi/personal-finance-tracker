@@ -12,6 +12,7 @@ class CashAccountController extends Controller
     public const ACCOUNT_TYPES = [
         'checking'      => 'Checking',
         'savings'       => 'Savings',
+        'credit_card'   => 'Credit Card',
         'cash'          => 'Cash',
         'money_market'  => 'Money Market',
         'cd'            => 'CD',
@@ -60,7 +61,9 @@ class CashAccountController extends Controller
         abort_unless($cashAccount->user_id === $request->user()->id, 403);
 
         $cashAccount->load(['transactions' => fn ($q) => $q->with('envelope:id,name')->orderByDesc('occurred_at')->orderByDesc('id')]);
-        $cashAccount->current_balance = $cashAccount->balance();
+        $cashAccount->current_balance = $cashAccount->transactions->sum(
+            fn ($t) => $t->type === 'deposit' ? (float) $t->amount : -(float) $t->amount
+        );
 
         $envelopes = $request->user()->envelopes()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
 
@@ -100,13 +103,47 @@ class CashAccountController extends Controller
         return redirect()->route('cash-accounts.index')->with('success', 'Account deleted.');
     }
 
+    public function reconcile(Request $request, CashAccount $cashAccount): RedirectResponse
+    {
+        abort_unless($cashAccount->user_id === $request->user()->id, 403);
+
+        $validated = $request->validate([
+            'actual_balance' => ['required', 'numeric'],
+            'occurred_at'    => ['required', 'date'],
+        ]);
+
+        $current    = $cashAccount->balance();
+        $actual     = (float) $validated['actual_balance'];
+        $difference = round($actual - $current, 2);
+
+        if ($difference == 0.0) {
+            return redirect()->route('cash-accounts.show', $cashAccount)
+                ->with('success', 'Already balanced — no adjustment needed.');
+        }
+
+        $cashAccount->transactions()->create([
+            'type'        => $difference > 0 ? 'deposit' : 'withdrawal',
+            'amount'      => abs($difference),
+            'description' => 'Reconciliation adjustment',
+            'occurred_at' => $validated['occurred_at'],
+        ]);
+
+        $sign = $difference > 0 ? '+' : '−';
+        $amt  = number_format(abs($difference), 2);
+
+        return redirect()->route('cash-accounts.show', $cashAccount)
+            ->with('success', "Reconciled — {$sign}\${$amt} adjustment recorded.");
+    }
+
     private function validatePayload(Request $request): array
     {
         return $request->validate([
-            'name'         => ['required', 'string', 'max:200'],
-            'account_type' => ['required', 'in:' . implode(',', array_keys(self::ACCOUNT_TYPES))],
-            'currency'     => ['required', 'string', 'size:3'],
-            'notes'        => ['nullable', 'string', 'max:1000'],
+            'name'          => ['required', 'string', 'max:200'],
+            'account_type'  => ['required', 'in:' . implode(',', array_keys(self::ACCOUNT_TYPES))],
+            'currency'      => ['required', 'string', 'size:3'],
+            'notes'         => ['nullable', 'string', 'max:1000'],
+            'interest_rate' => ['nullable', 'numeric', 'min:0', 'max:999.99'],
+            'billing_day'   => ['nullable', 'integer', 'min:1', 'max:28'],
         ]);
     }
 }

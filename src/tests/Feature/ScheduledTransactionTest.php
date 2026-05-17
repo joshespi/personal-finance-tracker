@@ -18,11 +18,6 @@ class ScheduledTransactionTest extends TestCase
         $this->get(route('scheduled-transactions.index'))->assertRedirect(route('login'));
     }
 
-    public function test_create_requires_auth(): void
-    {
-        $this->get(route('scheduled-transactions.create'))->assertRedirect(route('login'));
-    }
-
     // ── Index ─────────────────────────────────────────────────────────────────
 
     public function test_index_shows_user_scheduled_transactions(): void

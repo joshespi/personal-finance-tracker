@@ -9,7 +9,7 @@ use Carbon\Carbon;
 
 class BudgetRuleService
 {
-    public const MANDATORY_TARGET = 60.0;
+    public const MANDATORY_TARGET = 50.0;
     public const DISCRETIONARY_TARGET = 30.0;
     public const SAVINGS_TARGET = 20.0;
     public const WINDOW_MONTHS = 6;

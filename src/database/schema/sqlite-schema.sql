@@ -272,7 +272,7 @@ CREATE TABLE IF NOT EXISTS "cash_accounts"(
   "id" integer primary key autoincrement not null,
   "user_id" integer not null,
   "name" varchar not null,
-  "account_type" varchar check("account_type" in('checking', 'savings', 'cash', 'money_market', 'cd', 'other')) not null,
+  "account_type" varchar check("account_type" in('checking', 'savings', 'credit_card', 'cash', 'money_market', 'cd', 'other')) not null,
   "currency" varchar not null default 'USD',
   "notes" text,
   "created_at" datetime,

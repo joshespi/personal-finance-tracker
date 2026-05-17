@@ -36,7 +36,7 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertSee('Welcome to your financial tracker')
             ->assertSee('Create a portfolio')
-            ->assertSee('Add a cash account');
+            ->assertSee('Add a spending account');
     }
 
     public function test_dashboard_shows_net_worth_when_user_has_only_cash(): void
