@@ -101,15 +101,23 @@ class DashboardController extends Controller
         ];
 
         $allHoldings = $portfolioHoldings
-            ->flatMap(fn ($ph) => $ph['holdings']->all())
+            ->flatMap(fn ($ph) => $ph['holdings']->map(fn ($h) => $h + ['_portfolio' => $ph['portfolio']]))
             ->groupBy(fn ($h) => $h['asset']->symbol)
             ->map(function ($group) {
-                $first     = $group->first();
-                $totalQty  = round($group->sum('quantity'), 8);
-                $totalCost = round($group->sum('total_cost'), 2);
-                $price     = $group->first(fn ($h) => $h['current_price'] !== null)['current_price'] ?? null;
-                $value     = $price !== null ? round($totalQty * $price, 2) : null;
+                $first      = $group->first();
+                $totalQty   = round($group->sum('quantity'), 8);
+                $totalCost  = round($group->sum('total_cost'), 2);
+                $price      = $group->first(fn ($h) => $h['current_price'] !== null)['current_price'] ?? null;
+                $value      = $price !== null ? round($totalQty * $price, 2) : null;
                 $unrealized = $value !== null ? round($value - $totalCost, 2) : null;
+
+                $portfolios = $group->map(fn ($h) => [
+                    'id'    => $h['_portfolio']->id,
+                    'name'  => $h['_portfolio']->name,
+                    'qty'   => round((float) $h['quantity'], 8),
+                    'cost'  => round((float) $h['total_cost'], 2),
+                    'value' => $price !== null ? round((float) $h['quantity'] * $price, 2) : null,
+                ])->values()->all();
 
                 return [
                     'asset'           => $first['asset'],
@@ -119,6 +127,7 @@ class DashboardController extends Controller
                     'current_value'   => $value,
                     'effective_value' => $value ?? $totalCost,
                     'unrealized_gain' => $unrealized,
+                    'portfolios'      => $portfolios,
                 ];
             })
             ->filter(fn ($h) => $h['quantity'] > 0)

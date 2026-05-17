@@ -8,6 +8,7 @@ Alpine.data('holdingsSort', (rows) => ({
     rows,
     sortCol: 'sort_value',
     sortDir: 'desc',
+    openSymbol: null,
     sort(col) {
         if (this.sortCol === col) {
             this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';

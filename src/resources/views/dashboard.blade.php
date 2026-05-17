@@ -311,6 +311,7 @@
                             'pct'             => (float) $h['pct'],
                             'sort_value'      => (float) $h['effective_value'],
                             'reclassify_url'  => route('assets.reclassify', $h['asset']),
+                            'portfolios'      => $h['portfolios'],
                         ])->values()->all();
                     @endphp
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg"
@@ -351,10 +352,14 @@
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-                                    <template x-for="h in sorted" :key="h.asset_id">
+                                <template x-for="h in sorted" :key="h.asset_id">
+                                    <tbody class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                            <td class="px-5 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100" x-text="h.symbol"></td>
+                                            <td class="px-5 py-3">
+                                                <button @click="openSymbol = openSymbol === h.symbol ? null : h.symbol"
+                                                        class="font-mono font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer leading-none"
+                                                        x-text="h.symbol"></button>
+                                            </td>
                                             <td class="px-5 py-3">
                                                 <form :action="h.reclassify_url" method="POST" class="inline">
                                                     <input type="hidden" name="_token" value="{{ csrf_token() }}">
@@ -398,8 +403,22 @@
                                             <td class="px-5 py-3 text-right font-mono font-semibold" :class="plClass(h.unrealized_gain)" x-text="plFmt(h.unrealized_gain)"></td>
                                             <td class="px-5 py-3 text-right font-mono text-gray-500 dark:text-gray-400" x-text="fmtPct(h.pct)"></td>
                                         </tr>
-                                    </template>
-                                </tbody>
+                                        <tr x-show="openSymbol === h.symbol" style="display:none">
+                                            <td colspan="9" class="px-5 pb-4 bg-indigo-50/60 dark:bg-indigo-950/20">
+                                                <div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2 pt-2">Held in</div>
+                                                <div class="flex flex-wrap gap-3">
+                                                    <template x-for="p in h.portfolios" :key="p.id">
+                                                        <div class="min-w-[150px] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 shadow-sm">
+                                                            <div class="font-semibold text-gray-900 dark:text-gray-100 text-sm" x-text="p.name"></div>
+                                                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5" x-text="fmtQty(p.qty) + ' shares'"></div>
+                                                            <div class="text-xs font-mono font-semibold text-gray-700 dark:text-gray-300 mt-0.5" x-text="fmtMoney(p.value)"></div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </template>
                             </table>
                         </div>
                     </div>
