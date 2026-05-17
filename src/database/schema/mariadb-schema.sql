@@ -112,7 +112,7 @@ CREATE TABLE `cash_accounts` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `user_id` bigint(20) unsigned NOT NULL,
   `name` varchar(200) NOT NULL,
-  `account_type` enum('checking','savings','cash','money_market','cd','other') NOT NULL,
+  `account_type` enum('checking','savings','credit_card','cash','money_market','cd','other') NOT NULL,
   `currency` char(3) NOT NULL DEFAULT 'USD',
   `notes` text DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
