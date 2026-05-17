@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogControll
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
+use App\Http\Controllers\Admin\ToolsController as AdminToolsController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AllTransactionsController;
 use App\Http\Controllers\DividendController;
@@ -151,6 +152,8 @@ Route::middleware('auth')->group(function () {
         Route::get('settings', [AdminSettingsController::class, 'edit'])->name('settings');
         Route::post('settings', [AdminSettingsController::class, 'update'])->name('settings.update');
         Route::post('settings/test-email', [AdminSettingsController::class, 'sendTestEmail'])->name('settings.test-email');
+        Route::get('tools', [AdminToolsController::class, 'index'])->name('tools');
+        Route::post('tools/backfill-snapshots', [AdminToolsController::class, 'backfillSnapshots'])->name('tools.backfill-snapshots');
         Route::post('impersonate/{user}', [ImpersonationController::class, 'store'])->name('impersonate');
     });
 });

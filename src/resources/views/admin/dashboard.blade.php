@@ -41,6 +41,11 @@
                     <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Activity Log</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Full filterable event history</p>
                 </a>
+                <a href="{{ route('admin.tools') }}"
+                   class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 hover:ring-2 hover:ring-indigo-400 transition group">
+                    <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Tools</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Maintenance commands, backfill snapshots</p>
+                </a>
             </div>
 
             {{-- Recent signups --}}
