@@ -34,6 +34,7 @@ class ToolsController extends Controller
         if ($request->boolean('skip_fetch')) { $args['--skip-fetch'] = true; }
         if ($request->boolean('dry_run'))    { $args['--dry-run']    = true; }
 
+        set_time_limit(600);
         Artisan::call('portfolios:backfill-snapshots', $args);
         $output = trim(Artisan::output());
 

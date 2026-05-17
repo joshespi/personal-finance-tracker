@@ -89,9 +89,11 @@ class RealizedGainService
 
     public function computeTwr(Portfolio $portfolio): array
     {
-        $snapshots = $portfolio->snapshots()
-            ->orderBy('recorded_on')
-            ->get(['recorded_on', 'market_value', 'manual_value', 'cost_basis']);
+        if ($portfolio->relationLoaded('snapshots')) {
+            $snapshots = $portfolio->snapshots->sortBy('recorded_on')->values();
+        } else {
+            $snapshots = $portfolio->snapshots()->orderBy('recorded_on')->get(['recorded_on', 'market_value', 'manual_value', 'cost_basis']);
+        }
 
         if ($snapshots->count() < 2) {
             return ['total_pct' => null, 'annualized_pct' => null, 'first_date' => null];

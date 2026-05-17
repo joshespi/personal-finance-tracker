@@ -23,6 +23,8 @@
                     $moneyActive = request()->routeIs('cash-accounts.*')
                         || request()->routeIs('envelopes.*')
                         || request()->routeIs('liabilities.*')
+                        || request()->routeIs('analysis')
+                        || request()->routeIs('planning')
                         || request()->routeIs('cashflow')
                         || request()->routeIs('spending-trends')
                         || request()->routeIs('emergency-fund')
@@ -88,13 +90,9 @@
                             <div class="rounded-md ring-1 ring-black ring-opacity-5 dark:ring-gray-700 py-1 bg-white dark:bg-gray-800">
                                 <x-dropdown-link :href="route('ready-to-assign')">{{ __('Ready to Assign') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('cash-accounts.index')">{{ __('Spending Accounts') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('cashflow')">{{ __('Cashflow') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('spending-trends')">{{ __('Spending Trends') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('emergency-fund')">{{ __('Emergency Fund') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('debt-payoff')">{{ __('Debt Payoff') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('allocator')">{{ __('Extra-Cash Allocator') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('budget-rule')">{{ __('50/30/20 Rule') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('envelopes.index')">{{ __('Budget Envelopes') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('analysis')">{{ __('Analysis') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('planning')">{{ __('Planning') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('scheduled-transactions.index')">{{ __('Scheduled') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('liabilities.index')">{{ __('Liabilities') }}</x-dropdown-link>
                             </div>
@@ -228,29 +226,17 @@
             <x-responsive-nav-link :href="route('ready-to-assign')" :active="request()->routeIs('ready-to-assign')">
                 {{ __('Ready to Assign') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('cashflow')" :active="request()->routeIs('cashflow')">
-                {{ __('Cashflow') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('spending-trends')" :active="request()->routeIs('spending-trends')">
-                {{ __('Spending Trends') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('emergency-fund')" :active="request()->routeIs('emergency-fund')">
-                {{ __('Emergency Fund') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('debt-payoff')" :active="request()->routeIs('debt-payoff')">
-                {{ __('Debt Payoff') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('allocator')" :active="request()->routeIs('allocator')">
-                {{ __('Extra-Cash Allocator') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('budget-rule')" :active="request()->routeIs('budget-rule')">
-                {{ __('50/30/20 Rule') }}
-            </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('cash-accounts.index')" :active="request()->routeIs('cash-accounts.*')">
                 {{ __('Spending Accounts') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('envelopes.index')" :active="request()->routeIs('envelopes.*')">
                 {{ __('Budget Envelopes') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('analysis')" :active="request()->routeIs('analysis')">
+                {{ __('Analysis') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('planning')" :active="request()->routeIs('planning')">
+                {{ __('Planning') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('scheduled-transactions.index')" :active="request()->routeIs('scheduled-transactions.*')">
                 {{ __('Scheduled') }}

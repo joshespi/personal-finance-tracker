@@ -7,10 +7,12 @@ use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\ToolsController as AdminToolsController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AllTransactionsController;
+use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\DividendController;
 use App\Http\Controllers\BudgetRuleController;
 use App\Http\Controllers\AllocatorController;
 use App\Http\Controllers\DebtPayoffController;
+use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\CashAccountController;
 use App\Http\Controllers\CashTransactionController;
 use App\Http\Controllers\CashflowController;
@@ -114,6 +116,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('cash-transactions/{transaction}', [CashTransactionController::class, 'destroy'])
         ->name('cash-accounts.transactions.destroy');
 
+    Route::get('/analysis', AnalysisController::class)->name('analysis');
+    Route::get('/planning', PlanningController::class)->name('planning');
     Route::get('/cashflow', CashflowController::class)->name('cashflow');
     Route::get('/spending-trends', SpendingTrendsController::class)->name('spending-trends');
     Route::get('/emergency-fund', EmergencyFundController::class)->name('emergency-fund');
