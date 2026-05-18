@@ -163,7 +163,7 @@
                     </div>
                 @endif
 
-                @if ($chartData->isNotEmpty())
+                @if ($chartData->count() > 1)
                     {{-- Portfolio value chart with time range toggles --}}
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -469,7 +469,7 @@
         </div>
     </div>
 
-    @if ($chartData->isNotEmpty() || $allocation['total'] > 0)
+    @if ($chartData->count() > 1 || $allocation['total'] > 0)
         <script>window.__dashCharts = { chartData: @json($chartData), chartDataExManual: @json($chartDataExManual), benchmarkData: @json($benchmarkData), allocation: @json($allocation) };</script>
         @vite('resources/js/dashboard-charts.js')
     @endif

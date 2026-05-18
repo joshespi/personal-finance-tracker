@@ -104,13 +104,18 @@ class User extends Authenticatable implements MustVerifyEmail
         return round($this->totalCash() - ($funded - $spent), 2);
     }
 
+    private ?float $totalCashCache = null;
+
     public function totalCash(): float
     {
-        return (float) CashTransaction::query()
-            ->join('cash_accounts', 'cash_accounts.id', '=', 'cash_transactions.cash_account_id')
-            ->where('cash_accounts.user_id', $this->id)
-            ->selectRaw("COALESCE(SUM(CASE WHEN cash_transactions.type = 'deposit' THEN cash_transactions.amount ELSE -cash_transactions.amount END), 0) AS bal")
-            ->value('bal');
+        if ($this->totalCashCache === null) {
+            $this->totalCashCache = (float) CashTransaction::query()
+                ->join('cash_accounts', 'cash_accounts.id', '=', 'cash_transactions.cash_account_id')
+                ->where('cash_accounts.user_id', $this->id)
+                ->selectRaw("COALESCE(SUM(CASE WHEN cash_transactions.type = 'deposit' THEN cash_transactions.amount ELSE -cash_transactions.amount END), 0) AS bal")
+                ->value('bal');
+        }
+        return $this->totalCashCache;
     }
 
     public function totalDebt(): float

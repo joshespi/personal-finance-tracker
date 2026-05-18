@@ -14,21 +14,21 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request, BudgetRuleService $budgetRule): View
     {
-        $portfolios = $request->user()
-            ->portfolios()
+        $user       = $request->user();
+        $portfolios = $user->portfolios()
             ->with(['transactions.asset.latestPrice', 'manualAssets.latestValuation', 'manualAssets.proxyAsset.latestPrice'])
             ->get();
 
         $rawSnapshots = PortfolioSnapshot::whereIn('portfolio_id', $portfolios->pluck('id'))
+            ->selectRaw('recorded_on, SUM(market_value) as mv, SUM(manual_value) as manv, SUM(cost_basis) as cb')
+            ->groupBy('recorded_on')
             ->orderBy('recorded_on')
-            ->get(['portfolio_id', 'recorded_on', 'market_value', 'manual_value', 'cost_basis'])
-            ->groupBy(fn ($s) => $s->recorded_on->toDateString())
-            ->map(fn ($group) => [
-                'value'        => round($group->sum(fn ($s) => (float) $s->market_value + (float) $s->manual_value), 2),
-                'market_value' => round($group->sum(fn ($s) => (float) $s->market_value), 2),
-                'cost'         => round($group->sum(fn ($s) => (float) $s->cost_basis), 2),
-            ])
-            ->sortKeys();
+            ->get()
+            ->mapWithKeys(fn ($s) => [$s->recorded_on->toDateString() => [
+                'value'        => round((float) $s->mv + (float) $s->manv, 2),
+                'market_value' => round((float) $s->mv, 2),
+                'cost'         => round((float) $s->cb, 2),
+            ]]);
 
         $chartData = $rawSnapshots->map(fn ($v, $date) => ['date' => $date, 'value' => $v['value'], 'cost' => $v['cost']])
             ->values();
@@ -65,12 +65,12 @@ class DashboardController extends Controller
         });
 
         $portfolioValue   = round($summaries->sum('total_value'), 2);
-        $totalCash        = round($request->user()->totalCash(), 2);
+        $totalCash        = round($user->totalCash(), 2);
         $totalAssets      = round($portfolioValue + $totalCash, 2);
-        $userLiabilities  = $request->user()->liabilities()->with('latestBalance')->get();
+        $userLiabilities  = $user->liabilities()->with('latestBalance')->get();
         $totalDebt        = round($userLiabilities->sum(fn ($l) => $l->currentBalance()), 2);
 
-        $readyToAssign = $request->user()->readyToAssign();
+        $readyToAssign = $user->readyToAssign();
 
         [$revolvingBalance, $interestBleedMonthly] = $userLiabilities
             ->filter(fn ($l) => $l->isRevolving() && $l->currentBalance() > 0)
@@ -141,10 +141,11 @@ class DashboardController extends Controller
             return $h;
         });
 
-        $allocation  = $this->buildAllocation($allHoldings, $portfolios);
-        $rebalancing = $this->buildGlobalRebalancing($allHoldings, $portfolios, $request->user());
+        $manualBuckets = $this->manualAssetBuckets($portfolios);
+        $allocation    = $this->buildAllocation($allHoldings, $manualBuckets);
+        $rebalancing   = $this->buildGlobalRebalancing($allHoldings, $manualBuckets, $user);
 
-        $budgetRuleData = $budgetRule->compute($request->user());
+        $budgetRuleData = $budgetRule->compute($user);
 
         return view('dashboard', compact(
             'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'rebalancing', 'benchmarkData', 'budgetRuleData',
@@ -167,7 +168,7 @@ class DashboardController extends Controller
         return $buckets;
     }
 
-    private function buildAllocation(Collection $allHoldings, Collection $portfolios): array
+    private function buildAllocation(Collection $allHoldings, array $manualBuckets): array
     {
         $stockValue      = 0.0;
         $cryptoValue     = 0.0;
@@ -184,12 +185,11 @@ class DashboardController extends Controller
             };
         }
 
-        $ma = $this->manualAssetBuckets($portfolios);
-        $stockValue      += $ma['stock'];
-        $cryptoValue     += $ma['crypto'];
-        $realEstateValue += $ma['real_estate'];
-        $bondValue       += $ma['bond'];
-        $otherManualValue = $ma['other'];
+        $stockValue      += $manualBuckets['stock'];
+        $cryptoValue     += $manualBuckets['crypto'];
+        $realEstateValue += $manualBuckets['real_estate'];
+        $bondValue       += $manualBuckets['bond'];
+        $otherManualValue = $manualBuckets['other'];
 
         $total = $stockValue + $cryptoValue + $realEstateValue + $bondValue + $otherManualValue;
 
@@ -209,7 +209,7 @@ class DashboardController extends Controller
         ];
     }
 
-    private function buildGlobalRebalancing(Collection $allHoldings, Collection $portfolios, User $user): array
+    private function buildGlobalRebalancing(Collection $allHoldings, array $manualBuckets, User $user): array
     {
         $targets = [
             'stock'       => (int) $user->target_stock_pct,
@@ -230,7 +230,7 @@ class DashboardController extends Controller
             $current[array_key_exists($type, $current) ? $type : 'other'] += $val;
         }
 
-        foreach ($this->manualAssetBuckets($portfolios) as $type => $val) {
+        foreach ($manualBuckets as $type => $val) {
             $current[array_key_exists($type, $current) ? $type : 'other'] += $val;
         }
 

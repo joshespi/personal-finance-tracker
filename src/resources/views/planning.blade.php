@@ -8,6 +8,8 @@
                         Debt Payoff
                     @elseif ($tab === 'allocator')
                         Extra-Cash Allocator
+                    @elseif ($tab === 'retirement')
+                        Retirement Catch-Up
                     @else
                         Emergency Fund
                     @endif
@@ -35,6 +37,13 @@
                               ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
                               : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600' }}">
                     Emergency Fund
+                </a>
+                <a href="{{ route('planning', ['tab' => 'retirement']) }}"
+                   class="px-3 py-1.5 text-xs rounded-md font-medium transition
+                          {{ $tab === 'retirement'
+                              ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
+                              : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600' }}">
+                    Retirement
                 </a>
             </div>
         </div>
@@ -550,6 +559,199 @@
             @if ($mandatoryEnvelopes->isNotEmpty() && $emergencyEnvelope === null)
                 <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-5 py-4 text-sm text-amber-800 dark:text-amber-300">
                     No envelope is marked as your emergency fund savings. Edit an envelope and check <strong>Emergency fund savings</strong> so the calculator can show your progress.
+                </div>
+            @endif
+
+        </div>
+        @endif
+
+        @if ($tab === 'retirement')
+        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8 space-y-6">
+
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-5 text-sm text-gray-600 dark:text-gray-400 space-y-1.5">
+                <p class="text-gray-700 dark:text-gray-300">
+                    Enter your birth year and current contribution to see whether you're on track for retirement — and what monthly catch-up looks like if you're not.
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Birth year is optional and never stored — it's used only to compute years to retirement for this projection.
+                    Portfolio value is pre-filled from your latest snapshots.
+                </p>
+            </div>
+
+            <form method="GET" action="{{ route('planning', ['tab' => 'retirement']) }}"
+                  class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-5 space-y-5">
+                <input type="hidden" name="tab" value="retirement">
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Birth Year <span class="text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <input type="number" name="birth_year" value="{{ $birthYear ?? '' }}"
+                               min="1930" max="{{ now()->year - 18 }}" placeholder="{{ now()->year - 35 }}"
+                               class="block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Retire at Age</label>
+                        <input type="number" name="retirement_age" value="{{ $retirementAge }}"
+                               min="40" max="90"
+                               class="block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Expected Return</label>
+                        <div class="relative">
+                            <input type="number" name="annual_return" value="{{ $annualReturn }}" step="0.1" min="0" max="30"
+                                   class="pr-7 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                            <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 text-sm">%</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Current Portfolio Value
+                            @if ($currentValue == $defaultValue && $defaultValue > 0)
+                                <span class="text-gray-400 font-normal">(from your data)</span>
+                            @endif
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 text-sm">$</span>
+                            <input type="number" name="current_value" value="{{ $currentValue }}" step="any" min="0"
+                                   class="pl-7 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Contribution</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 text-sm">$</span>
+                            <input type="number" name="monthly_contrib" value="{{ $monthlyContrib }}" step="any" min="0"
+                                   class="pl-7 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                               title="Used for the 4% rule target: 25x your annual expenses = the amount needed to retire. If left blank, your app's recorded income is used.">
+                            Annual Expenses <span class="text-gray-400 font-normal">(optional ⓘ)</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 text-sm">$</span>
+                            <input type="number" name="annual_expenses" value="{{ $annualExpenses ?? '' }}" step="any" min="0"
+                                   placeholder="{{ $annualIncome > 0 ? number_format($annualIncome, 0) : '' }}"
+                                   class="pl-7 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                        </div>
+                        @if ($annualIncome > 0 && ! $annualExpenses)
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Using recorded income: ${{ number_format($annualIncome, 0) }}/yr</p>
+                        @endif
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit"
+                            class="px-4 py-2 bg-gray-800 dark:bg-gray-700 text-white text-sm font-semibold rounded-md hover:bg-gray-700 dark:hover:bg-gray-600 transition">
+                        Calculate
+                    </button>
+                </div>
+            </form>
+
+            @if ($result !== null)
+
+                {{-- Summary cards --}}
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Years to Retirement</p>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">{{ $result['years_left'] }}</p>
+                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Retire at {{ $retirementAge }}, currently {{ $age }}</p>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Projected at Retirement</p>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">${{ number_format($result['projected_fv'], 0) }}</p>
+                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">at {{ $annualReturn }}% annual return</p>
+                    </div>
+
+                    @if ($result['target'] !== null)
+                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+                               title="25× your annual expenses/income — the amount needed to withdraw 4% per year indefinitely">Target (4% Rule ⓘ)</p>
+                            <p class="mt-1 text-2xl font-semibold font-mono {{ $result['on_track'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">
+                                ${{ number_format($result['target'], 0) }}
+                            </p>
+                            <p class="mt-0.5 text-xs {{ $result['on_track'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">
+                                {{ $result['on_track'] ? 'On track' : '$' . number_format(abs($result['gap']), 0) . ' short' }}
+                            </p>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Catch-up callout --}}
+                @if ($result['target'] !== null && ! $result['on_track'] && $result['required_contrib'] !== null)
+                    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-5 py-4 space-y-1">
+                        <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">Catch-up needed</p>
+                        <p class="text-sm text-amber-700 dark:text-amber-400">
+                            To reach your target by {{ $retirementAge }}, contribute
+                            <strong>${{ number_format($result['required_contrib'], 0) }}/month</strong>
+                            (you're currently contributing ${{ number_format($monthlyContrib, 0) }}/month —
+                            {{ $result['required_contrib'] > $monthlyContrib
+                                ? 'an increase of $' . number_format($result['required_contrib'] - $monthlyContrib, 0) . '/month'
+                                : 'already enough' }}).
+                        </p>
+                    </div>
+                @elseif ($result['target'] !== null && $result['on_track'])
+                    <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg px-5 py-4">
+                        <p class="text-sm font-semibold text-emerald-800 dark:text-emerald-300">You're on track.</p>
+                        <p class="text-sm text-emerald-700 dark:text-emerald-400 mt-0.5">
+                            Your projected value at {{ $retirementAge }} exceeds the 4% rule target by ${{ number_format(abs($result['gap']), 0) }}.
+                        </p>
+                    </div>
+                @endif
+
+                {{-- Fidelity benchmarks --}}
+                @if (! empty($result['benchmarks']))
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
+                        <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700">
+                            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Fidelity Milestones</h3>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                Fidelity recommends saving a multiple of your annual income by each age. Based on ${{ number_format($annualIncome, 0) }}/yr.
+                            </p>
+                        </div>
+                        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach ($result['benchmarks'] as $b)
+                                <div class="px-5 py-3 flex items-center justify-between">
+                                    <div>
+                                        <span class="text-sm font-medium text-gray-800 dark:text-gray-200">Age {{ $b['age'] }}</span>
+                                        <span class="ml-2 text-xs text-gray-400 dark:text-gray-500">{{ $b['multiple'] }}× income</span>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-sm">
+                                        <div class="text-right">
+                                            <p class="text-xs text-gray-400 dark:text-gray-500">Target</p>
+                                            <p class="font-mono text-gray-700 dark:text-gray-300">${{ number_format($b['target'], 0) }}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-xs text-gray-400 dark:text-gray-500">Projected</p>
+                                            <p class="font-mono {{ $b['on_track'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">
+                                                ${{ number_format($b['projected'], 0) }}
+                                            </p>
+                                        </div>
+                                        <span class="text-xs font-semibold {{ $b['on_track'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">
+                                            {{ $b['on_track'] ? '✓' : '↑' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @elseif ($result !== null && $annualIncome <= 0)
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        Fidelity milestones require income data. Add deposits to your cash accounts so the app can estimate your income, or enter annual expenses above.
+                    </div>
+                @endif
+
+            @elseif ($age !== null && $age >= $retirementAge)
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Retirement age must be greater than current age.
                 </div>
             @endif
 
