@@ -144,7 +144,7 @@
             @endif
 
             {{-- Asset allocation donut --}}
-            @if ($allocation['total'] > 0)
+            @if ($allocation['holdings']->isNotEmpty())
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Allocation</h3>
                     <div class="flex flex-col sm:flex-row items-center gap-8">
@@ -561,7 +561,7 @@
         </div>
     </div>
 
-    @if ($chartData->count() > 1 || $allocation['total'] > 0)
+    @if ($chartData->count() > 1 || $allocation['holdings']->isNotEmpty())
         <script>window.__portCharts = { chartData: @json($chartData), benchmarkData: @json($benchmarkData), allocation: @json($allocation) };</script>
         @vite('resources/js/portfolio-charts.js')
     @endif
