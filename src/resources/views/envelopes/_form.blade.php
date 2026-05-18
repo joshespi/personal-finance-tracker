@@ -75,7 +75,8 @@
         <input type="checkbox" name="is_savings" value="1"
                {{ old('is_savings', $e?->is_savings) ? 'checked' : '' }}
                class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500">
-        <span class="text-sm text-gray-700 dark:text-gray-300">Savings envelope</span>
-        <span class="text-xs text-gray-400 dark:text-gray-500">(counts toward 20% savings rate)</span>
+        <span class="text-sm text-gray-700 dark:text-gray-300">Wealth building</span>
+        <span class="text-xs text-gray-400 dark:text-gray-500"
+              title="Use this for retirement contributions and long-term investing — not sinking funds for purchases like a vacation or gadget. Those are deferred wants and belong in your 30% discretionary budget.">(emergency fund &amp; investing — counts toward the 20% target ⓘ)</span>
     </label>
 </div>

@@ -252,15 +252,15 @@
 
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-sm text-gray-600 dark:text-gray-400 space-y-2">
                 <p class="text-gray-700 dark:text-gray-300">
-                    The 50/30/20 rule allocates monthly income across three buckets:
-                    <strong>50% mandatory</strong> (rent, utilities, groceries, insurance),
-                    <strong>30% discretionary</strong> (everything else you spend),
-                    and <strong>20% savings</strong> (emergency fund, then investing).
+                    The 50/30/20 rule splits monthly income into three buckets:
+                    <strong>50% needs</strong> (rent, utilities, groceries, insurance — fixed costs you can't easily cut),
+                    <strong>30% wants</strong> (dining, entertainment, subscriptions, and sinking funds for planned purchases like a vacation or gadget),
+                    and <strong>20% wealth building</strong> (emergency fund until it's fully funded, then retirement contributions and investments).
                 </p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
                     Figures below average the trailing {{ $data['window_months'] }} months
                     ({{ $data['window_start']->format('M Y') }} – {{ $data['window_end']->format('M Y') }}).
-                    Mark envelopes as <em>mandatory</em> or <em>savings</em> in their edit form to classify them.
+                    Mark envelopes as <em>mandatory</em> or <em>wealth building</em> in their edit form to classify them.
                 </p>
             </div>
 
@@ -279,8 +279,9 @@
                         </p>
                         <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">avg / month</p>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Mandatory</p>
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4"
+                         title="Envelopes marked 'Mandatory' — rent, utilities, groceries, insurance. Target: 50% or less.">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Needs</p>
                         <p class="mt-1 text-2xl font-semibold font-mono {{ $drift['mandatory_over'] ? 'text-amber-600 dark:text-amber-400' : 'text-gray-800 dark:text-gray-100' }}">
                             ${{ number_format($data['monthly_mandatory'], 2) }}
                         </p>
@@ -288,8 +289,9 @@
                             {{ $ratios['mandatory'] }}% (target ≤ {{ $targets['mandatory'] }}%)
                         </p>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Discretionary</p>
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4"
+                         title="Everything not tagged mandatory or wealth building — dining, entertainment, subscriptions, and sinking funds for planned purchases. Target: 30% or less.">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Wants</p>
                         <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">
                             ${{ number_format($data['monthly_discretionary'], 2) }}
                         </p>
@@ -297,8 +299,9 @@
                             {{ $ratios['discretionary'] }}% (target ≤ {{ $targets['discretionary'] }}%)
                         </p>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Savings</p>
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4"
+                         title="Envelopes marked 'Wealth building' — emergency fund and investing. Target: 20% or more.">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Wealth Building</p>
                         <p class="mt-1 text-2xl font-semibold font-mono {{ $drift['savings_under'] ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400' }}">
                             ${{ number_format($data['monthly_savings'], 2) }}
                         </p>
@@ -316,14 +319,14 @@
                             $d = max(0, min(100 - $m, $ratios['discretionary'] ?? 0));
                             $s = max(0, 100 - $m - $d);
                         @endphp
-                        <div class="h-full bg-indigo-500" style="width: {{ $m }}%" title="Mandatory {{ $ratios['mandatory'] }}%"></div>
-                        <div class="h-full bg-sky-400"    style="width: {{ $d }}%" title="Discretionary {{ $ratios['discretionary'] }}%"></div>
-                        <div class="h-full bg-emerald-500" style="width: {{ $s }}%" title="Savings {{ $ratios['savings'] }}%"></div>
+                        <div class="h-full bg-indigo-500" style="width: {{ $m }}%" title="Needs {{ $ratios['mandatory'] }}% — fixed costs like rent, utilities, groceries"></div>
+                        <div class="h-full bg-sky-400"    style="width: {{ $d }}%" title="Wants {{ $ratios['discretionary'] }}% — spending and planned purchases"></div>
+                        <div class="h-full bg-emerald-500" style="width: {{ $s }}%" title="Wealth Building {{ $ratios['savings'] }}% — emergency fund and investing"></div>
                     </div>
                     <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                        <span><span class="inline-block w-2 h-2 rounded-full bg-indigo-500 mr-1"></span>Mandatory</span>
-                        <span><span class="inline-block w-2 h-2 rounded-full bg-sky-400 mr-1"></span>Discretionary</span>
-                        <span><span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span>Savings</span>
+                        <span title="Fixed costs you can't easily cut"><span class="inline-block w-2 h-2 rounded-full bg-indigo-500 mr-1"></span>Needs</span>
+                        <span title="Day-to-day spending and sinking funds for planned purchases"><span class="inline-block w-2 h-2 rounded-full bg-sky-400 mr-1"></span>Wants</span>
+                        <span title="Emergency fund and investing — grows your net worth"><span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span>Wealth Building</span>
                     </div>
                 </div>
 
@@ -385,7 +388,7 @@
                                     @endforeach
                                 </ul>
                             @else
-                                Tag investing or sinking-fund envelopes as <em>savings</em> to direct future contributions there.
+                                Tag retirement or investing envelopes as <em>wealth building</em> to direct future contributions there.
                             @endif
                         </div>
                     @endif
