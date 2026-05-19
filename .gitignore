@@ -19,3 +19,6 @@ db_data
 ROADMAP.md
 CLAUDE.md
 backups/*.sql
+.agents
+.claude
+skills-lock.json

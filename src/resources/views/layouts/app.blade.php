@@ -31,11 +31,12 @@
     <body class="font-sans antialiased bg-slate-100 dark:bg-gray-900">
         <div class="min-h-screen">
             @if ($demo->isActive())
-                <div class="bg-violet-600 text-white text-sm font-medium px-4 py-2 flex items-center justify-between">
-                    <span>Demo mode — financial data is anonymized.</span>
+                <div class="bg-violet-600 text-white text-sm font-medium px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                    <span class="sm:hidden">Demo mode active.</span>
+                    <span class="hidden sm:inline">Demo mode — financial data is anonymized.</span>
                     <form method="POST" action="{{ route('demo-mode.toggle') }}">
                         @csrf
-                        <button type="submit" class="ml-4 underline font-semibold hover:text-violet-200">Exit demo mode</button>
+                        <button type="submit" class="underline font-semibold hover:text-violet-200">Exit demo mode</button>
                     </form>
                 </div>
             @endif

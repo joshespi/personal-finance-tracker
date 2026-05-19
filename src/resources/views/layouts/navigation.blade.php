@@ -275,6 +275,12 @@
                 <x-responsive-nav-link :href="route('export.index')" :active="request()->routeIs('export.*')">
                     {{ __('Export & Backup') }}
                 </x-responsive-nav-link>
+                <form method="POST" action="{{ route('demo-mode.toggle') }}">
+                    @csrf
+                    <x-responsive-nav-link href="#" onclick="event.preventDefault(); this.closest('form').submit();">
+                        {{ $demo->isActive() ? __('Exit Demo Mode') : __('Demo Mode') }}
+                    </x-responsive-nav-link>
+                </form>
                 <x-responsive-nav-link :href="route('donate')" :active="request()->routeIs('donate')">
                     {{ __('Donate') }}
                 </x-responsive-nav-link>
