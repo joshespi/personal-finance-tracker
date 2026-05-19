@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
 
             @php
                 $hasPortfolios = ! $summaries->isEmpty();
@@ -420,29 +420,27 @@
                     </div>
                     <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($summaries as $s)
-                            <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                <div>
-                                    <a href="{{ route('portfolios.show', $s['portfolio']) }}"
-                                       class="font-medium text-gray-900 dark:text-gray-100 hover:underline">
-                                        {{ $demo->n($s['portfolio']->name) }}
-                                    </a>
+                            <a href="{{ route('portfolios.show', $s['portfolio']) }}"
+                               class="px-6 py-4 flex items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                                <div class="min-w-0">
+                                    <p class="font-medium text-gray-900 dark:text-gray-100 truncate">{{ $demo->n($s['portfolio']->name) }}</p>
                                     @if ($s['portfolio']->description)
-                                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ $s['portfolio']->description }}</p>
+                                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">{{ $s['portfolio']->description }}</p>
                                     @endif
                                 </div>
-                                <div class="flex items-center gap-4 sm:gap-8 text-right text-sm">
+                                <div class="flex items-center gap-4 sm:gap-8 text-right text-sm shrink-0">
                                     <div class="hidden sm:block">
                                         <p class="text-xs text-gray-400 dark:text-gray-500">Cost Basis</p>
                                         <p class="font-mono text-gray-700 dark:text-gray-300">${{ $demo->amt($s['cost_basis']) }}</p>
                                     </div>
                                     @if ($s['market_value'] !== null)
+                                        @php $unr = $s['unrealized'] ?? 0; @endphp
                                         <div>
-                                            <p class="text-xs text-gray-400 dark:text-gray-500">Market Value</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">Market Value</p>
                                             <p class="font-mono text-gray-900 dark:text-gray-100 font-semibold">${{ $demo->amt($s['market_value']) }}</p>
                                         </div>
                                         <div class="hidden sm:block">
                                             <p class="text-xs text-gray-400 dark:text-gray-500">P&L</p>
-                                            @php $unr = $s['unrealized'] ?? 0; @endphp
                                             <p class="font-mono font-semibold {{ $unr >= 0 ? 'text-green-600' : 'text-red-600' }}">
                                                 {{ $unr >= 0 ? '+' : '' }}${{ $demo->amt($unr) }}
                                             </p>
@@ -454,12 +452,11 @@
                                             <p class="font-mono text-gray-700 dark:text-gray-300">${{ $demo->amt($s['manual_value']) }}</p>
                                         </div>
                                     @endif
-                                    <a href="{{ route('portfolios.show', $s['portfolio']) }}"
-                                       class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition shrink-0">
-                                        View
-                                    </a>
+                                    <svg class="sm:hidden h-4 w-4 text-gray-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
                                 </div>
-                            </div>
+                            </a>
                         @endforeach
                     </div>
                 </div>
