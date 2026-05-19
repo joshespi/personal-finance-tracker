@@ -158,6 +158,26 @@
                                         ${{ $demo->amt($monthlySpend) }}
                                     </p>
                                 </x-stat-tile>
+                                @if ($ageOfMoney !== null)
+                                    @php $efDaysTarget = ($budgetRuleData['target_months'] ?? 0) * 30; @endphp
+                                    <x-stat-tile>
+                                        <x-slot:label>Age of Money</x-slot:label>
+                                        <p class="mt-1 text-2xl font-semibold font-mono {{
+                                            $ageOfMoney >= 30 ? 'text-green-600 dark:text-green-400' :
+                                            ($ageOfMoney >= 15 ? 'text-amber-500 dark:text-amber-400' : 'text-red-600 dark:text-red-400')
+                                        }}">
+                                            {{ $ageOfMoney }}<span class="text-sm font-normal text-gray-500 dark:text-gray-400"> days</span>
+                                        </p>
+                                        @if ($efDaysTarget > 0 && $ageOfMoney >= $efDaysTarget)
+                                            <span class="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                                </svg>
+                                                {{ $budgetRuleData['target_months'] }}mo goal
+                                            </span>
+                                        @endif
+                                    </x-stat-tile>
+                                @endif
                             @endif
                         </div>
                     </div>

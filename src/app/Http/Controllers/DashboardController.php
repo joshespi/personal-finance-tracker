@@ -147,10 +147,15 @@ class DashboardController extends Controller
 
         $budgetRuleData = $budgetRule->compute($user);
 
+        $monthlySpend = $budgetRuleData['monthly_mandatory'] + $budgetRuleData['monthly_discretionary'];
+        $ageOfMoney   = ($budgetRuleData['has_data'] && $monthlySpend > 0)
+            ? max(0, (int) round($totalCash / $monthlySpend * 30))
+            : null;
+
         return view('dashboard', compact(
             'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'rebalancing', 'benchmarkData', 'budgetRuleData',
             'revolvingBalance', 'interestBleedMonthly', 'interestBleedYearly',
-            'totalCash', 'readyToAssign'
+            'totalCash', 'readyToAssign', 'ageOfMoney'
         ));
     }
 
