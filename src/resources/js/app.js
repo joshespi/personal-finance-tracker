@@ -4,8 +4,9 @@ import './ticker-search';
 import Alpine from 'alpinejs';
 window.Alpine = Alpine;
 
-Alpine.data('holdingsSort', (rows) => ({
+Alpine.data('holdingsSort', (rows, demoMode = false) => ({
     rows,
+    demoMode,
     sortCol: 'sort_value',
     sortDir: 'desc',
     openSymbol: null,
@@ -21,20 +22,24 @@ Alpine.data('holdingsSort', (rows) => ({
         return this.sortCol === col ? (this.sortDir === 'asc' ? ' ↑' : ' ↓') : '';
     },
     fmtMoney(v) {
+        if (this.demoMode) return '••••';
         if (v === null || v === undefined) return '—';
         return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     fmtPrice(v) {
+        if (this.demoMode) return '••••';
         if (v === null || v === undefined) return '—';
         return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
     },
     fmtQty(v) {
+        if (this.demoMode) return '••••';
         return parseFloat(v.toFixed(8)).toString();
     },
     fmtPct(v) {
         return v.toFixed(1) + '%';
     },
     plFmt(v) {
+        if (this.demoMode) return '••••';
         if (v === null || v === undefined) return '—';
         const abs = Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return (v >= 0 ? '+$' : '-$') + abs;

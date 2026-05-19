@@ -40,23 +40,29 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    const demoMode = window.__dashCharts?.demoMode ?? false;
+
     function updateTiles(filtered, range) {
         if (!filtered.length) return;
         const last  = filtered[filtered.length - 1];
         const first = filtered[0];
 
         const mvEl = document.getElementById('tile-market-value');
-        if (mvEl) mvEl.textContent = fmtFull(last.value);
+        if (mvEl) mvEl.textContent = demoMode ? '••••' : fmtFull(last.value);
 
         const totEl = document.getElementById('tile-total-value');
-        if (totEl) totEl.textContent = fmtFull(last.value);
+        if (totEl) totEl.textContent = demoMode ? '••••' : fmtFull(last.value);
 
         const plEl    = document.getElementById('tile-pl-value');
         const plLabel = document.getElementById('tile-pl-label');
         if (plEl) {
-            const pl = last.value - first.value;
-            plEl.textContent = (pl >= 0 ? '+$' : '-$') + Math.abs(pl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            plEl.className   = 'mt-1 text-2xl font-semibold font-mono ' + (pl >= 0 ? 'text-green-600' : 'text-red-600');
+            if (demoMode) {
+                plEl.textContent = '••••';
+            } else {
+                const pl = last.value - first.value;
+                plEl.textContent = (pl >= 0 ? '+$' : '-$') + Math.abs(pl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                plEl.className   = 'mt-1 text-2xl font-semibold font-mono ' + (pl >= 0 ? 'text-green-600' : 'text-red-600');
+            }
             if (plLabel) plLabel.textContent = range + ' Gain/Loss';
         }
     }

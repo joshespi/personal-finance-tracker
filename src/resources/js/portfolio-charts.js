@@ -10,7 +10,7 @@ import { filterByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOp
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
 
 document.addEventListener('DOMContentLoaded', function () {
-    const { chartData: allData, benchmarkData: benchRaw, allocation: allocData } = window.__portCharts ?? {};
+    const { chartData: allData, benchmarkData: benchRaw, allocation: allocData, demoMode } = window.__portCharts ?? {};
     if (!allData) return;
 
     const isDark     = document.documentElement.classList.contains('dark');
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    tooltip: { callbacks: { label: ctx => `${ctx.label}: $${ctx.parsed.toLocaleString('en-US', { minimumFractionDigits: 2 })}` } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.label}: ${demoMode ? '••••' : '$' + ctx.parsed.toLocaleString('en-US', { minimumFractionDigits: 2 })}` } },
                 },
             },
         });
