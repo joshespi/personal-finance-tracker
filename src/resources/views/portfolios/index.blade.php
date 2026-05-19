@@ -33,7 +33,7 @@
                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
                                 {{ $portfolio->currency }}
                                 &bull; {{ $portfolio->transactions_count }} transaction(s)
-                                &bull; {{ $portfolio->manualAssets->count() }} manual asset(s)
+                                &bull; {{ $portfolio->manual_assets_count }} manual asset(s)
                             </p>
                         </div>
                         <div class="flex items-center gap-2 shrink-0 ms-4">

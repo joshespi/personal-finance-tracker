@@ -90,9 +90,7 @@ class AnalysisController extends Controller
             ]);
         }
 
-        $prevMonthParam = $month->copy()->subMonth()->format('Y-m');
-        $nextMonthParam = $month->copy()->addMonth()->format('Y-m');
-        $isCurrentMonth = $month->isSameMonth(now());
+        ['prevMonth' => $prevMonthParam, 'nextMonth' => $nextMonthParam, 'isCurrentMonth' => $isCurrentMonth] = $this->monthNav($month);
 
         return view('analysis', [
             'tab'            => 'cashflow',

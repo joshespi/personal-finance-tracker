@@ -8,6 +8,8 @@ use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Liability;
 use App\Models\LiabilityBalance;
+use App\Models\ManualAsset;
+use App\Models\ManualValuation;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use App\Models\User;
@@ -181,6 +183,59 @@ class DashboardTest extends TestCase
         $this->actingAs($user)->get(route('dashboard'))
             ->assertOk()
             ->assertDontSee('Interest bleed');
+    }
+
+    public function test_portfolio_summary_includes_manual_asset_cost_basis(): void
+    {
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+        $btc       = $this->makePricedAsset('BTC', 50000.0);
+
+        Transaction::factory()->for($portfolio)->for($btc)->buy()->create([
+            'quantity'       => 1.0,
+            'price_per_unit' => 30000,
+        ]);
+
+        $manual = ManualAsset::factory()->for($portfolio)->create(['cost_basis' => 400000]);
+        ManualValuation::factory()->for($manual, 'manualAsset')->create(['value' => 420000]);
+
+        $response  = $this->actingAs($user)->get(route('dashboard'));
+        $summaries = $response->viewData('summaries');
+
+        $this->assertEquals(30000 + 400000, $summaries->first()['cost_basis']);
+    }
+
+    public function test_portfolio_summary_cost_basis_is_manual_asset_only_when_no_transactions(): void
+    {
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+
+        $manual = ManualAsset::factory()->for($portfolio)->create(['cost_basis' => 500000]);
+        ManualValuation::factory()->for($manual, 'manualAsset')->create(['value' => 520000]);
+
+        $response  = $this->actingAs($user)->get(route('dashboard'));
+        $summaries = $response->viewData('summaries');
+
+        $this->assertEquals(500000, $summaries->first()['cost_basis']);
+    }
+
+    public function test_portfolios_sorted_by_total_value_descending(): void
+    {
+        $user   = User::factory()->create();
+        $small  = Portfolio::factory()->for($user)->create(['name' => 'Small']);
+        $large  = Portfolio::factory()->for($user)->create(['name' => 'Large']);
+
+        $btc = $this->makePricedAsset('BTC', 50000.0);
+        $eth = $this->makePricedAsset('ETH', 100.0);
+
+        Transaction::factory()->for($large)->for($btc)->buy()->create(['quantity' => 1.0, 'price_per_unit' => 40000]);
+        Transaction::factory()->for($small)->for($eth)->buy()->create(['quantity' => 1.0, 'price_per_unit' => 80]);
+
+        $response  = $this->actingAs($user)->get(route('dashboard'));
+        $summaries = $response->viewData('summaries');
+
+        $this->assertEquals('Large', $summaries->first()['portfolio']->name);
+        $this->assertEquals('Small', $summaries->last()['portfolio']->name);
     }
 
     public function test_dashboard_sorted_by_value_descending(): void

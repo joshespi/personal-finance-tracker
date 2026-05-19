@@ -18,7 +18,7 @@ class PortfolioController extends Controller
         $portfolios = $request->user()
             ->portfolios()
             ->withCount('transactions')
-            ->with('manualAssets.latestValuation')
+            ->withCount('manualAssets')
             ->orderBy('name')
             ->get();
 

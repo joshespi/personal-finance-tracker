@@ -32,6 +32,21 @@ class ReadyToAssignTest extends TestCase
             ->assertSee('1,500.00');
     }
 
+    public function test_ready_to_assign_is_negative_when_envelopes_funded_beyond_cash(): void
+    {
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        CashTransaction::factory()->for($account)->deposit()->create(['amount' => 300]);
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 1000]);
+
+        $this->actingAs($user)
+            ->get(route('ready-to-assign'))
+            ->assertOk()
+            ->assertSee('−$700.00');
+    }
+
     public function test_zero_cash_shows_zero(): void
     {
         $user = User::factory()->create();

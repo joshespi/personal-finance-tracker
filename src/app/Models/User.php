@@ -118,11 +118,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->totalCashCache;
     }
 
+    private ?float $totalDebtCache = null;
+
     public function totalDebt(): float
     {
-        return (float) $this->liabilities()
-            ->with('latestBalance')
-            ->get()
-            ->sum(fn ($l) => $l->currentBalance());
+        if ($this->totalDebtCache === null) {
+            $this->totalDebtCache = (float) $this->liabilities()
+                ->with('latestBalance')
+                ->get()
+                ->sum(fn ($l) => $l->currentBalance());
+        }
+        return $this->totalDebtCache;
     }
 }

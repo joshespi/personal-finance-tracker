@@ -85,9 +85,7 @@ class CashflowController extends Controller
             ]);
         }
 
-        $prevMonth      = $month->copy()->subMonth()->format('Y-m');
-        $nextMonth      = $month->copy()->addMonth()->format('Y-m');
-        $isCurrentMonth = $month->isSameMonth(now());
+        ['prevMonth' => $prevMonth, 'nextMonth' => $nextMonth, 'isCurrentMonth' => $isCurrentMonth] = $this->monthNav($month);
 
         return view('cashflow', compact(
             'month', 'income', 'totalSpent', 'net',

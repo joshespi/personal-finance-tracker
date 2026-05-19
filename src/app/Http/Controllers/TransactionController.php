@@ -23,6 +23,11 @@ class TransactionController extends Controller
         'transfer_out'   => 'Transfer Out',
     ];
 
+    private function typeRule(): string
+    {
+        return 'in:' . implode(',', array_keys(self::TYPES));
+    }
+
     public function index(Request $request, Portfolio $portfolio): View
     {
         $this->authorize('view', $portfolio);
@@ -82,7 +87,7 @@ class TransactionController extends Controller
         $validated = $request->validate([
             'symbol'         => ['required', 'string', 'max:20'],
             'asset_type'     => ['required', Rule::enum(AssetType::class)],
-            'type'           => ['required', 'in:' . implode(',', array_keys(self::TYPES))],
+            'type'           => ['required', $this->typeRule()],
             'quantity'       => ['required', 'numeric', 'gt:0'],
             'price_per_unit' => ['required', 'numeric', 'gte:0'],
             'fees'           => ['nullable', 'numeric', 'gte:0'],
@@ -131,7 +136,7 @@ class TransactionController extends Controller
         $this->authorize('update', $transaction);
 
         $validated = $request->validate([
-            'type'           => ['required', 'in:' . implode(',', array_keys(self::TYPES))],
+            'type'           => ['required', $this->typeRule()],
             'quantity'       => ['required', 'numeric', 'gt:0'],
             'price_per_unit' => ['required', 'numeric', 'gte:0'],
             'fees'           => ['nullable', 'numeric', 'gte:0'],

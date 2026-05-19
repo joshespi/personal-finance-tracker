@@ -57,9 +57,7 @@ class EnvelopeController extends Controller
         $groups = collect(['Emergency Fund', 'Mandatory', 'Wealth Building', 'Spending'])
             ->mapWithKeys(fn ($key) => $grouped->has($key) ? [$key => $grouped[$key]] : []);
 
-        $prevMonth      = $month->copy()->subMonth()->format('Y-m');
-        $nextMonth      = $month->copy()->addMonth()->format('Y-m');
-        $isCurrentMonth = $month->isSameMonth(now());
+        ['prevMonth' => $prevMonth, 'nextMonth' => $nextMonth, 'isCurrentMonth' => $isCurrentMonth] = $this->monthNav($month);
 
         return view('envelopes.index', compact(
             'envelopes', 'groups', 'totalBalance', 'totalSpentMonth', 'totalFundedMonth',
