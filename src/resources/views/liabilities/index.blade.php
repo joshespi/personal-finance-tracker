@@ -25,7 +25,7 @@
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Debt</p>
                     <p class="mt-1 text-2xl font-semibold font-mono text-red-600 dark:text-red-400">
-                        −${{ number_format($totalDebt, 2) }}
+                        −${{ $demo->amt($totalDebt) }}
                     </p>
                 </div>
             @endif
@@ -39,11 +39,11 @@
                             <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div class="min-w-0">
                                     <a href="{{ route('liabilities.show', $l) }}"
-                                       class="font-medium text-gray-900 dark:text-gray-100 hover:underline">{{ $l->name }}</a>
+                                       class="font-medium text-gray-900 dark:text-gray-100 hover:underline">{{ $demo->n($l->name) }}</a>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                         {{ $liabilityTypes[$l->liability_type] ?? $l->liability_type }}
                                         @if ($l->manualAsset)
-                                            &bull; secured by <a href="{{ route('manual-assets.show', $l->manualAsset) }}" class="hover:underline">{{ $l->manualAsset->name }}</a>
+                                            &bull; secured by <a href="{{ route('manual-assets.show', $l->manualAsset) }}" class="hover:underline">{{ $demo->n($l->manualAsset->name) }}</a>
                                         @endif
                                         @if ($l->interest_rate !== null)
                                             &bull; {{ rtrim(rtrim(number_format((float)$l->interest_rate, 3), '0'), '.') }}% APR
@@ -54,7 +54,7 @@
                                 <div class="flex items-center justify-between sm:justify-end gap-4 shrink-0">
                                     <div class="text-right">
                                         @if ($l->latestBalance)
-                                            <p class="font-mono text-red-600 dark:text-red-400 text-sm">−{{ number_format((float)$l->latestBalance->balance, 2) }}</p>
+                                            <p class="font-mono text-red-600 dark:text-red-400 text-sm">−{{ $demo->amt((float)$l->latestBalance->balance) }}</p>
                                             <p class="text-xs text-gray-400 dark:text-gray-500">{{ $l->latestBalance->recorded_at->format('M j, Y') }}</p>
                                         @else
                                             <span class="text-xs text-gray-400 dark:text-gray-500">No balance</span>

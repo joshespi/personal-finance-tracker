@@ -56,6 +56,11 @@ Route::get('/dashboard', DashboardController::class)
 
 Route::middleware('auth')->group(function () {
 
+    Route::post('/demo-mode/toggle', function () {
+        app(\App\Services\DemoMode::class)->toggle();
+        return redirect()->back();
+    })->name('demo-mode.toggle');
+
     Route::get('/transactions', AllTransactionsController::class)->name('transactions.all');
     Route::get('/dividends', DividendController::class)->name('dividends');
     Route::get('/tax', TaxSummaryController::class)->name('tax.summary');

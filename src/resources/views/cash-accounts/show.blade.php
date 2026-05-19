@@ -5,7 +5,7 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                     <a href="{{ route('cash-accounts.index') }}" class="hover:underline">Spending Accounts</a>
                 </p>
-                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">{{ $account->name }}</h2>
+                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">{{ $demo->n($account->name) }}</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                     {{ $accountTypes[$account->account_type] ?? $account->account_type }} &bull; {{ $account->currency }}
                 </p>
@@ -44,7 +44,7 @@
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                 <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Current Balance</p>
                 <p class="mt-1 text-3xl font-semibold font-mono {{ $account->current_balance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
-                    {{ $account->current_balance < 0 ? '−' : '' }}${{ number_format(abs($account->current_balance), 2) }}
+                    {{ $account->current_balance < 0 ? '−' : '' }}${{ $demo->amt(abs($account->current_balance)) }}
                 </p>
             </div>
 
@@ -59,7 +59,7 @@
                         @if ($account->current_balance < 0)
                             <div>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Est. monthly interest</p>
-                                <p class="mt-0.5 font-mono font-semibold text-red-600 dark:text-red-400">${{ number_format($monthlyInterest, 2) }}</p>
+                                <p class="mt-0.5 font-mono font-semibold text-red-600 dark:text-red-400">${{ $demo->amt($monthlyInterest) }}</p>
                             </div>
                         @endif
                     @endif
@@ -211,13 +211,13 @@
                                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">
                                             @if ($t->envelope)
                                                 <a href="{{ route('envelopes.show', $t->envelope) }}"
-                                                   class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">{{ $t->envelope->name }}</a>
+                                                   class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">{{ $demo->n($t->envelope->name) }}</a>
                                             @else
                                                 <span class="text-gray-300 dark:text-gray-600">—</span>
                                             @endif
                                         </td>
                                         <td class="px-6 py-3 text-right font-mono font-semibold {{ $t->type === 'deposit' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
-                                            {{ $t->type === 'deposit' ? '+' : '−' }}{{ number_format((float)$t->amount, 2) }}
+                                            {{ $t->type === 'deposit' ? '+' : '−' }}{{ $demo->amt((float)$t->amount) }}
                                         </td>
                                         <td class="px-6 py-3 text-right">
                                             <form method="POST" action="{{ route('cash-accounts.transactions.destroy', $t) }}" class="inline"
@@ -262,12 +262,12 @@
                                         {{ $s->typeLabel() }} · {{ $s->recurrenceLabel() }}
                                         @if ($s->envelope)
                                             · <span class="inline-block w-2 h-2 rounded-full align-middle" style="background-color: {{ $s->envelope->color }}"></span>
-                                            {{ $s->envelope->name }}
+                                            {{ $demo->n($s->envelope->name) }}
                                         @endif
                                     </p>
                                 </div>
                                 <div class="text-right shrink-0">
-                                    <p class="text-sm font-mono font-semibold text-gray-900 dark:text-gray-100">${{ number_format((float)$s->amount, 2) }}</p>
+                                    <p class="text-sm font-mono font-semibold text-gray-900 dark:text-gray-100">${{ $demo->amt((float)$s->amount) }}</p>
                                     <p class="text-xs mt-0.5 {{ $s->is_active && $s->next_due_at->isPast() ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-500 dark:text-gray-400' }}">
                                         {{ $s->next_due_at->format('M j, Y') }}
                                     </p>
@@ -287,7 +287,7 @@
             close() { $store.reconcile.open = false; $store.reconcile.actualBalance = '' },
             get diff() {
                 const a = parseFloat($store.reconcile.actualBalance);
-                const c = {{ $account->current_balance }};
+                const c = {{ round($demo->scaleScalar($account->current_balance), 2) }};
                 if (isNaN(a)) return null;
                 return Math.round((a - c) * 100) / 100;
             }
@@ -303,7 +303,7 @@
             <div class="flex items-center justify-between text-sm">
                 <span class="text-gray-500 dark:text-gray-400">Tracked balance</span>
                 <span class="font-mono font-semibold text-gray-900 dark:text-gray-100">
-                    {{ $account->current_balance < 0 ? '−' : '' }}${{ number_format(abs($account->current_balance), 2) }}
+                    {{ $account->current_balance < 0 ? '−' : '' }}${{ $demo->amt(abs($account->current_balance)) }}
                 </span>
             </div>
 

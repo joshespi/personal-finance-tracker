@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <div>
-                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">{{ $portfolio->name }}</h2>
+                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">{{ $demo->n($portfolio->name) }}</h2>
                 @if ($portfolio->description)
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ $portfolio->description }}</p>
                 @endif
@@ -51,20 +51,20 @@
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Cost Basis</p>
                         <p class="mt-1 text-xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                            {{ $portfolio->currency }} {{ number_format($totalCostBasis, 2) }}
+                            {{ $portfolio->currency }} {{ $demo->amt($totalCostBasis) }}
                         </p>
                     </div>
                     @if ($hasAnyPrice)
                         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                             <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Market Value</p>
                             <p class="mt-1 text-xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                {{ $portfolio->currency }} {{ number_format($totalCurrentValue, 2) }}
+                                {{ $portfolio->currency }} {{ $demo->amt($totalCurrentValue) }}
                             </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                             <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Unrealized P&L</p>
                             <p class="mt-1 text-xl font-semibold font-mono {{ $totalUnrealized >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                {{ $totalUnrealized >= 0 ? '+' : '' }}{{ $portfolio->currency }} {{ number_format($totalUnrealized, 2) }}
+                                {{ $totalUnrealized >= 0 ? '+' : '' }}{{ $portfolio->currency }} {{ $demo->amt($totalUnrealized) }}
                             </p>
                         </div>
                     @endif
@@ -85,7 +85,7 @@
                         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                             <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Realized P&L</p>
                             <p class="mt-1 text-xl font-semibold font-mono {{ $realizedGains['totalGain'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                {{ $realizedGains['totalGain'] >= 0 ? '+' : '' }}{{ $portfolio->currency }} {{ number_format($realizedGains['totalGain'], 2) }}
+                                {{ $realizedGains['totalGain'] >= 0 ? '+' : '' }}{{ $portfolio->currency }} {{ $demo->amt($realizedGains['totalGain']) }}
                             </p>
                         </div>
                     @endif
@@ -93,7 +93,7 @@
                         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                             <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Manual Assets</p>
                             <p class="mt-1 text-xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                {{ $portfolio->currency }} {{ number_format($totalManualValue, 2) }}
+                                {{ $portfolio->currency }} {{ $demo->amt($totalManualValue) }}
                             </p>
                         </div>
                     @endif
@@ -174,10 +174,10 @@
                                             <input type="checkbox" name="include[]" value="{{ $ma->id }}"
                                                    class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
                                                    @checked($ma->include_in_chart)>
-                                            <span class="flex-1 text-sm text-gray-800 dark:text-gray-200">{{ $ma->name }}</span>
+                                            <span class="flex-1 text-sm text-gray-800 dark:text-gray-200">{{ $demo->n($ma->name) }}</span>
                                             @if ($ma->latestValuation)
                                                 <span class="text-xs font-mono text-gray-400 dark:text-gray-500">
-                                                    ${{ number_format((float) $ma->latestValuation->value, 0) }}
+                                                    ${{ $demo->amt((float) $ma->latestValuation->value, 0) }}
                                                 </span>
                                             @endif
                                         </label>
@@ -206,11 +206,11 @@
                                 @endphp
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-2">
-                                        <span class="font-mono font-semibold text-gray-900 dark:text-gray-100 w-16">{{ $h['symbol'] }}</span>
+                                        <span class="font-mono font-semibold text-gray-900 dark:text-gray-100 w-16">{{ $demo->ticker($h['symbol']) }}</span>
                                         <span class="text-xs {{ $legendColor }}">{{ $legendLabel }}</span>
                                     </div>
                                     <div class="flex items-center gap-4 text-right">
-                                        <span class="font-mono text-gray-900 dark:text-gray-100">${{ number_format($h['value'], 2) }}</span>
+                                        <span class="font-mono text-gray-900 dark:text-gray-100">${{ $demo->amt($h['value']) }}</span>
                                         <span class="text-gray-400 dark:text-gray-500 w-12">
                                             {{ $allocation['total'] > 0 ? number_format($h['value'] / $allocation['total'] * 100, 1) : 0 }}%
                                         </span>
@@ -221,7 +221,7 @@
                                 <div class="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-700">
                                     <span class="text-gray-600 dark:text-gray-400">Manual Assets</span>
                                     <div class="flex items-center gap-4 text-right">
-                                        <span class="font-mono text-gray-900 dark:text-gray-100">${{ number_format($allocation['manual_value'], 2) }}</span>
+                                        <span class="font-mono text-gray-900 dark:text-gray-100">${{ $demo->amt($allocation['manual_value']) }}</span>
                                         <span class="text-gray-400 dark:text-gray-500 w-12">
                                             {{ $allocation['total'] > 0 ? number_format($allocation['manual_value'] / $allocation['total'] * 100, 1) : 0 }}%
                                         </span>
@@ -266,7 +266,7 @@
                 $ccy = $portfolio->currency;
             @endphp
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg"
-                 x-data="holdingsSort({{ json_encode($holdingsRows) }})">
+                 x-data="holdingsSort({{ json_encode($demo->scrambleHoldings($holdingsRows)) }})">
                 <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Holdings</h3>
                     <a href="{{ route('portfolios.transactions.index', $portfolio) }}"
@@ -379,7 +379,7 @@
                         <div class="text-right">
                             <p class="text-xs text-gray-400 dark:text-gray-500">Total Realized</p>
                             <p class="font-mono font-semibold text-lg {{ $realizedGains['totalGain'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                {{ $realizedGains['totalGain'] >= 0 ? '+' : '' }}{{ $portfolio->currency }} {{ number_format($realizedGains['totalGain'], 2) }}
+                                {{ $realizedGains['totalGain'] >= 0 ? '+' : '' }}{{ $portfolio->currency }} {{ $demo->amt($realizedGains['totalGain']) }}
                             </p>
                         </div>
                     </div>
@@ -391,7 +391,7 @@
                                 <div>
                                     <p class="text-xs text-gray-400 dark:text-gray-500">{{ $year }}</p>
                                     <p class="font-mono font-semibold text-sm {{ $gain >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                        {{ $gain >= 0 ? '+' : '' }}${{ number_format($gain, 2) }}
+                                        {{ $gain >= 0 ? '+' : '' }}${{ $demo->amt($gain) }}
                                     </p>
                                 </div>
                             @endforeach
@@ -416,16 +416,16 @@
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach ($realizedGains['lots'] as $lot)
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td class="px-6 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $lot['asset']->symbol }}</td>
+                                        <td class="px-6 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $demo->ticker($lot['asset']->symbol) }}</td>
                                         <td class="px-6 py-3 text-right text-gray-500 dark:text-gray-400">{{ $lot['buy_date']->format('Y-m-d') }}</td>
                                         <td class="px-6 py-3 text-right text-gray-500 dark:text-gray-400">{{ $lot['sell_date']->format('Y-m-d') }}</td>
                                         <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">
                                             {{ rtrim(rtrim(number_format((float)$lot['quantity'], 8), '0'), '.') }}
                                         </td>
-                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ number_format($lot['cost_basis'], 2) }}</td>
-                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ number_format($lot['proceeds'], 2) }}</td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ $demo->amt($lot['cost_basis']) }}</td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ $demo->amt($lot['proceeds']) }}</td>
                                         <td class="px-6 py-3 text-right font-mono font-semibold {{ $lot['gain'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                            {{ $lot['gain'] >= 0 ? '+' : '' }}${{ number_format($lot['gain'], 2) }}
+                                            {{ $lot['gain'] >= 0 ? '+' : '' }}${{ $demo->amt($lot['gain']) }}
                                         </td>
                                         <td class="px-6 py-3 text-right font-mono text-gray-500 dark:text-gray-400">
                                             {{ number_format($lot['holding_days']) }}
@@ -495,8 +495,8 @@
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach ($rebalancing as $row)
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td class="px-6 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $row['symbol'] }}</td>
-                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ number_format($row['current_val'], 2) }}</td>
+                                        <td class="px-6 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $demo->ticker($row['symbol']) }}</td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ $demo->amt($row['current_val']) }}</td>
                                         <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ $row['current_pct'] }}%</td>
                                         <td class="px-6 py-3 text-right font-mono text-gray-500 dark:text-gray-400">{{ $row['target_pct'] }}%</td>
                                         <td class="px-6 py-3 text-right font-mono font-semibold {{ abs($row['drift_pct']) < 3 ? 'text-gray-400' : ($row['drift_pct'] > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400') }}">
@@ -507,11 +507,11 @@
                                                 <span class="text-green-500 text-xs">On target</span>
                                             @elseif ($row['diff'] > 0)
                                                 <span class="text-green-600 dark:text-green-400">
-                                                    +${{ number_format($row['diff'], 2) }} buy
+                                                    +${{ $demo->amt($row['diff']) }} buy
                                                 </span>
                                             @else
                                                 <span class="text-red-500 dark:text-red-400">
-                                                    -${{ number_format(abs($row['diff']), 2) }} sell
+                                                    -${{ $demo->amt(abs($row['diff'])) }} sell
                                                 </span>
                                             @endif
                                         </td>
@@ -555,9 +555,9 @@
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach ($incomeByAsset as $inc)
                                     <tr>
-                                        <td class="px-6 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $inc['asset']->symbol }}</td>
+                                        <td class="px-6 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $demo->ticker($inc['asset']->symbol) }}</td>
                                         <td class="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-300">
-                                            {{ $portfolio->currency }} {{ number_format((float)$inc['total_income'], 2) }}
+                                            {{ $portfolio->currency }} {{ $demo->amt((float)$inc['total_income']) }}
                                         </td>
                                     </tr>
                                 @endforeach
@@ -583,13 +583,13 @@
                             <div class="px-6 py-4 flex items-center justify-between">
                                 <div>
                                     <a href="{{ route('manual-assets.show', $ma) }}"
-                                       class="font-medium text-gray-900 dark:text-gray-100 hover:underline">{{ $ma->name }}</a>
+                                       class="font-medium text-gray-900 dark:text-gray-100 hover:underline">{{ $demo->n($ma->name) }}</a>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ ucwords(str_replace('_', ' ', $ma->asset_class)) }}</p>
                                 </div>
                                 <div class="text-right">
                                     @if ($ma->latestValuation)
                                         <p class="font-mono text-gray-900 dark:text-gray-100 text-sm">
-                                            {{ $ma->currency }} {{ number_format((float)$ma->latestValuation->value, 2) }}
+                                            {{ $ma->currency }} {{ $demo->amt((float)$ma->latestValuation->value) }}
                                         </p>
                                         <p class="text-xs text-gray-400 dark:text-gray-500">as of {{ $ma->latestValuation->valued_at->format('M j, Y') }}</p>
                                     @else
@@ -606,7 +606,15 @@
     </div>
 
     @if ($chartData->count() > 1 || $allocation['holdings']->isNotEmpty())
-        <script>window.__portCharts = { chartData: @json($chartData), benchmarkData: @json($benchmarkData), allocation: @json($allocation) };</script>
+        @php
+            $jsPortChartData = $demo->scaleAmounts($chartData->toArray());
+            $jsPortAllocation = array_merge($allocation, [
+                'holdings' => $demo->scaleAmounts($allocation['holdings']->toArray()),
+                'manual_value' => $demo->scaleScalar($allocation['manual_value']),
+                'total'        => $demo->scaleScalar($allocation['total']),
+            ]);
+        @endphp
+        <script>window.__portCharts = { chartData: @json($jsPortChartData), benchmarkData: @json($benchmarkData), allocation: @json($jsPortAllocation) };</script>
         @vite('resources/js/portfolio-charts.js')
     @endif
 </x-app-layout>

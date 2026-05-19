@@ -25,7 +25,7 @@
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Balance</p>
                     <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                        ${{ number_format($totalCash, 2) }}
+                        ${{ $demo->amt($totalCash) }}
                     </p>
                 </div>
             @endif
@@ -39,7 +39,7 @@
                             <div class="px-6 py-4 flex items-center justify-between">
                                 <div>
                                     <a href="{{ route('cash-accounts.show', $a) }}"
-                                       class="font-medium text-gray-900 dark:text-gray-100 hover:underline">{{ $a->name }}</a>
+                                       class="font-medium text-gray-900 dark:text-gray-100 hover:underline">{{ $demo->n($a->name) }}</a>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                         {{ $accountTypes[$a->account_type] ?? $a->account_type }} &bull; {{ $a->currency }}
                                     </p>
@@ -47,7 +47,7 @@
                                 <div class="flex items-center gap-4">
                                     <div class="text-right">
                                         <p class="font-mono {{ $a->current_balance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }} text-sm">
-                                            {{ $a->current_balance < 0 ? '−' : '' }}${{ number_format(abs($a->current_balance), 2) }}
+                                            {{ $a->current_balance < 0 ? '−' : '' }}${{ $demo->amt(abs($a->current_balance)) }}
                                         </p>
                                     </div>
                                     <div class="flex items-center gap-2">

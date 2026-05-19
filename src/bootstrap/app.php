@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: env('TRUSTED_PROXIES', null));
         $middleware->alias(['admin' => EnsureUserIsAdmin::class]);
         $middleware->appendToGroup('web', HandleImpersonation::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\ShareDemoMode::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -5,11 +5,11 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                     <a href="{{ route('liabilities.index') }}" class="hover:underline">Liabilities</a>
                 </p>
-                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">{{ $liability->name }}</h2>
+                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">{{ $demo->n($liability->name) }}</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                     {{ $liabilityTypes[$liability->liability_type] ?? $liability->liability_type }}
                     @if ($liability->manualAsset)
-                        &bull; secured by <a href="{{ route('manual-assets.show', $liability->manualAsset) }}" class="hover:underline">{{ $liability->manualAsset->name }}</a>
+                        &bull; secured by <a href="{{ route('manual-assets.show', $liability->manualAsset) }}" class="hover:underline">{{ $demo->n($liability->manualAsset->name) }}</a>
                     @endif
                     @if ($liability->interest_rate !== null)
                         &bull; {{ rtrim(rtrim(number_format((float)$liability->interest_rate, 3), '0'), '.') }}% APR
@@ -111,7 +111,7 @@
                                 @foreach ($liability->balances as $b)
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                         <td class="px-6 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ $b->recorded_at->format('M j, Y') }}</td>
-                                        <td class="px-6 py-3 text-right font-mono font-semibold text-red-600 dark:text-red-400">−{{ number_format((float)$b->balance, 2) }}</td>
+                                        <td class="px-6 py-3 text-right font-mono font-semibold text-red-600 dark:text-red-400">−{{ $demo->amt((float)$b->balance) }}</td>
                                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $b->notes ?? '—' }}</td>
                                         <td class="px-6 py-3 text-right">
                                             <form method="POST" action="{{ route('liabilities.balances.destroy', $b) }}" class="inline"

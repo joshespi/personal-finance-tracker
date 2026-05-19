@@ -24,7 +24,7 @@
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                                 <a href="{{ route('portfolios.show', $portfolio) }}" class="hover:underline">
-                                    {{ $portfolio->name }}
+                                    {{ $demo->n($portfolio->name) }}
                                 </a>
                             </h3>
                             @if ($portfolio->description)

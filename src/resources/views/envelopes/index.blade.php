@@ -53,15 +53,15 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total in Envelopes</p>
-                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">${{ number_format($totalBalance, 2) }}</p>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">${{ $demo->amt($totalBalance) }}</p>
                     </div>
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Funded in {{ $month->format('M Y') }}</p>
-                        <p class="mt-1 text-2xl font-semibold font-mono text-indigo-600 dark:text-indigo-400">+${{ number_format($totalFundedMonth, 2) }}</p>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-indigo-600 dark:text-indigo-400">+${{ $demo->amt($totalFundedMonth) }}</p>
                     </div>
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
                         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Spent in {{ $month->format('M Y') }}</p>
-                        <p class="mt-1 text-2xl font-semibold font-mono text-red-600 dark:text-red-400">−${{ number_format($totalSpentMonth, 2) }}</p>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-red-600 dark:text-red-400">−${{ $demo->amt($totalSpentMonth) }}</p>
                     </div>
                 </div>
             @endif
@@ -97,14 +97,14 @@
                                     $goalPct    = $goalAmount > 0 ? min(100, round($e->current_balance / $goalAmount * 100)) : 0;
 
                                     $parts = [];
-                                    if ($funded > 0) $parts[] = 'funded $' . number_format($funded, 2);
+                                    if ($funded > 0) $parts[] = 'funded $' . $demo->amt($funded);
                                     if ($target > 0) {
-                                        $parts[] = 'spent $' . number_format($spent, 2) . ' / $' . number_format($target, 2);
+                                        $parts[] = 'spent $' . $demo->amt($spent) . ' / $' . $demo->amt($target);
                                     } elseif ($spent > 0) {
-                                        $parts[] = 'spent $' . number_format($spent, 2);
+                                        $parts[] = 'spent $' . $demo->amt($spent);
                                     }
                                     if ($goalAmount > 0) {
-                                        $goalLabel = 'goal $' . number_format($e->current_balance, 2) . ' / $' . number_format($goalAmount, 2);
+                                        $goalLabel = 'goal $' . $demo->amt($e->current_balance) . ' / $' . $demo->amt($goalAmount);
                                         if ($e->goal_date) $goalLabel .= ' by ' . $e->goal_date->format('M Y');
                                         $parts[] = $goalLabel;
                                     }
@@ -114,12 +114,12 @@
                                         <div class="flex items-center gap-3 min-w-0">
                                             <span class="inline-block w-3 h-3 rounded-full shrink-0" style="background-color: {{ $e->color }}"></span>
                                             <a href="{{ route('envelopes.show', $e) }}"
-                                               class="font-medium text-gray-900 dark:text-gray-100 hover:underline truncate">{{ $e->name }}</a>
+                                               class="font-medium text-gray-900 dark:text-gray-100 hover:underline truncate">{{ $demo->n($e->name) }}</a>
                                         </div>
                                         <div class="flex items-center gap-4">
                                             <div class="text-right">
                                                 <p class="font-mono {{ $e->current_balance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }} text-sm">
-                                                    {{ $e->current_balance < 0 ? '−' : '' }}${{ number_format(abs($e->current_balance), 2) }}
+                                                    {{ $e->current_balance < 0 ? '−' : '' }}${{ $demo->amt(abs($e->current_balance)) }}
                                                 </p>
                                                 @if (count($parts))
                                                     <p class="text-xs {{ $overBudget ? 'text-red-500' : 'text-gray-400 dark:text-gray-500' }}">

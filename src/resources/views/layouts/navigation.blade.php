@@ -154,6 +154,12 @@
                         <x-dropdown-link :href="route('export.index')">
                             {{ __('Export & Backup') }}
                         </x-dropdown-link>
+                        <form method="POST" action="{{ route('demo-mode.toggle') }}">
+                            @csrf
+                            <x-dropdown-link href="#" onclick="event.preventDefault(); this.closest('form').submit();">
+                                {{ $demo->isActive() ? __('Exit Demo Mode') : __('Demo Mode') }}
+                            </x-dropdown-link>
+                        </form>
                         <x-dropdown-link :href="route('donate')">
                             {{ __('Donate') }}
                         </x-dropdown-link>

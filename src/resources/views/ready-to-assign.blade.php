@@ -28,7 +28,7 @@
                 @endif">
                 <p class="text-sm text-white/80 uppercase tracking-wide font-medium">Ready to Assign</p>
                 <p class="mt-1 text-4xl font-bold font-mono text-white">
-                    @if ($readyToAssign < 0)−@endif${{ number_format(abs($readyToAssign), 2) }}
+                    @if ($readyToAssign < 0)−@endif${{ $demo->amt(abs($readyToAssign)) }}
                 </p>
                 @if ($readyToAssign < 0)
                     <p class="mt-2 text-sm text-white/80">Your envelope balances exceed your cash. Deposit money or reduce envelope funding to reconcile.</p>
@@ -68,11 +68,11 @@
                                                 <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0"
                                                       style="background-color: {{ $envelope->color }}"></span>
                                                 <div class="flex-1 min-w-0">
-                                                    <p class="text-sm text-gray-800 dark:text-gray-200 truncate">{{ $envelope->name }}</p>
+                                                    <p class="text-sm text-gray-800 dark:text-gray-200 truncate">{{ $demo->n($envelope->name) }}</p>
                                                     <p class="text-xs text-gray-400 dark:text-gray-500 font-mono">
-                                                        Balance: ${{ number_format($envelope->current_balance, 2) }}
+                                                        Balance: ${{ $demo->amt($envelope->current_balance) }}
                                                         @if ($envelope->monthly_target)
-                                                            · Target: ${{ number_format($envelope->monthly_target, 2) }}/mo
+                                                            · Target: ${{ $demo->amt($envelope->monthly_target) }}/mo
                                                         @endif
                                                     </p>
                                                 </div>
@@ -100,7 +100,7 @@
                                             · Remaining:
                                             <span class="font-mono" :class="remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'"
                                                   x-text="(remaining < 0 ? '−' : '') + '$' + Math.abs(remaining).toFixed(2)">
-                                                ${{ number_format($readyToAssign, 2) }}
+                                                ${{ $demo->amt($readyToAssign) }}
                                             </span>
                                         </span>
                                     </div>
@@ -119,7 +119,7 @@
         function assignForm() {
             return {
                 amounts: {},
-                rta: {{ $readyToAssign }},
+                rta: {{ round($demo->scaleScalar($readyToAssign), 2) }},
                 get total() {
                     return Object.values(this.amounts).reduce((s, v) => s + (parseFloat(v) || 0), 0);
                 },

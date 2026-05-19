@@ -29,6 +29,16 @@
     </head>
     <body class="font-sans antialiased bg-slate-100 dark:bg-gray-900">
         <div class="min-h-screen">
+            @if ($demo->isActive())
+                <div class="bg-violet-600 text-white text-sm font-medium px-4 py-2 flex items-center justify-between">
+                    <span>Demo mode — financial data is anonymized.</span>
+                    <form method="POST" action="{{ route('demo-mode.toggle') }}">
+                        @csrf
+                        <button type="submit" class="ml-4 underline font-semibold hover:text-violet-200">Exit demo mode</button>
+                    </form>
+                </div>
+            @endif
+
             @if (session('impersonate_admin_id'))
                 <div class="bg-amber-500 text-amber-950 text-sm font-medium px-4 py-2 flex items-center justify-between">
                     <span>

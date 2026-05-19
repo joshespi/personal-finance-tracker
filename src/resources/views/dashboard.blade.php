@@ -18,7 +18,7 @@
                 <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-amber-800 dark:text-amber-300">
                     <div>
                         <span class="font-semibold">Interest bleed:</span>
-                        <span class="font-mono">${{ number_format($interestBleedMonthly, 2) }}/mo &middot; ${{ number_format($interestBleedYearly, 2) }}/yr</span>
+                        <span class="font-mono">${{ $demo->amt($interestBleedMonthly) }}/mo &middot; ${{ $demo->amt($interestBleedYearly) }}/yr</span>
                         draining to lenders.
                     </div>
                     <a href="{{ route('debt-payoff') }}" class="shrink-0 inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-600 rounded-md text-xs font-semibold text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">
@@ -60,13 +60,13 @@
                             <x-stat-tile>
                                 <x-slot:label>Tracked Assets</x-slot:label>
                                 <p id="tile-total-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                    ${{ number_format($totals['portfolio_value'], 2) }}
+                                    ${{ $demo->amt($totals['portfolio_value']) }}
                                 </p>
                             </x-stat-tile>
                             <x-stat-tile>
                                 <x-slot:label>Cost Basis</x-slot:label>
                                 <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                    ${{ number_format($totals['cost_basis'], 2) }}
+                                    ${{ $demo->amt($totals['cost_basis']) }}
                                 </p>
                             </x-stat-tile>
                             @if ($totals['market_value'] !== null)
@@ -74,19 +74,19 @@
                                 <x-stat-tile>
                                     <x-slot:label>Market Value</x-slot:label>
                                     <p id="tile-market-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                        ${{ number_format($totals['market_value'], 2) }}
+                                        ${{ $demo->amt($totals['market_value']) }}
                                     </p>
                                 </x-stat-tile>
                                 <x-stat-tile>
                                     <x-slot:label>Unrealized P&L</x-slot:label>
                                     <p class="mt-1 text-2xl font-semibold font-mono {{ $unr >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                        {{ $unr >= 0 ? '+$' : '-$' }}{{ number_format(abs($unr), 2) }}
+                                        {{ $unr >= 0 ? '+$' : '-$' }}{{ $demo->amt(abs($unr)) }}
                                     </p>
                                 </x-stat-tile>
                                 <x-stat-tile>
                                     <x-slot:label><span id="tile-pl-label">1Y Gain/Loss</span></x-slot:label>
                                     <p id="tile-pl-value" class="mt-1 text-2xl font-semibold font-mono {{ $unr >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                        {{ $unr >= 0 ? '+$' : '-$' }}{{ number_format(abs($unr), 2) }}
+                                        {{ $unr >= 0 ? '+$' : '-$' }}{{ $demo->amt(abs($unr)) }}
                                     </p>
                                 </x-stat-tile>
                             @endif
@@ -102,25 +102,25 @@
                             <x-stat-tile>
                                 <x-slot:label>Cash Balance</x-slot:label>
                                 <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                    ${{ number_format($totalCash, 2) }}
+                                    ${{ $demo->amt($totalCash) }}
                                 </p>
                             </x-stat-tile>
                             <x-stat-tile>
                                 <x-slot:label>Total Assets</x-slot:label>
                                 <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                    ${{ number_format($totals['total_value'], 2) }}
+                                    ${{ $demo->amt($totals['total_value']) }}
                                 </p>
                             </x-stat-tile>
                             <x-stat-tile>
                                 <x-slot:label><a href="{{ route('liabilities.index') }}" class="hover:underline">Total Debt</a></x-slot:label>
                                 <p class="mt-1 text-2xl font-semibold font-mono {{ $totals['total_debt'] > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100' }}">
-                                    {{ $totals['total_debt'] > 0 ? '−' : '' }}${{ number_format($totals['total_debt'], 2) }}
+                                    {{ $totals['total_debt'] > 0 ? '−' : '' }}${{ $demo->amt($totals['total_debt']) }}
                                 </p>
                             </x-stat-tile>
                             <x-stat-tile :highlight="true">
                                 <x-slot:label>Net Worth</x-slot:label>
                                 <p class="mt-1 text-2xl font-semibold font-mono {{ $totals['net_worth'] >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
-                                    {{ $totals['net_worth'] < 0 ? '−' : '' }}${{ number_format(abs($totals['net_worth']), 2) }}
+                                    {{ $totals['net_worth'] < 0 ? '−' : '' }}${{ $demo->amt(abs($totals['net_worth'])) }}
                                 </p>
                             </x-stat-tile>
                             @if ($totals['debt_to_asset'] !== null)
@@ -148,14 +148,14 @@
                             <x-stat-tile>
                                 <x-slot:label><a href="{{ route('ready-to-assign') }}" class="hover:underline">Ready to Assign</a></x-slot:label>
                                 <p class="mt-1 text-2xl font-semibold font-mono {{ $readyToAssign >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                    {{ $readyToAssign < 0 ? '−' : '' }}${{ number_format(abs($readyToAssign), 2) }}
+                                    {{ $readyToAssign < 0 ? '−' : '' }}${{ $demo->amt(abs($readyToAssign)) }}
                                 </p>
                             </x-stat-tile>
                             @if ($budgetRuleData['has_data'])
                                 <x-stat-tile>
                                     <x-slot:label>Monthly Spend</x-slot:label>
                                     <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                        ${{ number_format($monthlySpend, 2) }}
+                                        ${{ $demo->amt($monthlySpend) }}
                                     </p>
                                 </x-stat-tile>
                             @endif
@@ -226,7 +226,7 @@
                                         <div class="flex items-center gap-3">
                                             <span class="w-3 h-3 rounded-full shrink-0" style="background:{{ $allocation['colors'][$i] }}"></span>
                                             <span class="text-gray-700 dark:text-gray-300 min-w-[5rem]">{{ $label }}</span>
-                                            <span class="font-mono text-gray-900 dark:text-gray-100">${{ number_format($val, 2) }}</span>
+                                            <span class="font-mono text-gray-900 dark:text-gray-100">${{ $demo->amt($val) }}</span>
                                             <span class="text-gray-400 dark:text-gray-500">
                                                 ({{ $allocation['total'] > 0 ? number_format($val / $allocation['total'] * 100, 1) : 0 }}%)
                                             </span>
@@ -262,7 +262,7 @@
                                         <tr>
                                             <td class="py-2 pr-4 font-medium text-gray-900 dark:text-gray-100">{{ $row['label'] }}</td>
                                             <td class="py-2 px-4 text-right font-mono text-gray-700 dark:text-gray-300">
-                                                ${{ number_format($row['current_val'], 0) }}
+                                                ${{ $demo->amt($row['current_val'], 0) }}
                                                 <span class="text-gray-400">({{ $row['current_pct'] }}%)</span>
                                             </td>
                                             <td class="py-2 px-4 text-right font-mono text-gray-500 dark:text-gray-400">
@@ -272,7 +272,7 @@
                                                 {{ $row['drift_pct'] > 0 ? '+' : '' }}{{ number_format($row['drift_pct'], 1) }}%
                                             </td>
                                             <td class="py-2 pl-4 text-right font-mono {{ $row['diff'] < 0 ? 'text-red-600 dark:text-red-400' : ($row['diff'] > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-400') }}">
-                                                {{ $row['diff'] >= 0 ? '+' : '' }}${{ number_format(abs($row['diff']), 0) }}
+                                                {{ $row['diff'] >= 0 ? '+' : '' }}${{ $demo->amt(abs($row['diff']), 0) }}
                                                 <span class="text-xs text-gray-400">{{ $row['diff'] > 0 ? 'buy' : ($row['diff'] < 0 ? 'sell' : '—') }}</span>
                                             </td>
                                         </tr>
@@ -303,7 +303,7 @@
                         ])->values()->all();
                     @endphp
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg"
-                         x-data="holdingsSort({{ json_encode($holdingsRows) }})">
+                         x-data="holdingsSort({{ json_encode($demo->scrambleHoldings($holdingsRows)) }})">
                         <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">All Holdings</h3>
                         </div>
@@ -424,7 +424,7 @@
                                 <div>
                                     <a href="{{ route('portfolios.show', $s['portfolio']) }}"
                                        class="font-medium text-gray-900 dark:text-gray-100 hover:underline">
-                                        {{ $s['portfolio']->name }}
+                                        {{ $demo->n($s['portfolio']->name) }}
                                     </a>
                                     @if ($s['portfolio']->description)
                                         <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ $s['portfolio']->description }}</p>
@@ -433,25 +433,25 @@
                                 <div class="flex items-center gap-4 sm:gap-8 text-right text-sm">
                                     <div class="hidden sm:block">
                                         <p class="text-xs text-gray-400 dark:text-gray-500">Cost Basis</p>
-                                        <p class="font-mono text-gray-700 dark:text-gray-300">${{ number_format($s['cost_basis'], 2) }}</p>
+                                        <p class="font-mono text-gray-700 dark:text-gray-300">${{ $demo->amt($s['cost_basis']) }}</p>
                                     </div>
                                     @if ($s['market_value'] !== null)
                                         <div>
                                             <p class="text-xs text-gray-400 dark:text-gray-500">Market Value</p>
-                                            <p class="font-mono text-gray-900 dark:text-gray-100 font-semibold">${{ number_format($s['market_value'], 2) }}</p>
+                                            <p class="font-mono text-gray-900 dark:text-gray-100 font-semibold">${{ $demo->amt($s['market_value']) }}</p>
                                         </div>
                                         <div class="hidden sm:block">
                                             <p class="text-xs text-gray-400 dark:text-gray-500">P&L</p>
                                             @php $unr = $s['unrealized'] ?? 0; @endphp
                                             <p class="font-mono font-semibold {{ $unr >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                                {{ $unr >= 0 ? '+' : '' }}${{ number_format($unr, 2) }}
+                                                {{ $unr >= 0 ? '+' : '' }}${{ $demo->amt($unr) }}
                                             </p>
                                         </div>
                                     @endif
                                     @if ($s['manual_value'] > 0)
                                         <div class="hidden sm:block">
                                             <p class="text-xs text-gray-400 dark:text-gray-500">Manual</p>
-                                            <p class="font-mono text-gray-700 dark:text-gray-300">${{ number_format($s['manual_value'], 2) }}</p>
+                                            <p class="font-mono text-gray-700 dark:text-gray-300">${{ $demo->amt($s['manual_value']) }}</p>
                                         </div>
                                     @endif
                                     <a href="{{ route('portfolios.show', $s['portfolio']) }}"
@@ -470,7 +470,13 @@
     </div>
 
     @if ($chartData->count() > 1 || $allocation['total'] > 0)
-        <script>window.__dashCharts = { chartData: @json($chartData), chartDataExManual: @json($chartDataExManual), benchmarkData: @json($benchmarkData), allocation: @json($allocation) };</script>
+        @php
+            $jsChartData       = $demo->scaleAmounts($chartData->toArray());
+            $jsChartDataExMan  = $demo->scaleAmounts($chartDataExManual->toArray());
+            $jsBenchmarkData   = $benchmarkData; // normalized index — no scaling needed
+            $jsAllocation      = array_merge($allocation, ['values' => $demo->scaleValues($allocation['values']), 'total' => $demo->scaleScalar($allocation['total'])]);
+        @endphp
+        <script>window.__dashCharts = { chartData: @json($jsChartData), chartDataExManual: @json($jsChartDataExMan), benchmarkData: @json($jsBenchmarkData), allocation: @json($jsAllocation) };</script>
         @vite('resources/js/dashboard-charts.js')
     @endif
 </x-app-layout>
