@@ -47,7 +47,7 @@ class DashboardController extends Controller
             $portfolio = $ph['portfolio'];
             $holdings  = $ph['holdings'];
 
-            $costBasis    = $holdings->sum('total_cost');
+            $costBasis    = $holdings->sum('total_cost') + $portfolio->manualAssets->sum(fn ($ma) => (float) $ma->cost_basis);
             $marketValue  = $holdings->filter(fn ($h) => $h['current_value'] !== null)->sum('current_value');
             $unpricedCost = $holdings->filter(fn ($h) => $h['current_value'] === null)->sum('total_cost');
             $manualValue  = $portfolio->chartManualValue();
