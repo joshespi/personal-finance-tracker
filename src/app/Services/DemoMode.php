@@ -71,17 +71,10 @@ class DemoMode
     public function scrambleHoldings(array $rows): array
     {
         if (! $this->isActive()) return $rows;
-        $f = $this->factor();
-        return array_map(function ($h) use ($f) {
-            $h['symbol']          = $this->ticker($h['symbol']);
-            $h['total_cost']      = ($h['total_cost'] ?? 0) * $f;
-            $h['current_price']   = $h['current_price'] !== null ? $h['current_price'] * $f : null;
-            $h['current_value']   = $h['current_value'] !== null ? $h['current_value'] * $f : null;
-            $h['unrealized_gain'] = $h['unrealized_gain'] !== null ? $h['unrealized_gain'] * $f : null;
-            $h['sort_value']      = ($h['sort_value'] ?? 0) * $f;
-            $h['portfolios']      = array_map(fn ($p) => array_merge($p, [
-                'name'  => $this->n($p['name']),
-                'value' => ($p['value'] ?? 0) * $f,
+        return array_map(function ($h) {
+            $h['symbol']     = $this->ticker($h['symbol']);
+            $h['portfolios'] = array_map(fn ($p) => array_merge($p, [
+                'name' => $this->n($p['name']),
             ]), $h['portfolios'] ?? []);
             return $h;
         }, $rows);

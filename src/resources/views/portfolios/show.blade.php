@@ -266,7 +266,7 @@
                 $ccy = $portfolio->currency;
             @endphp
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg"
-                 x-data="holdingsSort({{ json_encode($demo->scrambleHoldings($holdingsRows)) }}, {{ $demo->isActive() ? 'true' : 'false' }})">
+                 x-data="holdingsSort({{ json_encode($demo->scrambleHoldings($holdingsRows)) }})">
                 <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Holdings</h3>
                     <a href="{{ route('portfolios.transactions.index', $portfolio) }}"
@@ -614,7 +614,7 @@
                 'total'        => $demo->scaleScalar($allocation['total']),
             ]);
         @endphp
-        <script>window.__portCharts = { chartData: @json($jsPortChartData), benchmarkData: @json($benchmarkData), allocation: @json($jsPortAllocation), demoMode: {{ $demo->isActive() ? 'true' : 'false' }} };</script>
+        <script>window.__portCharts = { chartData: @json($jsPortChartData), benchmarkData: @json($benchmarkData), allocation: @json($jsPortAllocation) };</script>
         @vite('resources/js/portfolio-charts.js')
     @endif
 </x-app-layout>

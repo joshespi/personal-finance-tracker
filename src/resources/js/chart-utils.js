@@ -1,3 +1,5 @@
+export const DEMO_MASK = '••••';
+
 export function cutoffDate(range) {
     const now = new Date();
     const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();

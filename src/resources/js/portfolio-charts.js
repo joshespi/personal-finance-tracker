@@ -5,12 +5,13 @@ import {
     PieController, ArcElement,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import { filterByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow, buildNorm, benchTickerColors, slicePalette } from './chart-utils';
+import { filterByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow, buildNorm, benchTickerColors, slicePalette, DEMO_MASK } from './chart-utils';
 
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
 
 document.addEventListener('DOMContentLoaded', function () {
-    const { chartData: allData, benchmarkData: benchRaw, allocation: allocData, demoMode } = window.__portCharts ?? {};
+    const { chartData: allData, benchmarkData: benchRaw, allocation: allocData } = window.__portCharts ?? {};
+    const demoMode = window.__demoMode ?? false;
     if (!allData) return;
 
     const isDark     = document.documentElement.classList.contains('dark');
@@ -106,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    tooltip: { callbacks: { label: ctx => `${ctx.label}: ${demoMode ? '••••' : '$' + ctx.parsed.toLocaleString('en-US', { minimumFractionDigits: 2 })}` } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.label}: ${demoMode ? DEMO_MASK : '$' + ctx.parsed.toLocaleString('en-US', { minimumFractionDigits: 2 })}` } },
                 },
             },
         });

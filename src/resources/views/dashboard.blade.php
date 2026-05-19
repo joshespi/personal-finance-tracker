@@ -303,7 +303,7 @@
                         ])->values()->all();
                     @endphp
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg"
-                         x-data="holdingsSort({{ json_encode($demo->scrambleHoldings($holdingsRows)) }}, {{ $demo->isActive() ? 'true' : 'false' }})">
+                         x-data="holdingsSort({{ json_encode($demo->scrambleHoldings($holdingsRows)) }})">
                         <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">All Holdings</h3>
                         </div>
@@ -476,7 +476,7 @@
             $jsBenchmarkData   = $benchmarkData; // normalized index — no scaling needed
             $jsAllocation      = array_merge($allocation, ['values' => $demo->scaleValues($allocation['values']), 'total' => $demo->scaleScalar($allocation['total'])]);
         @endphp
-        <script>window.__dashCharts = { chartData: @json($jsChartData), chartDataExManual: @json($jsChartDataExMan), benchmarkData: @json($jsBenchmarkData), allocation: @json($jsAllocation), demoMode: {{ $demo->isActive() ? 'true' : 'false' }} };</script>
+        <script>window.__dashCharts = { chartData: @json($jsChartData), chartDataExManual: @json($jsChartDataExMan), benchmarkData: @json($jsBenchmarkData), allocation: @json($jsAllocation) };</script>
         @vite('resources/js/dashboard-charts.js')
     @endif
 </x-app-layout>

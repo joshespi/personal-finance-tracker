@@ -5,7 +5,7 @@ import {
     PieController, ArcElement,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import { filterByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow, buildNorm, benchTickerColors } from './chart-utils';
+import { filterByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow, buildNorm, benchTickerColors, DEMO_MASK } from './chart-utils';
 
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
 
@@ -40,24 +40,25 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    const demoMode = window.__dashCharts?.demoMode ?? false;
+    const demoMode = window.__demoMode ?? false;
 
     function updateTiles(filtered, range) {
         if (!filtered.length) return;
         const last  = filtered[filtered.length - 1];
         const first = filtered[0];
 
+        const tileValue = demoMode ? DEMO_MASK : fmtFull(last.value);
         const mvEl = document.getElementById('tile-market-value');
-        if (mvEl) mvEl.textContent = demoMode ? '••••' : fmtFull(last.value);
+        if (mvEl) mvEl.textContent = tileValue;
 
         const totEl = document.getElementById('tile-total-value');
-        if (totEl) totEl.textContent = demoMode ? '••••' : fmtFull(last.value);
+        if (totEl) totEl.textContent = tileValue;
 
         const plEl    = document.getElementById('tile-pl-value');
         const plLabel = document.getElementById('tile-pl-label');
         if (plEl) {
             if (demoMode) {
-                plEl.textContent = '••••';
+                plEl.textContent = DEMO_MASK;
             } else {
                 const pl = last.value - first.value;
                 plEl.textContent = (pl >= 0 ? '+$' : '-$') + Math.abs(pl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
