@@ -18,24 +18,25 @@ class DemoMode
         'KYST', 'LNDN', 'MAPL', 'NRDC', 'ONYX', 'PRSM',
     ];
 
-    private ?bool $active = null;
-    private ?float $factor = null;
-    private ?string $salt = null;
+    private ?bool   $cachedActive  = null;
+    private ?float  $cachedFactor  = null;
+    private ?string $cachedSalt    = null;
 
     public function isActive(): bool
     {
-        return $this->active ??= session('demo_mode', (bool) config('app.demo_mode', false));
+        return $this->cachedActive ??= (bool) session('demo_mode', (bool) config('app.demo_mode', false));
     }
 
     public function toggle(): void
     {
-        $this->active = ! $this->isActive();
-        session(['demo_mode' => $this->active]);
+        $this->cachedActive = ! $this->isActive();
+        session(['demo_mode' => $this->cachedActive]);
     }
 
     public function amt(float|int $value, int $decimals = 2): string
     {
-        return number_format($this->isActive() ? $value * $this->factor() : $value, $decimals);
+        if ($this->isActive()) return '••••';
+        return number_format($value, $decimals);
     }
 
     public function scaleScalar(float|int $value): float|int
@@ -88,24 +89,24 @@ class DemoMode
 
     public function factor(): float
     {
-        if ($this->factor === null) {
+        if ($this->cachedFactor === null) {
             if (! session()->has('demo_factor')) {
                 session(['demo_factor' => mt_rand(45, 195) / 100]);
             }
-            $this->factor = (float) session('demo_factor');
+            $this->cachedFactor = (float) session('demo_factor');
         }
-        return $this->factor;
+        return $this->cachedFactor;
     }
 
     private function salt(): string
     {
-        if ($this->salt === null) {
+        if ($this->cachedSalt === null) {
             if (! session()->has('demo_salt')) {
                 session(['demo_salt' => Str::random(8)]);
             }
-            $this->salt = session('demo_salt');
+            $this->cachedSalt = session('demo_salt');
         }
-        return $this->salt;
+        return $this->cachedSalt;
     }
 
     private function walk(mixed $value): mixed
