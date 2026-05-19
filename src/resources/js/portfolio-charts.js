@@ -5,7 +5,7 @@ import {
     PieController, ArcElement,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import { filterByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow, buildNorm, benchTickerColors } from './chart-utils';
+import { filterByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow, buildNorm, benchTickerColors, slicePalette } from './chart-utils';
 
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
 
@@ -97,9 +97,10 @@ document.addEventListener('DOMContentLoaded', function () {
             labels.push('Manual');
             values.push(allocData.manual_value);
         }
+        const colors = values.map((_, i) => slicePalette[i % slicePalette.length]);
         new Chart(donutEl, {
             type: 'pie',
-            data: { labels, datasets: [{ data: values, borderWidth: 0 }] },
+            data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,

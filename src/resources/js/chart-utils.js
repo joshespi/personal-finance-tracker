@@ -77,3 +77,8 @@ export function buildNorm(data, key, range) {
 }
 
 export const benchTickerColors = { SPY: '#10b981', BTC: '#f59e0b' };
+
+export const slicePalette = [
+    '#6366f1','#10b981','#f59e0b','#ef4444','#3b82f6',
+    '#8b5cf6','#f97316','#14b8a6','#ec4899','#84cc16',
+];
