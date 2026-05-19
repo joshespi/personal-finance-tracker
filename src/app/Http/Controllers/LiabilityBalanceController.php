@@ -11,7 +11,7 @@ class LiabilityBalanceController extends Controller
 {
     public function store(Request $request, Liability $liability): RedirectResponse
     {
-        abort_unless($liability->user_id === $request->user()->id, 403);
+        $this->authorize('update', $liability);
 
         $validated = $request->validate([
             'balance'     => ['required', 'numeric', 'gte:0'],
@@ -26,7 +26,7 @@ class LiabilityBalanceController extends Controller
 
     public function destroy(Request $request, LiabilityBalance $balance): RedirectResponse
     {
-        abort_unless($balance->liability->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $balance);
 
         $liabilityId = $balance->liability_id;
         $balance->delete();

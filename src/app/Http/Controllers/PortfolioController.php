@@ -50,7 +50,7 @@ class PortfolioController extends Controller
 
     public function show(Request $request, Portfolio $portfolio): View
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('view', $portfolio);
 
         $portfolio->load(['transactions.asset.latestPrice', 'manualAssets.latestValuation', 'manualAssets.proxyAsset.latestPrice', 'snapshots', 'slices.asset.latestPrice']);
 
@@ -88,14 +88,14 @@ class PortfolioController extends Controller
 
     public function edit(Request $request, Portfolio $portfolio): View
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $portfolio);
 
         return view('portfolios.edit', compact('portfolio'));
     }
 
     public function update(Request $request, Portfolio $portfolio): RedirectResponse
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $portfolio);
 
         $validated = $request->validate([
             'name'              => ['required', 'string', 'max:100'],
@@ -118,13 +118,25 @@ class PortfolioController extends Controller
 
     public function destroy(Request $request, Portfolio $portfolio): RedirectResponse
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $portfolio);
 
         ActivityLog::record('portfolio.deleted', null, ['name' => $portfolio->name]);
 
         $portfolio->delete();
 
         return redirect()->route('portfolios.index')->with('success', 'Portfolio deleted.');
+    }
+
+    public function updateChartVisibility(Request $request, Portfolio $portfolio): RedirectResponse
+    {
+        $this->authorize('update', $portfolio);
+
+        $enabled = collect($request->input('include', []))->map('intval')->all();
+
+        $portfolio->manualAssets()->whereIn('id', $enabled)->update(['include_in_chart' => true]);
+        $portfolio->manualAssets()->whereNotIn('id', $enabled)->update(['include_in_chart' => false]);
+
+        return redirect()->route('portfolios.show', $portfolio);
     }
 
     private function buildAllocation(Collection $holdings, Portfolio $portfolio): array

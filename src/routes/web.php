@@ -93,6 +93,9 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('portfolios.manual-assets', ManualAssetController::class)->shallow();
 
+    Route::patch('portfolios/{portfolio}/chart-visibility', [PortfolioController::class, 'updateChartVisibility'])
+        ->name('portfolios.chart-visibility');
+
     Route::post('portfolios/{portfolio}/slices', [PortfolioSliceController::class, 'store'])->name('portfolios.slices.store');
     Route::delete('portfolios/{portfolio}/slices/{slice}', [PortfolioSliceController::class, 'destroy'])->name('portfolios.slices.destroy');
 

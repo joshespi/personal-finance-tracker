@@ -41,7 +41,7 @@ class ScheduledTransactionController extends Controller
 
     public function edit(Request $request, ScheduledTransaction $scheduledTransaction): View
     {
-        abort_unless($scheduledTransaction->user_id === $request->user()->id, 403);
+        $this->authorize('update', $scheduledTransaction);
         $envelopes   = $request->user()->envelopes()->orderBy('sort_order')->get();
         $cashAccounts = $request->user()->cashAccounts()->orderBy('name')->get();
         return view('scheduled-transactions.edit', compact('scheduledTransaction', 'envelopes', 'cashAccounts'));
@@ -49,7 +49,7 @@ class ScheduledTransactionController extends Controller
 
     public function update(Request $request, ScheduledTransaction $scheduledTransaction): RedirectResponse
     {
-        abort_unless($scheduledTransaction->user_id === $request->user()->id, 403);
+        $this->authorize('update', $scheduledTransaction);
         $scheduledTransaction->update($this->validated($request));
         return redirect()->route('scheduled-transactions.index')
             ->with('success', 'Scheduled transaction updated.');
@@ -57,7 +57,7 @@ class ScheduledTransactionController extends Controller
 
     public function destroy(Request $request, ScheduledTransaction $scheduledTransaction): RedirectResponse
     {
-        abort_unless($scheduledTransaction->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $scheduledTransaction);
         $scheduledTransaction->delete();
         return redirect()->route('scheduled-transactions.index')
             ->with('success', 'Scheduled transaction deleted.');
@@ -65,7 +65,7 @@ class ScheduledTransactionController extends Controller
 
     public function toggle(Request $request, ScheduledTransaction $scheduledTransaction): RedirectResponse
     {
-        abort_unless($scheduledTransaction->user_id === $request->user()->id, 403);
+        $this->authorize('update', $scheduledTransaction);
         $scheduledTransaction->update(['is_active' => ! $scheduledTransaction->is_active]);
         return redirect()->route('scheduled-transactions.index');
     }

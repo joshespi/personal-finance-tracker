@@ -13,7 +13,7 @@ class EnvelopeTransactionController extends Controller
 {
     public function store(Request $request, Envelope $envelope): RedirectResponse
     {
-        abort_unless($envelope->user_id === $request->user()->id, 403);
+        $this->authorize('update', $envelope);
 
         $validated = $request->validate([
             'type'            => ['required', 'in:fund'],
@@ -26,7 +26,7 @@ class EnvelopeTransactionController extends Controller
         $cashAccount = null;
         if (! empty($validated['cash_account_id'])) {
             $cashAccount = CashAccount::find($validated['cash_account_id']);
-            abort_unless($cashAccount && $cashAccount->user_id === $request->user()->id, 403);
+            $this->authorize('update', $cashAccount);
         }
 
         $envelopeName = $envelope->name;
@@ -60,7 +60,7 @@ class EnvelopeTransactionController extends Controller
 
     public function destroy(Request $request, EnvelopeTransaction $transaction): RedirectResponse
     {
-        abort_unless($transaction->envelope->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $transaction);
 
         $envelopeId = $transaction->envelope_id;
         $transaction->delete();

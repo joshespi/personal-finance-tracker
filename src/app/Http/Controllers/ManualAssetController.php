@@ -15,7 +15,7 @@ class ManualAssetController extends Controller
 {
     public function index(Request $request, Portfolio $portfolio): View
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $portfolio);
 
         $manualAssets = $portfolio->manualAssets()->with('latestValuation')->orderBy('name')->get();
 
@@ -24,7 +24,7 @@ class ManualAssetController extends Controller
 
     public function create(Request $request, Portfolio $portfolio): View
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $portfolio);
 
         return view('manual-assets.create', [
             'portfolio'    => $portfolio,
@@ -34,7 +34,7 @@ class ManualAssetController extends Controller
 
     public function store(Request $request, Portfolio $portfolio): RedirectResponse
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $portfolio);
 
         $validated = $this->validatePayload($request);
         $validated['tracking_method'] ??= 'static';
@@ -50,7 +50,7 @@ class ManualAssetController extends Controller
 
     public function show(Request $request, ManualAsset $manualAsset): View
     {
-        abort_unless($manualAsset->portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('view', $manualAsset);
 
         $manualAsset->load([
             'portfolio',
@@ -68,7 +68,7 @@ class ManualAssetController extends Controller
 
     public function edit(Request $request, ManualAsset $manualAsset): View
     {
-        abort_unless($manualAsset->portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $manualAsset);
 
         $manualAsset->load(['portfolio', 'proxyAsset']);
 
@@ -81,7 +81,7 @@ class ManualAssetController extends Controller
 
     public function update(Request $request, ManualAsset $manualAsset): RedirectResponse
     {
-        abort_unless($manualAsset->portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $manualAsset);
 
         $validated = $this->validatePayload($request);
         $validated['tracking_method'] ??= 'static';
@@ -97,7 +97,7 @@ class ManualAssetController extends Controller
 
     public function destroy(Request $request, ManualAsset $manualAsset): RedirectResponse
     {
-        abort_unless($manualAsset->portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $manualAsset);
 
         $portfolioId = $manualAsset->portfolio_id;
         $manualAsset->delete();

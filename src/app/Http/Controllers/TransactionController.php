@@ -25,7 +25,7 @@ class TransactionController extends Controller
 
     public function index(Request $request, Portfolio $portfolio): View
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('view', $portfolio);
 
         $query = $portfolio->transactions()->with([
             'asset',
@@ -70,14 +70,14 @@ class TransactionController extends Controller
 
     public function create(Request $request, Portfolio $portfolio): View
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $portfolio);
 
         return view('transactions.create', ['portfolio' => $portfolio, 'types' => self::TYPES]);
     }
 
     public function store(Request $request, Portfolio $portfolio): RedirectResponse
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $portfolio);
 
         $validated = $request->validate([
             'symbol'         => ['required', 'string', 'max:20'],
@@ -114,7 +114,7 @@ class TransactionController extends Controller
 
     public function edit(Request $request, Transaction $transaction): View
     {
-        abort_unless($transaction->portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $transaction);
 
         $transaction->load('asset', 'portfolio');
 
@@ -128,7 +128,7 @@ class TransactionController extends Controller
 
     public function update(Request $request, Transaction $transaction): RedirectResponse
     {
-        abort_unless($transaction->portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $transaction);
 
         $validated = $request->validate([
             'type'           => ['required', 'in:' . implode(',', array_keys(self::TYPES))],
@@ -157,7 +157,7 @@ class TransactionController extends Controller
 
     public function destroy(Request $request, Transaction $transaction): RedirectResponse
     {
-        abort_unless($transaction->portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $transaction);
 
         $portfolioId = $transaction->portfolio_id;
         $symbol = $transaction->asset->symbol ?? 'unknown';

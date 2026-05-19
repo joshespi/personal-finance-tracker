@@ -145,8 +145,52 @@
 
             {{-- Asset allocation donut --}}
             @if ($allocation['holdings']->isNotEmpty())
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
-                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Allocation</h3>
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5"
+                     x-data="{ visOpen: false }">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Allocation</h3>
+                        @if ($portfolio->manualAssets->isNotEmpty())
+                            <button @click="visOpen = true"
+                                    class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+                                Manage manual assets
+                            </button>
+                        @endif
+                    </div>
+
+                    {{-- Chart visibility modal --}}
+                    <div x-show="visOpen" x-cloak
+                         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                         @keydown.escape.window="visOpen = false">
+                        <div class="absolute inset-0 bg-black/50" @click="visOpen = false"></div>
+                        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 space-y-4">
+                            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Chart visibility — manual assets</h4>
+                            <form method="POST"
+                                  action="{{ route('portfolios.chart-visibility', $portfolio) }}"
+                                  @submit="visOpen = false">
+                                @csrf @method('PATCH')
+                                <div class="space-y-2">
+                                    @foreach ($portfolio->manualAssets as $ma)
+                                        <label class="flex items-center gap-3 cursor-pointer">
+                                            <input type="checkbox" name="include[]" value="{{ $ma->id }}"
+                                                   class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                                                   @checked($ma->include_in_chart)>
+                                            <span class="flex-1 text-sm text-gray-800 dark:text-gray-200">{{ $ma->name }}</span>
+                                            @if ($ma->latestValuation)
+                                                <span class="text-xs font-mono text-gray-400 dark:text-gray-500">
+                                                    ${{ number_format((float) $ma->latestValuation->value, 0) }}
+                                                </span>
+                                            @endif
+                                        </label>
+                                    @endforeach
+                                </div>
+                                <div class="flex justify-end gap-3 mt-5">
+                                    <button type="button" @click="visOpen = false"
+                                            class="text-sm text-gray-500 dark:text-gray-400 hover:underline">Cancel</button>
+                                    <x-primary-button type="submit">Save</x-primary-button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                     <div class="flex flex-col sm:flex-row items-center gap-8">
                         <div class="w-64 h-64 shrink-0 relative"><canvas id="portAllocationDonut"></canvas></div>
                         <div class="space-y-2 text-sm w-full max-w-sm">

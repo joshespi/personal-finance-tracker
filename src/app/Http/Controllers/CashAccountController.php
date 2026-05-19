@@ -58,7 +58,7 @@ class CashAccountController extends Controller
 
     public function show(Request $request, CashAccount $cashAccount): View
     {
-        abort_unless($cashAccount->user_id === $request->user()->id, 403);
+        $this->authorize('view', $cashAccount);
 
         $cashAccount->load([
             'transactions'         => fn ($q) => $q->with('envelope:id,name')->orderByDesc('occurred_at')->orderByDesc('id'),
@@ -79,7 +79,7 @@ class CashAccountController extends Controller
 
     public function edit(Request $request, CashAccount $cashAccount): View
     {
-        abort_unless($cashAccount->user_id === $request->user()->id, 403);
+        $this->authorize('update', $cashAccount);
 
         return view('cash-accounts.edit', [
             'account'      => $cashAccount,
@@ -89,7 +89,7 @@ class CashAccountController extends Controller
 
     public function update(Request $request, CashAccount $cashAccount): RedirectResponse
     {
-        abort_unless($cashAccount->user_id === $request->user()->id, 403);
+        $this->authorize('update', $cashAccount);
 
         $validated = $this->validatePayload($request);
         $cashAccount->update($validated);
@@ -99,7 +99,7 @@ class CashAccountController extends Controller
 
     public function destroy(Request $request, CashAccount $cashAccount): RedirectResponse
     {
-        abort_unless($cashAccount->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $cashAccount);
 
         $cashAccount->delete();
 
@@ -108,7 +108,7 @@ class CashAccountController extends Controller
 
     public function reconcile(Request $request, CashAccount $cashAccount): RedirectResponse
     {
-        abort_unless($cashAccount->user_id === $request->user()->id, 403);
+        $this->authorize('update', $cashAccount);
 
         $validated = $request->validate([
             'actual_balance' => ['required', 'numeric'],

@@ -77,7 +77,7 @@ class WatchlistController extends Controller
 
     public function destroy(Request $request, WatchlistItem $watchlistItem): RedirectResponse
     {
-        abort_unless($watchlistItem->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $watchlistItem);
 
         $symbol = $watchlistItem->symbol;
 

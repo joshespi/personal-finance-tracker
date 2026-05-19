@@ -60,7 +60,7 @@ class LiabilityController extends Controller
 
     public function show(Request $request, Liability $liability): View
     {
-        abort_unless($liability->user_id === $request->user()->id, 403);
+        $this->authorize('view', $liability);
 
         $liability->load([
             'manualAsset.portfolio',
@@ -75,14 +75,14 @@ class LiabilityController extends Controller
 
     public function edit(Request $request, Liability $liability): View
     {
-        abort_unless($liability->user_id === $request->user()->id, 403);
+        $this->authorize('update', $liability);
 
         return view('liabilities.edit', $this->formData($request, $liability));
     }
 
     public function update(Request $request, Liability $liability): RedirectResponse
     {
-        abort_unless($liability->user_id === $request->user()->id, 403);
+        $this->authorize('update', $liability);
 
         $validated = $this->validatePayload($request);
 
@@ -98,7 +98,7 @@ class LiabilityController extends Controller
 
     public function destroy(Request $request, Liability $liability): RedirectResponse
     {
-        abort_unless($liability->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $liability);
 
         $liability->delete();
 

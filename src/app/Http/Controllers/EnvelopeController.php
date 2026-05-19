@@ -87,7 +87,7 @@ class EnvelopeController extends Controller
 
     public function show(Request $request, Envelope $envelope): View
     {
-        abort_unless($envelope->user_id === $request->user()->id, 403);
+        $this->authorize('view', $envelope);
 
         $envelope->load([
             'transactions'     => fn ($q) => $q->where('type', 'fund')->orderByDesc('occurred_at')->orderByDesc('id'),
@@ -103,14 +103,14 @@ class EnvelopeController extends Controller
 
     public function edit(Request $request, Envelope $envelope): View
     {
-        abort_unless($envelope->user_id === $request->user()->id, 403);
+        $this->authorize('update', $envelope);
 
         return view('envelopes.edit', compact('envelope'));
     }
 
     public function update(Request $request, Envelope $envelope): RedirectResponse
     {
-        abort_unless($envelope->user_id === $request->user()->id, 403);
+        $this->authorize('update', $envelope);
 
         $validated = $this->validatePayload($request);
 
@@ -125,7 +125,7 @@ class EnvelopeController extends Controller
 
     public function destroy(Request $request, Envelope $envelope): RedirectResponse
     {
-        abort_unless($envelope->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $envelope);
 
         $envelope->delete();
 

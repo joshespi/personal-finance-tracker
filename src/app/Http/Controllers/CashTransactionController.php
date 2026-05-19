@@ -12,7 +12,7 @@ class CashTransactionController extends Controller
 {
     public function store(Request $request, CashAccount $cashAccount): RedirectResponse
     {
-        abort_unless($cashAccount->user_id === $request->user()->id, 403);
+        $this->authorize('update', $cashAccount);
 
         $validated = $request->validate([
             'type'        => ['required', 'in:deposit,withdrawal'],
@@ -39,7 +39,7 @@ class CashTransactionController extends Controller
 
     public function destroy(Request $request, CashTransaction $transaction): RedirectResponse
     {
-        abort_unless($transaction->cashAccount->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $transaction);
 
         $accountId = $transaction->cash_account_id;
         $transaction->delete();

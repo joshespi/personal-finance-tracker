@@ -23,7 +23,7 @@ class IncomeEntryController extends Controller
 
     public function destroy(Request $request, IncomeEntry $incomeEntry): RedirectResponse
     {
-        abort_unless($incomeEntry->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $incomeEntry);
 
         $incomeEntry->delete();
 

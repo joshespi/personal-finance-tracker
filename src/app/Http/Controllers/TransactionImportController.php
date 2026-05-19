@@ -29,7 +29,7 @@ class TransactionImportController extends Controller
 
     public function store(Request $request, Portfolio $portfolio): RedirectResponse
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $portfolio);
 
         $request->validate([
             'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],

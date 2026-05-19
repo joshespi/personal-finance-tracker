@@ -11,7 +11,7 @@ class ManualValuationController extends Controller
 {
     public function store(Request $request, ManualAsset $manualAsset): RedirectResponse
     {
-        abort_unless($manualAsset->portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $manualAsset);
 
         $validated = $request->validate([
             'value'     => ['required', 'numeric', 'gte:0'],
@@ -26,7 +26,7 @@ class ManualValuationController extends Controller
 
     public function destroy(Request $request, ManualValuation $valuation): RedirectResponse
     {
-        abort_unless($valuation->manualAsset->portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('delete', $valuation);
 
         $assetId = $valuation->manual_asset_id;
         $valuation->delete();

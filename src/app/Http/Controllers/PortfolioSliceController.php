@@ -13,7 +13,7 @@ class PortfolioSliceController extends Controller
 {
     public function store(Request $request, Portfolio $portfolio): RedirectResponse
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $portfolio);
 
         $data = $request->validate([
             'symbol'     => ['required', 'string', 'max:20', Rule::exists('assets', 'symbol')],
@@ -32,7 +32,7 @@ class PortfolioSliceController extends Controller
 
     public function destroy(Request $request, Portfolio $portfolio, PortfolioSlice $slice): RedirectResponse
     {
-        abort_unless($portfolio->user_id === $request->user()->id, 403);
+        $this->authorize('update', $portfolio);
         abort_unless($slice->portfolio_id === $portfolio->id, 403);
 
         $slice->delete();
