@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\LiabilityBalance;
 use App\Models\ScheduledTransaction;
 use App\Models\User;
 use Carbon\Carbon;
@@ -16,7 +17,7 @@ class ScheduledTransactionService
         $due = $user->scheduledTransactions()
             ->where('is_active', true)
             ->where('next_due_at', '<=', today())
-            ->with(['envelope', 'cashAccount'])
+            ->with(['envelope', 'cashAccount', 'liability.latestBalance'])
             ->get();
 
         DB::transaction(function () use ($due) {
@@ -50,10 +51,11 @@ class ScheduledTransactionService
     private function createTransactions(ScheduledTransaction $scheduled, Carbon $date): void
     {
         match ($scheduled->type) {
-            'envelope_fund' => $this->envelopeFund($scheduled, $date),
-            'envelope_spend' => $this->envelopeSpend($scheduled, $date),
-            'cash_deposit' => $this->cashDeposit($scheduled, $date),
-            'cash_withdrawal' => $this->cashWithdrawal($scheduled, $date),
+            'envelope_fund'    => $this->envelopeFund($scheduled, $date),
+            'envelope_spend'   => $this->envelopeSpend($scheduled, $date),
+            'cash_deposit'     => $this->cashDeposit($scheduled, $date),
+            'cash_withdrawal'  => $this->cashWithdrawal($scheduled, $date),
+            'mortgage_payment' => $this->mortgagePayment($scheduled, $date),
         };
     }
 
@@ -105,6 +107,33 @@ class ScheduledTransactionService
             'description' => $s->description,
             'occurred_at' => $date,
         ]);
+    }
+
+    private function mortgagePayment(ScheduledTransaction $s, Carbon $date): void
+    {
+        $s->cashAccount->transactions()->create([
+            'type'        => 'withdrawal',
+            'envelope_id' => $s->envelope_id,
+            'amount'      => $s->amount,
+            'description' => $s->description,
+            'occurred_at' => $date,
+        ]);
+
+        if ($s->liability) {
+            $liability   = $s->liability;
+            $balance     = $liability->currentBalance();
+            $rate        = (float) ($liability->interest_rate ?? 0);
+            $piPayment   = (float) ($liability->minimum_payment ?? 0);
+            $interest    = $rate > 0 ? round($balance * $rate / 100 / 12, 2) : 0.0;
+            $principal   = max(0.0, round($piPayment - $interest, 2));
+            $newBalance  = round(max(0.0, $balance - $principal), 2);
+
+            LiabilityBalance::create([
+                'liability_id' => $liability->id,
+                'balance'      => $newBalance,
+                'recorded_at'  => $date->toDateString(),
+            ]);
+        }
     }
 
     private function advance(Carbon $date, string $recurrence): Carbon

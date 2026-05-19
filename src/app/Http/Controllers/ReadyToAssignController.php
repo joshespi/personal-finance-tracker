@@ -25,7 +25,16 @@ class ReadyToAssignController extends Controller
 
         $readyToAssign = round($user->totalCash() - $envelopes->sum('current_balance'), 2);
 
-        return view('ready-to-assign', compact('readyToAssign', 'envelopes'));
+        $grouped = $envelopes->groupBy(fn ($e) => match (true) {
+            $e->is_emergency_fund => 'Emergency Fund',
+            $e->is_mandatory      => 'Mandatory',
+            $e->is_savings        => 'Wealth Building',
+            default               => 'Spending',
+        });
+        $groups = collect(['Emergency Fund', 'Mandatory', 'Wealth Building', 'Spending'])
+            ->mapWithKeys(fn ($key) => $grouped->has($key) ? [$key => $grouped[$key]] : []);
+
+        return view('ready-to-assign', compact('readyToAssign', 'groups'));
     }
 
     public function assign(Request $request): RedirectResponse

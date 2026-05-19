@@ -132,12 +132,18 @@ class PlanningController extends Controller
         $user = $request->user();
 
         $portfolioIds = $user->portfolios()->pluck('id');
-        $defaultValue = $portfolioIds->isNotEmpty()
-            ? round((float) PortfolioSnapshot::whereIn('portfolio_id', $portfolioIds)
-                ->whereRaw('recorded_on = (SELECT MAX(s2.recorded_on) FROM portfolio_snapshots s2 WHERE s2.portfolio_id = portfolio_snapshots.portfolio_id)')
-                ->selectRaw('SUM(market_value + manual_value) as total')
-                ->value('total'), 2)
-            : 0.0;
+        if ($portfolioIds->isNotEmpty()) {
+            $latestDates  = PortfolioSnapshot::whereIn('portfolio_id', $portfolioIds)
+                ->selectRaw('portfolio_id, MAX(recorded_on) as max_date')
+                ->groupBy('portfolio_id');
+            $defaultValue = round((float) PortfolioSnapshot::joinSub($latestDates, 'latest', fn ($j) =>
+                $j->on('portfolio_snapshots.portfolio_id', '=', 'latest.portfolio_id')
+                  ->on('portfolio_snapshots.recorded_on', '=', 'latest.max_date')
+            )->selectRaw('SUM(portfolio_snapshots.market_value + portfolio_snapshots.manual_value) as total')
+             ->value('total'), 2);
+        } else {
+            $defaultValue = 0.0;
+        }
 
         $sixMonthsAgo  = now()->subMonths(6)->startOfMonth();
         $lastMonthEnd  = now()->subMonth()->endOfMonth();

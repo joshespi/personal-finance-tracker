@@ -50,7 +50,7 @@
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Enter amounts to fund envelopes from your ready-to-assign balance.</p>
                         </div>
 
-                        @if ($envelopes->isEmpty())
+                        @if ($groups->isEmpty())
                             <div class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                                 <p>No envelopes yet.</p>
                                 <a href="{{ route('envelopes.create') }}" class="mt-2 inline-block text-indigo-600 dark:text-indigo-400 hover:underline">Create your first envelope &rarr;</a>
@@ -59,30 +59,35 @@
                             <form method="POST" action="{{ route('ready-to-assign.assign') }}" x-data="assignForm()" @submit="submitForm">
                                 @csrf
                                 <div class="divide-y divide-gray-100 dark:divide-gray-700">
-                                    @foreach ($envelopes as $envelope)
-                                        <div class="px-6 py-3 flex items-center gap-3">
-                                            <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                                                  style="background-color: {{ $envelope->color }}"></span>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm text-gray-800 dark:text-gray-200 truncate">{{ $envelope->name }}</p>
-                                                <p class="text-xs text-gray-400 dark:text-gray-500 font-mono">
-                                                    Balance: ${{ number_format($envelope->current_balance, 2) }}
-                                                    @if ($envelope->monthly_target)
-                                                        · Target: ${{ number_format($envelope->monthly_target, 2) }}/mo
-                                                    @endif
-                                                </p>
-                                            </div>
-                                            <div class="relative w-32 shrink-0">
-                                                <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">$</span>
-                                                <input type="number"
-                                                       name="amounts[{{ $envelope->id }}]"
-                                                       step="0.01"
-                                                       min="0"
-                                                       x-model.number="amounts[{{ $envelope->id }}]"
-                                                       class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm pl-7 py-1.5"
-                                                       placeholder="0.00">
-                                            </div>
+                                    @foreach ($groups as $groupName => $groupEnvelopes)
+                                        <div class="px-6 py-2 bg-gray-50 dark:bg-gray-700/50">
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ $groupName }}</p>
                                         </div>
+                                        @foreach ($groupEnvelopes as $envelope)
+                                            <div class="px-6 py-3 flex items-center gap-3">
+                                                <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                                                      style="background-color: {{ $envelope->color }}"></span>
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-sm text-gray-800 dark:text-gray-200 truncate">{{ $envelope->name }}</p>
+                                                    <p class="text-xs text-gray-400 dark:text-gray-500 font-mono">
+                                                        Balance: ${{ number_format($envelope->current_balance, 2) }}
+                                                        @if ($envelope->monthly_target)
+                                                            · Target: ${{ number_format($envelope->monthly_target, 2) }}/mo
+                                                        @endif
+                                                    </p>
+                                                </div>
+                                                <div class="relative w-32 shrink-0">
+                                                    <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">$</span>
+                                                    <input type="number"
+                                                           name="amounts[{{ $envelope->id }}]"
+                                                           step="0.01"
+                                                           min="0"
+                                                           x-model.number="amounts[{{ $envelope->id }}]"
+                                                           class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm pl-7 py-1.5"
+                                                           placeholder="0.00">
+                                                </div>
+                                            </div>
+                                        @endforeach
                                     @endforeach
                                 </div>
 
