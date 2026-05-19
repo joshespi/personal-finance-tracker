@@ -62,7 +62,7 @@ class DashboardController extends Controller
                 'unrealized'   => $hasPrice ? round($unrealized, 2) : null,
                 'total_value'  => round(($hasPrice ? $marketValue + $unpricedCost : $costBasis) + $manualValue, 2),
             ];
-        });
+        })->sortByDesc('total_value')->values();
 
         $portfolioValue   = round($summaries->sum('total_value'), 2);
         $totalCash        = round($user->totalCash(), 2);

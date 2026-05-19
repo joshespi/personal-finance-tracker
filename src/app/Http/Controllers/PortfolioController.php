@@ -19,7 +19,7 @@ class PortfolioController extends Controller
             ->portfolios()
             ->withCount('transactions')
             ->with('manualAssets.latestValuation')
-            ->latest()
+            ->orderBy('name')
             ->get();
 
         return view('portfolios.index', compact('portfolios'));
