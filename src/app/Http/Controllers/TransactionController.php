@@ -140,16 +140,20 @@ class TransactionController extends Controller
             'quantity'       => ['required', 'numeric', 'gt:0'],
             'price_per_unit' => ['required', 'numeric', 'gte:0'],
             'fees'           => ['nullable', 'numeric', 'gte:0'],
+            'fee_in_asset'   => ['nullable', 'boolean'],
             'currency'       => ['required', 'string', 'size:3'],
             'transacted_at'  => ['required', 'date'],
             'notes'          => ['nullable', 'string', 'max:1000'],
         ]);
+
+        $isTransfer = in_array($validated['type'], ['transfer_in', 'transfer_out']);
 
         $transaction->update([
             'type'           => $validated['type'],
             'quantity'       => $validated['quantity'],
             'price_per_unit' => $validated['price_per_unit'],
             'fees'           => $validated['fees'] ?? 0,
+            'fee_in_asset'   => $isTransfer && ($validated['fee_in_asset'] ?? false),
             'currency'       => $validated['currency'],
             'transacted_at'  => $validated['transacted_at'],
             'notes'          => $validated['notes'] ?? null,

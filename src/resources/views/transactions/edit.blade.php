@@ -33,13 +33,19 @@
                     </form>
                 </div>
 
-                <form method="POST" action="{{ route('transactions.update', $transaction) }}" class="space-y-6">
+                <form method="POST" action="{{ route('transactions.update', $transaction) }}" class="space-y-6"
+                      x-data="{
+                          txType: '{{ old('type', $transaction->type) }}',
+                          fees: {{ old('fees', (float) $transaction->fees) }},
+                          feeInAsset: {{ old('fee_in_asset', $transaction->fee_in_asset) ? 'true' : 'false' }},
+                          get isTransfer() { return this.txType === 'transfer_in' || this.txType === 'transfer_out'; }
+                      }">
                     @csrf
                     @method('PUT')
 
                     <div>
                         <x-input-label for="type" value="Transaction Type" />
-                        <select id="type" name="type"
+                        <select id="type" name="type" x-model="txType"
                                 class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                             @foreach ($types as $value => $label)
                                 <option value="{{ $value }}" @selected(old('type', $transaction->type) === $value)>{{ $label }}</option>
@@ -62,11 +68,23 @@
                             <x-input-error :messages="$errors->get('price_per_unit')" class="mt-2" />
                         </div>
                         <div>
-                            <x-input-label for="fees" value="Fees" />
+                            <x-input-label for="fees" value="Network Fee" />
                             <x-text-input id="fees" name="fees" type="number" class="mt-1 block w-full"
-                                          :value="old('fees', $transaction->fees)" min="0" step="any" />
+                                          :value="old('fees', $transaction->fees)" min="0" step="any"
+                                          x-model="fees" />
                             <x-input-error :messages="$errors->get('fees')" class="mt-2" />
                         </div>
+                    </div>
+
+                    <div x-show="isTransfer && parseFloat(fees) > 0" x-cloak>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" name="fee_in_asset" value="1"
+                                   x-model="feeInAsset"
+                                   class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                            <span class="text-sm text-gray-700 dark:text-gray-300">
+                                Fee paid in the asset (deducted from quantity received, not USD cost)
+                            </span>
+                        </label>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
