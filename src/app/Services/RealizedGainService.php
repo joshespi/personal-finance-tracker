@@ -33,7 +33,10 @@ class RealizedGainService
                     'asset'         => $t->asset,
                 ];
             } elseif (in_array($t->type, Transaction::OUTFLOW_TYPES)) {
-                $remainingToSell = (float) $t->quantity;
+                // fee_in_asset on a transfer_out means fee units also left the wallet
+                $remainingToSell = $t->fee_in_asset
+                    ? (float) $t->quantity + (float) $t->fees
+                    : (float) $t->quantity;
                 $sellPrice       = (float) $t->price_per_unit;
                 $sellDate        = $t->transacted_at;
 

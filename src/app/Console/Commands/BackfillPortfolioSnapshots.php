@@ -284,10 +284,11 @@ class BackfillPortfolioSnapshots extends Command
                     $totalCost += $qty * (float) $t->price_per_unit + $usdFee;
                     $totalQty  += $qty;
                 } elseif (in_array($t->type, Transaction::OUTFLOW_TYPES)) {
+                    $deduct = $t->fee_in_asset ? $qty + (float) $t->fees : $qty;
                     if ($totalQty > 0) {
-                        $totalCost -= ($totalCost / $totalQty) * min($qty, $totalQty);
+                        $totalCost -= ($totalCost / $totalQty) * min($deduct, $totalQty);
                     }
-                    $totalQty -= $qty;
+                    $totalQty -= $deduct;
                 }
             }
 

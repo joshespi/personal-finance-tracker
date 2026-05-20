@@ -158,7 +158,7 @@ class PortfolioTransferTest extends TestCase
             ->assertSessionHasErrors('quantity');
     }
 
-    public function test_fee_in_asset_reduces_transfer_in_quantity(): void
+    public function test_fee_in_asset_records_fee_on_out_and_net_on_in(): void
     {
         $user = User::factory()->create();
         $from = Portfolio::factory()->for($user)->create();
@@ -173,10 +173,14 @@ class PortfolioTransferTest extends TestCase
         $out = Transaction::where('type', 'transfer_out')->first();
         $in  = Transaction::where('type', 'transfer_in')->first();
 
+        // transfer_out keeps full sent quantity; fee_in_asset flag tells holdings to deduct fee units too
         $this->assertEquals('1.00000000', $out->quantity);
-        $this->assertEquals('0.99950000', $in->quantity);
         $this->assertTrue((bool) $out->fee_in_asset);
-        $this->assertTrue((bool) $in->fee_in_asset);
+
+        // transfer_in stores net received; no fee on this side
+        $this->assertEquals('0.99950000', $in->quantity);
+        $this->assertFalse((bool) $in->fee_in_asset);
+        $this->assertEquals('0.00000000', $in->fees);
     }
 
     public function test_fee_in_asset_false_does_not_reduce_quantity(): void
@@ -197,24 +201,36 @@ class PortfolioTransferTest extends TestCase
         $this->assertFalse((bool) $out->fee_in_asset);
     }
 
-    public function test_fee_in_asset_excluded_from_cost_basis(): void
+    public function test_fee_in_asset_deducts_fee_units_from_transfer_out_holding(): void
     {
         $user      = User::factory()->create();
         $portfolio = Portfolio::factory()->for($user)->create();
 
-        Transaction::factory()->for($portfolio)->create([
-            'type'          => 'transfer_in',
-            'quantity'      => '0.9995',
-            'price_per_unit'=> '40000',
-            'fees'          => '0.0005',
-            'fee_in_asset'  => true,
+        $asset = \App\Models\Asset::factory()->crypto()->create(['symbol' => 'BTC']);
+
+        // Buy 1.0 BTC first
+        Transaction::factory()->for($portfolio)->for($asset)->create([
+            'type'           => 'buy',
+            'quantity'       => '1.0',
+            'price_per_unit' => '40000',
+            'fees'           => '0',
+            'fee_in_asset'   => false,
+        ]);
+
+        // Transfer out 0.5 BTC with 0.001 fee paid in asset — total leaving wallet = 0.501
+        Transaction::factory()->for($portfolio)->for($asset)->create([
+            'type'           => 'transfer_out',
+            'quantity'       => '0.5',
+            'price_per_unit' => '40000',
+            'fees'           => '0.001',
+            'fee_in_asset'   => true,
         ]);
 
         $holdings = $portfolio->computeHoldings();
         $holding  = $holdings->first();
 
-        // cost = 0.9995 * 40000 + 0 (fee not added as USD) = 39980
-        $this->assertEquals(39980.0, $holding['total_cost']);
+        // remaining = 1.0 - (0.5 + 0.001) = 0.499
+        $this->assertEquals(0.499, $holding['quantity']);
     }
 
     public function test_linked_relations_point_to_correct_portfolios(): void

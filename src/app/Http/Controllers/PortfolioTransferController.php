@@ -58,7 +58,7 @@ class PortfolioTransferController extends Controller
             'quantity'     => $validated['quantity'],
         ]));
 
-        // When fee is paid in the asset, the destination receives quantity − fee.
+        // transfer_in records what actually landed — fee was consumed on the sending side
         $receivedQty = $feeInAsset
             ? max(0, (float) $validated['quantity'] - $fees)
             : (float) $validated['quantity'];
@@ -67,6 +67,8 @@ class PortfolioTransferController extends Controller
             'portfolio_id'       => $validated['to_portfolio_id'],
             'type'               => 'transfer_in',
             'quantity'           => $receivedQty,
+            'fee_in_asset'       => false,
+            'fees'               => 0,
             'linked_transfer_id' => $transferOut->id,
         ]));
 

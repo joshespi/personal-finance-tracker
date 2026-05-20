@@ -150,10 +150,10 @@ class TransactionController extends Controller
         $feeInAsset  = $isTransfer && ($validated['fee_in_asset'] ?? false);
         $fees        = (float) ($validated['fees'] ?? 0);
 
-        // For transfer_in with fee paid in asset, quantity entered is gross (what left the sender).
-        // Subtract fee so stored quantity reflects what actually arrived.
+        // quantity field on transfer_out edit shows gross (sent + fee); strip fee back out for storage
+        // since holdings logic adds fees back when deducting from position
         $quantity = (float) $validated['quantity'];
-        if ($feeInAsset && $validated['type'] === 'transfer_in') {
+        if ($feeInAsset && $validated['type'] === 'transfer_out') {
             $quantity = max(0, $quantity - $fees);
         }
 
