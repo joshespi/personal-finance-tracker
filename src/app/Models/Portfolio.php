@@ -74,7 +74,8 @@ class Portfolio extends Model
                 foreach ($txns->sortBy('transacted_at') as $t) {
                     $qty = (float) $t->quantity;
                     if (in_array($t->type, Transaction::INFLOW_TYPES)) {
-                        $totalCost += $qty * (float) $t->price_per_unit + (float) $t->fees;
+                        $usdFee     = $t->fee_in_asset ? 0.0 : (float) $t->fees;
+                        $totalCost += $qty * (float) $t->price_per_unit + $usdFee;
                         $totalQty  += $qty;
                     } elseif (in_array($t->type, Transaction::OUTFLOW_TYPES)) {
                         if ($totalQty > 0) {

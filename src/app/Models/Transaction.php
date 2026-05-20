@@ -17,7 +17,7 @@ class Transaction extends Model
 
     protected $fillable = [
         'portfolio_id', 'asset_id', 'type', 'quantity',
-        'price_per_unit', 'fees', 'currency', 'notes', 'transacted_at',
+        'price_per_unit', 'fees', 'fee_in_asset', 'currency', 'notes', 'transacted_at',
         'linked_transfer_id',
     ];
 
@@ -26,6 +26,7 @@ class Transaction extends Model
         'quantity'       => 'decimal:8',
         'price_per_unit' => 'decimal:8',
         'fees'           => 'decimal:8',
+        'fee_in_asset'   => 'boolean',
     ];
 
     public function portfolio(): BelongsTo

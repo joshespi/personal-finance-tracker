@@ -158,6 +158,65 @@ class PortfolioTransferTest extends TestCase
             ->assertSessionHasErrors('quantity');
     }
 
+    public function test_fee_in_asset_reduces_transfer_in_quantity(): void
+    {
+        $user = User::factory()->create();
+        $from = Portfolio::factory()->for($user)->create();
+        $to   = Portfolio::factory()->for($user)->create();
+
+        $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($from, $to, [
+            'quantity'     => '1.0',
+            'fees'         => '0.0005',
+            'fee_in_asset' => '1',
+        ]));
+
+        $out = Transaction::where('type', 'transfer_out')->first();
+        $in  = Transaction::where('type', 'transfer_in')->first();
+
+        $this->assertEquals('1.00000000', $out->quantity);
+        $this->assertEquals('0.99950000', $in->quantity);
+        $this->assertTrue((bool) $out->fee_in_asset);
+        $this->assertTrue((bool) $in->fee_in_asset);
+    }
+
+    public function test_fee_in_asset_false_does_not_reduce_quantity(): void
+    {
+        $user = User::factory()->create();
+        $from = Portfolio::factory()->for($user)->create();
+        $to   = Portfolio::factory()->for($user)->create();
+
+        $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($from, $to, [
+            'quantity' => '0.5',
+            'fees'     => '5',
+        ]));
+
+        $out = Transaction::where('type', 'transfer_out')->first();
+        $in  = Transaction::where('type', 'transfer_in')->first();
+
+        $this->assertEquals($out->quantity, $in->quantity);
+        $this->assertFalse((bool) $out->fee_in_asset);
+    }
+
+    public function test_fee_in_asset_excluded_from_cost_basis(): void
+    {
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+
+        Transaction::factory()->for($portfolio)->create([
+            'type'          => 'transfer_in',
+            'quantity'      => '0.9995',
+            'price_per_unit'=> '40000',
+            'fees'          => '0.0005',
+            'fee_in_asset'  => true,
+        ]);
+
+        $holdings = $portfolio->computeHoldings();
+        $holding  = $holdings->first();
+
+        // cost = 0.9995 * 40000 + 0 (fee not added as USD) = 39980
+        $this->assertEquals(39980.0, $holding['total_cost']);
+    }
+
     public function test_linked_relations_point_to_correct_portfolios(): void
     {
         $user = User::factory()->create();

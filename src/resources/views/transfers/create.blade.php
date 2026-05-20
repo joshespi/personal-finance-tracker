@@ -14,7 +14,17 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
                     Records a linked Transfer Out and Transfer In across two portfolios (e.g. exchange → cold wallet).
                 </p>
-                <form method="POST" action="{{ route('transfers.store') }}" class="space-y-6">
+                <form method="POST" action="{{ route('transfers.store') }}" class="space-y-6"
+                      x-data="{
+                          qty: {{ old('quantity', 0) }},
+                          fees: {{ old('fees', 0) }},
+                          feeInAsset: {{ old('fee_in_asset') ? 'true' : 'false' }},
+                          get received() {
+                              let q = parseFloat(this.qty) || 0;
+                              let f = parseFloat(this.fees) || 0;
+                              return this.feeInAsset && f > 0 ? Math.max(0, q - f) : q;
+                          }
+                      }">
                     @csrf
 
                     <div class="grid grid-cols-2 gap-4">
@@ -64,9 +74,10 @@
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <x-input-label for="quantity" value="Quantity" />
+                            <x-input-label for="quantity" value="Quantity Sent" />
                             <x-text-input id="quantity" name="quantity" type="number" class="mt-1 block w-full"
-                                          :value="old('quantity')" required min="0.00000001" step="any" placeholder="0.5" />
+                                          :value="old('quantity')" required min="0.00000001" step="any" placeholder="0.5"
+                                          x-model="qty" />
                             <x-input-error :messages="$errors->get('quantity')" class="mt-2" />
                         </div>
                         <div>
@@ -76,10 +87,30 @@
                             <x-input-error :messages="$errors->get('price_per_unit')" class="mt-2" />
                         </div>
                         <div>
-                            <x-input-label for="fees" value="Fees" />
+                            <x-input-label for="fees" value="Network Fee" />
                             <x-text-input id="fees" name="fees" type="number" class="mt-1 block w-full"
-                                          :value="old('fees', '0')" min="0" step="any" placeholder="0.00" />
+                                          :value="old('fees', '0')" min="0" step="any" placeholder="0.00"
+                                          x-model="fees" />
                             <x-input-error :messages="$errors->get('fees')" class="mt-2" />
+                        </div>
+                    </div>
+
+                    <div x-show="parseFloat(fees) > 0" x-cloak class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" name="fee_in_asset" value="1"
+                                   x-model="feeInAsset"
+                                   class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                            <span class="text-sm text-gray-700 dark:text-gray-300">
+                                Fee paid in the asset (e.g. gas fee deducted from crypto received)
+                            </span>
+                        </label>
+
+                        <div x-show="feeInAsset" x-cloak
+                             class="rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
+                            Destination will receive
+                            <span class="font-mono font-semibold" x-text="received.toFixed(8).replace(/\.?0+$/, '')"></span>
+                            (sent <span class="font-mono" x-text="(parseFloat(qty)||0).toFixed(8).replace(/\.?0+$/, '')"></span>
+                            − fee <span class="font-mono" x-text="(parseFloat(fees)||0).toFixed(8).replace(/\.?0+$/, '')"></span>)
                         </div>
                     </div>
 

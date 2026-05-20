@@ -24,7 +24,8 @@ class RealizedGainService
             $assetId = $t->asset_id;
 
             if (in_array($t->type, Transaction::INFLOW_TYPES)) {
-                $costPerUnit = (float) $t->price_per_unit + ((float) $t->fees / max(1, (float) $t->quantity));
+                $usdFee      = $t->fee_in_asset ? 0.0 : (float) $t->fees;
+                $costPerUnit = (float) $t->price_per_unit + ($usdFee / max(1, (float) $t->quantity));
                 $openLots[$assetId][] = [
                     'qty'           => (float) $t->quantity,
                     'cost_per_unit' => $costPerUnit,
