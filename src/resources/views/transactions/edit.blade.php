@@ -58,7 +58,7 @@
                         <div>
                             <x-input-label for="quantity" value="Quantity" />
                             <x-text-input id="quantity" name="quantity" type="number" class="mt-1 block w-full"
-                                          :value="old('quantity', $transaction->quantity)" required min="0.00000001" step="any" />
+                                          :value="old('quantity', $transaction->fee_in_asset && $transaction->type === 'transfer_in' ? (float)$transaction->quantity + (float)$transaction->fees : $transaction->quantity)" required min="0.00000001" step="any" />
                             <x-input-error :messages="$errors->get('quantity')" class="mt-2" />
                         </div>
                         <div>

@@ -146,14 +146,23 @@ class TransactionController extends Controller
             'notes'          => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $isTransfer = in_array($validated['type'], ['transfer_in', 'transfer_out']);
+        $isTransfer  = in_array($validated['type'], ['transfer_in', 'transfer_out']);
+        $feeInAsset  = $isTransfer && ($validated['fee_in_asset'] ?? false);
+        $fees        = (float) ($validated['fees'] ?? 0);
+
+        // For transfer_in with fee paid in asset, quantity entered is gross (what left the sender).
+        // Subtract fee so stored quantity reflects what actually arrived.
+        $quantity = (float) $validated['quantity'];
+        if ($feeInAsset && $validated['type'] === 'transfer_in') {
+            $quantity = max(0, $quantity - $fees);
+        }
 
         $transaction->update([
             'type'           => $validated['type'],
-            'quantity'       => $validated['quantity'],
+            'quantity'       => $quantity,
             'price_per_unit' => $validated['price_per_unit'],
-            'fees'           => $validated['fees'] ?? 0,
-            'fee_in_asset'   => $isTransfer && ($validated['fee_in_asset'] ?? false),
+            'fees'           => $fees,
+            'fee_in_asset'   => $feeInAsset,
             'currency'       => $validated['currency'],
             'transacted_at'  => $validated['transacted_at'],
             'notes'          => $validated['notes'] ?? null,
