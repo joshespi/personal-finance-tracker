@@ -86,9 +86,12 @@
                                                            x-model="inputs[{{ $envelope->id }}]"
                                                            class="rta-input block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm pl-7 py-1.5"
                                                            :class="saved[{{ $envelope->id }}] ? 'border-green-400 dark:border-green-500' : ''"
-                                                           placeholder="0.00"
-                                                           @keydown.enter.prevent="save({{ $envelope->id }}, $el)"
-                                                           @blur="save({{ $envelope->id }}, $el)">
+                                                           @focus="onFocus({{ $envelope->id }}, $el)"
+                                                           @blur="onBlur({{ $envelope->id }}, $el)"
+                                                           @keydown.arrow-down.prevent="navigate($el, 1)"
+                                                           @keydown.arrow-up.prevent="navigate($el, -1)"
+                                                           @keydown.enter.prevent="onBlur({{ $envelope->id }}, $el)"
+                                                           @keydown.tab="onBlur({{ $envelope->id }}, $el)">
                                                 </div>
                                             </div>
                                         @endforeach
@@ -114,16 +117,23 @@
     <script>
         function assignForm() {
             return {
-                inputs:  {},
-                balances: {},
-                saved:   {},
-                saving:  false,
-                error:   '',
-                rta:     {{ round($demo->scaleScalar($readyToAssign), 2) }},
+                inputs:      @json($groups->flatten()->mapWithKeys(fn($e) => [$e->id => (float)$e->monthly_target ?: (float)$e->current_balance])),
+                balances:    {},
+                focusValues: {},
+                saved:       {},
+                saving:      false,
+                error:       '',
+                rta:         {{ round($demo->scaleScalar($readyToAssign), 2) }},
 
-                async save(envelopeId, el) {
-                    const amount = parseFloat(this.inputs[envelopeId]);
-                    if (!amount || amount <= 0) { this.focusNext(el); return; }
+                onFocus(envelopeId, el) {
+                    this.focusValues[envelopeId] = this.inputs[envelopeId];
+                    el.select();
+                },
+
+                async onBlur(envelopeId, el) {
+                    const current  = parseFloat(this.inputs[envelopeId]) || 0;
+                    const original = parseFloat(this.focusValues[envelopeId]) || 0;
+                    if (current === original || current <= 0) return;
 
                     this.saving = true;
                     this.error  = '';
@@ -135,16 +145,15 @@
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                                 'Accept': 'application/json',
                             },
-                            body: JSON.stringify({ envelope_id: envelopeId, amount }),
+                            body: JSON.stringify({ envelope_id: envelopeId, amount: current }),
                         });
                         if (!res.ok) throw new Error('Save failed');
                         const data = await res.json();
                         this.rta = data.ready_to_assign;
-                        this.balances[envelopeId] = data.envelope_balance;
-                        this.inputs[envelopeId]   = '';
-                        this.saved[envelopeId]    = true;
+                        this.balances[envelopeId]    = data.envelope_balance;
+                        this.focusValues[envelopeId] = current;
+                        this.saved[envelopeId]       = true;
                         setTimeout(() => { this.saved[envelopeId] = false; }, 1500);
-                        this.focusNext(el);
                     } catch {
                         this.error = 'Failed to save — check your connection.';
                     } finally {
@@ -152,13 +161,11 @@
                     }
                 },
 
-                focusNext(el) {
+                navigate(el, dir) {
                     const inputs = Array.from(document.querySelectorAll('.rta-input'));
-                    const idx = inputs.indexOf(el);
-                    if (idx >= 0 && idx < inputs.length - 1) {
-                        inputs[idx + 1].focus();
-                        inputs[idx + 1].select();
-                    }
+                    const idx    = inputs.indexOf(el);
+                    const next   = inputs[idx + dir];
+                    if (next) { next.focus(); next.select(); }
                 },
             };
         }
