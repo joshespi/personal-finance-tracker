@@ -56,8 +56,7 @@
                                 <a href="{{ route('envelopes.create') }}" class="mt-2 inline-block text-indigo-600 dark:text-indigo-400 hover:underline">Create your first envelope &rarr;</a>
                             </div>
                         @else
-                            <form method="POST" action="{{ route('ready-to-assign.assign') }}" x-data="assignForm()" @submit="submitForm">
-                                @csrf
+                            <div x-data="assignForm()">
                                 <div class="divide-y divide-gray-100 dark:divide-gray-700">
                                     @foreach ($groups as $groupName => $groupEnvelopes)
                                         <div class="px-6 py-2 bg-gray-50 dark:bg-gray-700/50">
@@ -70,7 +69,10 @@
                                                 <div class="flex-1 min-w-0">
                                                     <p class="text-sm text-gray-800 dark:text-gray-200 truncate">{{ $demo->n($envelope->name) }}</p>
                                                     <p class="text-xs text-gray-400 dark:text-gray-500 font-mono">
-                                                        Balance: ${{ $demo->amt($envelope->current_balance) }}
+                                                        Balance:
+                                                        <span x-text="'$' + (balances[{{ $envelope->id }}] ?? {{ (float) $envelope->current_balance }}).toFixed(2)">
+                                                            ${{ $demo->amt($envelope->current_balance) }}
+                                                        </span>
                                                         @if ($envelope->monthly_target)
                                                             · Target: ${{ $demo->amt($envelope->monthly_target) }}/mo
                                                         @endif
@@ -79,37 +81,31 @@
                                                 <div class="relative w-32 shrink-0">
                                                     <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">$</span>
                                                     <input type="number"
-                                                           name="amounts[{{ $envelope->id }}]"
                                                            step="0.01"
                                                            min="0"
-                                                           x-model.number="amounts[{{ $envelope->id }}]"
-                                                           class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm pl-7 py-1.5"
-                                                           placeholder="0.00">
+                                                           x-model="inputs[{{ $envelope->id }}]"
+                                                           class="rta-input block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm pl-7 py-1.5"
+                                                           :class="saved[{{ $envelope->id }}] ? 'border-green-400 dark:border-green-500' : ''"
+                                                           placeholder="0.00"
+                                                           @keydown.enter.prevent="save({{ $envelope->id }}, $el)"
+                                                           @blur="save({{ $envelope->id }}, $el)">
                                                 </div>
                                             </div>
                                         @endforeach
                                     @endforeach
                                 </div>
 
-                                <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/40 flex items-center justify-between gap-4">
-                                    <div class="text-sm text-gray-600 dark:text-gray-400">
-                                        Assigning:
-                                        <span class="font-mono font-semibold text-gray-800 dark:text-gray-200"
-                                              x-text="'$' + total.toFixed(2)">$0.00</span>
-                                        <span class="ml-2 text-xs">
-                                            · Remaining:
-                                            <span class="font-mono" :class="remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'"
-                                                  x-text="(remaining < 0 ? '−' : '') + '$' + Math.abs(remaining).toFixed(2)">
-                                                ${{ $demo->amt($readyToAssign) }}
-                                            </span>
-                                        </span>
-                                    </div>
-                                    <button type="submit"
-                                            class="inline-flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                        Assign
-                                    </button>
+                                <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/40 text-sm text-gray-600 dark:text-gray-400">
+                                    Ready to assign:
+                                    <span class="font-mono font-semibold"
+                                          :class="rta < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'"
+                                          x-text="(rta < 0 ? '−' : '') + '$' + Math.abs(rta).toFixed(2)">
+                                        ${{ $demo->amt($readyToAssign) }}
+                                    </span>
+                                    <span x-show="saving" class="ml-3 text-xs text-gray-400" x-cloak>Saving…</span>
+                                    <span x-show="error" class="ml-3 text-xs text-red-500" x-text="error" x-cloak></span>
                                 </div>
-                            </form>
+                            </div>
                         @endif
             </div>
         </div>
@@ -118,13 +114,51 @@
     <script>
         function assignForm() {
             return {
-                amounts: {},
-                rta: {{ round($demo->scaleScalar($readyToAssign), 2) }},
-                get total() {
-                    return Object.values(this.amounts).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+                inputs:  {},
+                balances: {},
+                saved:   {},
+                saving:  false,
+                error:   '',
+                rta:     {{ round($demo->scaleScalar($readyToAssign), 2) }},
+
+                async save(envelopeId, el) {
+                    const amount = parseFloat(this.inputs[envelopeId]);
+                    if (!amount || amount <= 0) { this.focusNext(el); return; }
+
+                    this.saving = true;
+                    this.error  = '';
+                    try {
+                        const res = await fetch('{{ route('ready-to-assign.assign-one') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ envelope_id: envelopeId, amount }),
+                        });
+                        if (!res.ok) throw new Error('Save failed');
+                        const data = await res.json();
+                        this.rta = data.ready_to_assign;
+                        this.balances[envelopeId] = data.envelope_balance;
+                        this.inputs[envelopeId]   = '';
+                        this.saved[envelopeId]    = true;
+                        setTimeout(() => { this.saved[envelopeId] = false; }, 1500);
+                        this.focusNext(el);
+                    } catch {
+                        this.error = 'Failed to save — check your connection.';
+                    } finally {
+                        this.saving = false;
+                    }
                 },
-                get remaining() {
-                    return this.rta - this.total;
+
+                focusNext(el) {
+                    const inputs = Array.from(document.querySelectorAll('.rta-input'));
+                    const idx = inputs.indexOf(el);
+                    if (idx >= 0 && idx < inputs.length - 1) {
+                        inputs[idx + 1].focus();
+                        inputs[idx + 1].select();
+                    }
                 },
             };
         }

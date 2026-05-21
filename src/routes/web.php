@@ -135,6 +135,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/forecast', ForecastController::class)->name('forecast');
     Route::get('/ready-to-assign', [ReadyToAssignController::class, 'index'])->name('ready-to-assign');
     Route::post('/ready-to-assign/assign', [ReadyToAssignController::class, 'assign'])->name('ready-to-assign.assign');
+    Route::post('/ready-to-assign/assign-one', [ReadyToAssignController::class, 'assignOne'])->name('ready-to-assign.assign-one');
     Route::post('/income-entries', [IncomeEntryController::class, 'store'])->name('income-entries.store');
     Route::delete('/income-entries/{incomeEntry}', [IncomeEntryController::class, 'destroy'])->name('income-entries.destroy');
 

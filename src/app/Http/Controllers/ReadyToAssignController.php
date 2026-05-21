@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\EnvelopeTransaction;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -68,5 +69,40 @@ class ReadyToAssignController extends Controller
 
         return redirect()->route('ready-to-assign')
             ->with('success', 'Assigned to ' . $created . ' envelope(s).');
+    }
+
+    public function assignOne(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'envelope_id' => ['required', 'integer'],
+            'amount'      => ['required', 'numeric', 'gt:0'],
+        ]);
+
+        abort_unless($user->envelopes()->where('id', $validated['envelope_id'])->exists(), 403);
+
+        EnvelopeTransaction::create([
+            'envelope_id' => $validated['envelope_id'],
+            'type'        => 'fund',
+            'amount'      => $validated['amount'],
+            'description' => 'Ready to assign',
+            'occurred_at' => now()->toDateString(),
+        ]);
+
+        $envelopes     = $user->envelopes()
+            ->withSum(['transactions as funds_total' => fn ($q) => $q->where('type', 'fund')], 'amount')
+            ->withSum('spendTransactions as spends_total', 'amount')
+            ->get()
+            ->each(fn ($e) => $e->current_balance = (float) ($e->funds_total ?? 0) - (float) ($e->spends_total ?? 0));
+
+        $readyToAssign = round($user->totalCash() - $envelopes->sum('current_balance'), 2);
+
+        $envelopeBalance = (float) $envelopes->firstWhere('id', $validated['envelope_id'])?->current_balance;
+
+        return response()->json([
+            'ready_to_assign'  => $readyToAssign,
+            'envelope_balance' => $envelopeBalance,
+        ]);
     }
 }
