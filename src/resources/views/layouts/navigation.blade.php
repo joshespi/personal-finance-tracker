@@ -32,6 +32,7 @@
                         || request()->routeIs('debt-payoff')
                         || request()->routeIs('allocator')
                         || request()->routeIs('ready-to-assign')
+                        || request()->routeIs('envelopes.*')
                         || request()->routeIs('income-entries.*')
                         || request()->routeIs('scheduled-transactions.*');
 
@@ -88,7 +89,6 @@
                              style="display: none;"
                              @click="open = false">
                             <div class="rounded-md ring-1 ring-black ring-opacity-5 dark:ring-gray-700 py-1 bg-white dark:bg-gray-800">
-                                <x-dropdown-link :href="route('ready-to-assign')">{{ __('Ready to Assign') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('cash-accounts.index')">{{ __('Spending Accounts') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('envelopes.index')">{{ __('Budget Envelopes') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('analysis')">{{ __('Analysis') }}</x-dropdown-link>
@@ -229,9 +229,6 @@
             </x-responsive-nav-link>
 
             <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Money') }}</p>
-            <x-responsive-nav-link :href="route('ready-to-assign')" :active="request()->routeIs('ready-to-assign')">
-                {{ __('Ready to Assign') }}
-            </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('cash-accounts.index')" :active="request()->routeIs('cash-accounts.*')">
                 {{ __('Spending Accounts') }}
             </x-responsive-nav-link>

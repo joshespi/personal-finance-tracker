@@ -133,9 +133,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/allocator', AllocatorController::class)->name('allocator');
     Route::get('/budget-rule', BudgetRuleController::class)->name('budget-rule');
     Route::get('/forecast', ForecastController::class)->name('forecast');
-    Route::get('/ready-to-assign', [ReadyToAssignController::class, 'index'])->name('ready-to-assign');
-    Route::post('/ready-to-assign/assign', [ReadyToAssignController::class, 'assign'])->name('ready-to-assign.assign');
-    Route::post('/ready-to-assign/assign-one', [ReadyToAssignController::class, 'assignOne'])->name('ready-to-assign.assign-one');
+    Route::get('/ready-to-assign', fn() => redirect()->route('envelopes.index'))->name('ready-to-assign');
     Route::post('/income-entries', [IncomeEntryController::class, 'store'])->name('income-entries.store');
     Route::delete('/income-entries/{incomeEntry}', [IncomeEntryController::class, 'destroy'])->name('income-entries.destroy');
 
@@ -143,6 +141,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('scheduled-transactions/{scheduledTransaction}/toggle', [ScheduledTransactionController::class, 'toggle'])
         ->name('scheduled-transactions.toggle');
 
+    Route::post('envelopes/assign-one', [EnvelopeController::class, 'assignOne'])->name('envelopes.assign-one');
     Route::resource('envelopes', EnvelopeController::class);
 
     Route::post('envelopes/{envelope}/transactions', [EnvelopeTransactionController::class, 'store'])

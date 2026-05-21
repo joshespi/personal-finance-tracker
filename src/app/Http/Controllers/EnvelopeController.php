@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Envelope;
+use App\Models\EnvelopeTransaction;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -59,11 +61,13 @@ class EnvelopeController extends Controller
                 ? [$key => $grouped[$key]->sortByDesc(fn ($e) => (float) ($e->monthly_target ?? $e->current_balance))->values()]
                 : []);
 
+        $readyToAssign = round($request->user()->totalCash() - $totalBalance, 2);
+
         ['prevMonth' => $prevMonth, 'nextMonth' => $nextMonth, 'isCurrentMonth' => $isCurrentMonth] = $this->monthNav($month);
 
         return view('envelopes.index', compact(
             'envelopes', 'groups', 'totalBalance', 'totalSpentMonth', 'totalFundedMonth',
-            'month', 'prevMonth', 'nextMonth', 'isCurrentMonth',
+            'readyToAssign', 'month', 'prevMonth', 'nextMonth', 'isCurrentMonth',
         ));
     }
 
@@ -130,6 +134,40 @@ class EnvelopeController extends Controller
         $envelope->delete();
 
         return redirect()->route('envelopes.index')->with('success', 'Envelope deleted.');
+    }
+
+    public function assignOne(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'envelope_id' => ['required', 'integer'],
+            'amount'      => ['required', 'numeric', 'gt:0'],
+        ]);
+
+        $envelope = $user->envelopes()
+            ->where('id', $validated['envelope_id'])
+            ->withSum(['transactions as funds_total' => fn ($q) => $q->where('type', 'fund')], 'amount')
+            ->withSum('spendTransactions as spends_total', 'amount')
+            ->first();
+
+        abort_unless($envelope !== null, 403);
+
+        EnvelopeTransaction::create([
+            'envelope_id' => $validated['envelope_id'],
+            'type'        => 'fund',
+            'amount'      => $validated['amount'],
+            'description' => 'Ready to assign',
+            'occurred_at' => now()->toDateString(),
+        ]);
+
+        $envelopeBalance = (float) ($envelope->funds_total ?? 0) - (float) ($envelope->spends_total ?? 0);
+        $readyToAssign   = $user->readyToAssign();
+
+        return response()->json([
+            'ready_to_assign'  => $readyToAssign,
+            'envelope_balance' => $envelopeBalance,
+        ]);
     }
 
     private function clearEmergencyFundFlag(Request $request, ?int $except = null): void

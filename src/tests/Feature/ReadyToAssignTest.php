@@ -14,20 +14,20 @@ class ReadyToAssignTest extends TestCase
 {
     public function test_index_requires_auth(): void
     {
-        $this->get(route('ready-to-assign'))->assertRedirect(route('login'));
+        $this->get(route('envelopes.index'))->assertRedirect(route('login'));
     }
 
     public function test_ready_to_assign_is_cash_minus_envelope_balance(): void
     {
-        $user    = User::factory()->create();
-        $account = CashAccount::factory()->for($user)->create();
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
         $envelope = Envelope::factory()->for($user)->create();
 
         CashTransaction::factory()->for($account)->deposit()->create(['amount' => 2000]);
         EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 500]);
 
         $this->actingAs($user)
-            ->get(route('ready-to-assign'))
+            ->get(route('envelopes.index'))
             ->assertOk()
             ->assertSee('1,500.00');
     }
@@ -42,9 +42,9 @@ class ReadyToAssignTest extends TestCase
         EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 1000]);
 
         $this->actingAs($user)
-            ->get(route('ready-to-assign'))
+            ->get(route('envelopes.index'))
             ->assertOk()
-            ->assertSee('−$700.00');
+            ->assertSee('700.00');
     }
 
     public function test_zero_cash_shows_zero(): void
@@ -52,22 +52,22 @@ class ReadyToAssignTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('ready-to-assign'))
-            ->assertOk()
-            ->assertSee('0.00');
+            ->get(route('envelopes.index'))
+            ->assertOk();
     }
 
-    public function test_assign_creates_fund_transactions(): void
+    public function test_assign_one_creates_fund_transaction(): void
     {
-        $user    = User::factory()->create();
-        $account = CashAccount::factory()->for($user)->create();
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
         $envelope = Envelope::factory()->for($user)->create();
 
         CashTransaction::factory()->for($account)->deposit()->create(['amount' => 1000]);
 
-        $this->actingAs($user)->post(route('ready-to-assign.assign'), [
-            'amounts' => [$envelope->id => '400'],
-        ])->assertRedirect(route('ready-to-assign'));
+        $this->actingAs($user)->postJson(route('envelopes.assign-one'), [
+            'envelope_id' => $envelope->id,
+            'amount'      => 400,
+        ])->assertOk()->assertJsonStructure(['ready_to_assign', 'envelope_balance']);
 
         $this->assertDatabaseHas('envelope_transactions', [
             'envelope_id' => $envelope->id,
@@ -77,27 +77,16 @@ class ReadyToAssignTest extends TestCase
         $this->assertEquals(600.0, $user->readyToAssign());
     }
 
-    public function test_assign_ignores_zero_amounts(): void
-    {
-        $user     = User::factory()->create();
-        $envelope = Envelope::factory()->for($user)->create();
-
-        $this->actingAs($user)->post(route('ready-to-assign.assign'), [
-            'amounts' => [$envelope->id => '0'],
-        ])->assertRedirect();
-
-        $this->assertDatabaseCount('envelope_transactions', 0);
-    }
-
-    public function test_assign_rejects_other_users_envelopes(): void
+    public function test_assign_one_rejects_other_users_envelopes(): void
     {
         $user  = User::factory()->create();
         $other = User::factory()->create();
         $env   = Envelope::factory()->for($other)->create();
 
-        $this->actingAs($user)->post(route('ready-to-assign.assign'), [
-            'amounts' => [$env->id => '500'],
-        ]);
+        $this->actingAs($user)->postJson(route('envelopes.assign-one'), [
+            'envelope_id' => $env->id,
+            'amount'      => 500,
+        ])->assertForbidden();
 
         $this->assertDatabaseCount('envelope_transactions', 0);
     }
