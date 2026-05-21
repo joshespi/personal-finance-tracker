@@ -55,7 +55,9 @@ class EnvelopeController extends Controller
             default               => 'Spending',
         });
         $groups = collect(['Emergency Fund', 'Mandatory', 'Wealth Building', 'Spending'])
-            ->mapWithKeys(fn ($key) => $grouped->has($key) ? [$key => $grouped[$key]] : []);
+            ->mapWithKeys(fn ($key) => $grouped->has($key)
+                ? [$key => $grouped[$key]->sortByDesc(fn ($e) => (float) ($e->monthly_target ?? $e->current_balance))->values()]
+                : []);
 
         ['prevMonth' => $prevMonth, 'nextMonth' => $nextMonth, 'isCurrentMonth' => $isCurrentMonth] = $this->monthNav($month);
 
