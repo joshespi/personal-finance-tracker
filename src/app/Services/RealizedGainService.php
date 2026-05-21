@@ -39,24 +39,28 @@ class RealizedGainService
                     : (float) $t->quantity;
                 $sellPrice       = (float) $t->price_per_unit;
                 $sellDate        = $t->transacted_at;
+                $isSale          = $t->type === 'sell';
 
                 while ($remainingToSell > 0.000001 && ! empty($openLots[$assetId])) {
                     $lot = &$openLots[$assetId][0];
 
                     $matched = min($lot['qty'], $remainingToSell);
 
-                    $lots->push([
-                        'asset'          => $t->asset,
-                        'quantity'       => $matched,
-                        'buy_price'      => $lot['cost_per_unit'],
-                        'sell_price'     => $sellPrice,
-                        'cost_basis'     => round($matched * $lot['cost_per_unit'], 2),
-                        'proceeds'       => round($matched * $sellPrice, 2),
-                        'gain'           => round($matched * ($sellPrice - $lot['cost_per_unit']), 2),
-                        'buy_date'       => $lot['date'],
-                        'sell_date'      => $sellDate,
-                        'holding_days'   => (int) $lot['date']->diffInDays($sellDate),
-                    ]);
+                    // transfers move cost basis to the destination portfolio — not a taxable event
+                    if ($isSale) {
+                        $lots->push([
+                            'asset'          => $t->asset,
+                            'quantity'       => $matched,
+                            'buy_price'      => $lot['cost_per_unit'],
+                            'sell_price'     => $sellPrice,
+                            'cost_basis'     => round($matched * $lot['cost_per_unit'], 2),
+                            'proceeds'       => round($matched * $sellPrice, 2),
+                            'gain'           => round($matched * ($sellPrice - $lot['cost_per_unit']), 2),
+                            'buy_date'       => $lot['date'],
+                            'sell_date'      => $sellDate,
+                            'holding_days'   => (int) $lot['date']->diffInDays($sellDate),
+                        ]);
+                    }
 
                     $lot['qty'] -= $matched;
                     $remainingToSell -= $matched;
