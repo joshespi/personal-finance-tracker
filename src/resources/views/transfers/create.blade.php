@@ -34,7 +34,7 @@
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                                 <option value="">Select…</option>
                                 @foreach ($portfolios as $p)
-                                    <option value="{{ $p->id }}" @selected(old('from_portfolio_id') == $p->id)>{{ $p->name }}</option>
+                                    <option value="{{ $p->id }}" @selected(old('from_portfolio_id', request('from_portfolio_id')) == $p->id)>{{ $p->name }}</option>
                                 @endforeach
                             </select>
                             <x-input-error :messages="$errors->get('from_portfolio_id')" class="mt-2" />
@@ -45,7 +45,7 @@
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                                 <option value="">Select…</option>
                                 @foreach ($portfolios as $p)
-                                    <option value="{{ $p->id }}" @selected(old('to_portfolio_id') == $p->id)>{{ $p->name }}</option>
+                                    <option value="{{ $p->id }}" @selected(old('to_portfolio_id', request('to_portfolio_id')) == $p->id)>{{ $p->name }}</option>
                                 @endforeach
                             </select>
                             <x-input-error :messages="$errors->get('to_portfolio_id')" class="mt-2" />
@@ -56,7 +56,7 @@
                         <div>
                             <x-input-label for="symbol" value="Symbol (e.g. BTC, AAPL)" />
                             <x-text-input id="symbol" name="symbol" type="text" class="mt-1 block w-full"
-                                          :value="old('symbol')" required autofocus maxlength="20"
+                                          :value="old('symbol', request('symbol'))" required autofocus maxlength="20"
                                           placeholder="BTC" style="text-transform:uppercase" />
                             <x-input-error :messages="$errors->get('symbol')" class="mt-2" />
                         </div>
@@ -65,7 +65,7 @@
                             <select id="asset_type" name="asset_type"
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                                 @foreach (App\Enums\AssetType::cases() as $type)
-                                    <option value="{{ $type->value }}" @selected(old('asset_type', 'stock') === $type->value)>{{ $type->label() }}</option>
+                                    <option value="{{ $type->value }}" @selected(old('asset_type', request('asset_type', 'stock')) === $type->value)>{{ $type->label() }}</option>
                                 @endforeach
                             </select>
                             <x-input-error :messages="$errors->get('asset_type')" class="mt-2" />
@@ -118,14 +118,14 @@
                         <div>
                             <x-input-label for="currency" value="Currency" />
                             <x-text-input id="currency" name="currency" type="text" class="mt-1 block w-full"
-                                          :value="old('currency', 'USD')" required maxlength="3"
+                                          :value="old('currency', request('currency', 'USD'))" required maxlength="3"
                                           placeholder="USD" style="text-transform:uppercase" />
                             <x-input-error :messages="$errors->get('currency')" class="mt-2" />
                         </div>
                         <div>
                             <x-input-label for="transacted_at" value="Date" />
                             <x-text-input id="transacted_at" name="transacted_at" type="date" class="mt-1 block w-full"
-                                          :value="old('transacted_at', now()->format('Y-m-d'))" required />
+                                          :value="old('transacted_at', request('transacted_at', now()->format('Y-m-d')))" required />
                             <x-input-error :messages="$errors->get('transacted_at')" class="mt-2" />
                         </div>
                     </div>
@@ -140,6 +140,10 @@
 
                     <div class="flex items-center gap-4">
                         <x-primary-button>Record Transfer</x-primary-button>
+                        <button type="submit" name="add_another" value="1"
+                                class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-25 transition ease-in-out duration-150">
+                            Record &amp; Add Another
+                        </button>
                         <a href="{{ route('dashboard') }}"
                            class="text-sm text-gray-600 dark:text-gray-400 hover:underline">Cancel</a>
                     </div>

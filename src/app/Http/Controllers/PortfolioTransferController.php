@@ -72,6 +72,19 @@ class PortfolioTransferController extends Controller
             'linked_transfer_id' => $transferOut->id,
         ]));
 
+        if ($request->boolean('add_another')) {
+            return redirect()
+                ->route('transfers.create', [
+                    'from_portfolio_id' => $validated['from_portfolio_id'],
+                    'to_portfolio_id'   => $validated['to_portfolio_id'],
+                    'symbol'            => $symbol,
+                    'asset_type'        => $validated['asset_type'],
+                    'currency'          => $validated['currency'],
+                    'transacted_at'     => $validated['transacted_at'],
+                ])
+                ->with('success', 'Transfer recorded.');
+        }
+
         return redirect()
             ->route('dashboard')
             ->with('success', 'Transfer recorded.');
