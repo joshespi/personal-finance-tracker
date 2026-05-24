@@ -95,6 +95,77 @@ class RealizedGainService
         return compact('lots', 'totalGain', 'byYear', 'byAsset');
     }
 
+    /**
+     * FIFO open lots for one asset in a portfolio, up to and including $date.
+     * Returns [['qty' => float, 'cost_per_unit' => float], ...].
+     */
+    public function openLotsForAsset(Portfolio $portfolio, int $assetId, string $date): array
+    {
+        $txns = $portfolio->transactions()
+            ->where('asset_id', $assetId)
+            ->whereIn('type', Transaction::POSITION_TYPES)
+            ->where('transacted_at', '<=', $date)
+            ->orderBy('transacted_at')
+            ->get();
+
+        $openLots = [];
+
+        foreach ($txns as $t) {
+            if (in_array($t->type, Transaction::INFLOW_TYPES)) {
+                $usdFee      = $t->fee_in_asset ? 0.0 : (float) $t->fees;
+                $openLots[] = [
+                    'qty'           => (float) $t->quantity,
+                    'cost_per_unit' => (float) $t->price_per_unit + ($usdFee / max(1, (float) $t->quantity)),
+                ];
+            } elseif (in_array($t->type, Transaction::OUTFLOW_TYPES)) {
+                $remaining = $t->fee_in_asset
+                    ? (float) $t->quantity + (float) $t->fees
+                    : (float) $t->quantity;
+
+                while ($remaining > 0.000001 && ! empty($openLots)) {
+                    $matched          = min($openLots[0]['qty'], $remaining);
+                    $openLots[0]['qty'] -= $matched;
+                    $remaining        -= $matched;
+                    if ($openLots[0]['qty'] < 0.000001) {
+                        array_shift($openLots);
+                    }
+                }
+            }
+        }
+
+        return array_values(array_filter($openLots, fn ($l) => $l['qty'] > 0.000001));
+    }
+
+    /**
+     * Walk open lots FIFO to get the total cost for $qtySent units, then
+     * divide by $qtyReceived to get cost-per-unit for the destination lot.
+     * Returns null when lots don't cover qtySent (caller should fall back).
+     */
+    public function transferInCostPerUnit(array $openLots, float $qtySent, float $qtyReceived): ?float
+    {
+        if ($qtyReceived <= 0) {
+            return null;
+        }
+
+        $remaining = $qtySent;
+        $totalCost = 0.0;
+
+        foreach ($openLots as $lot) {
+            if ($remaining <= 0.000001) {
+                break;
+            }
+            $matched    = min($lot['qty'], $remaining);
+            $totalCost += $matched * $lot['cost_per_unit'];
+            $remaining -= $matched;
+        }
+
+        if ($remaining > 0.000001) {
+            return null;
+        }
+
+        return $totalCost / $qtyReceived;
+    }
+
     public function computeTwr(Portfolio $portfolio): array
     {
         if ($portfolio->relationLoaded('snapshots')) {

@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\RealizedGainService;
 use Tests\TestCase;
 
 class PortfolioTransferTest extends TestCase
@@ -231,6 +232,81 @@ class PortfolioTransferTest extends TestCase
 
         // remaining = 1.0 - (0.5 + 0.001) = 0.499
         $this->assertEquals(0.499, $holding['quantity']);
+    }
+
+    public function test_transfer_in_carries_cost_basis_from_source_lots(): void
+    {
+        $user  = User::factory()->create();
+        $from  = Portfolio::factory()->for($user)->create();
+        $to    = Portfolio::factory()->for($user)->create();
+        $asset = Asset::factory()->crypto()->create(['symbol' => 'BTC']);
+
+        Transaction::factory()->for($from)->for($asset)->buy()->create([
+            'quantity'       => '1.0',
+            'price_per_unit' => '30000',
+            'fees'           => '0',
+            'transacted_at'  => '2024-01-01',
+        ]);
+
+        // form price_per_unit is current market price, not original cost
+        $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($from, $to, [
+            'symbol'         => 'BTC',
+            'asset_type'     => 'crypto',
+            'quantity'       => '0.5',
+            'price_per_unit' => '50000',
+            'fees'           => '0',
+            'transacted_at'  => '2024-06-01',
+        ]));
+
+        $in = Transaction::where('type', 'transfer_in')->first();
+
+        $this->assertEquals(30000.0, (float) $in->price_per_unit);
+    }
+
+    public function test_transfer_in_cost_basis_adjusts_for_fee_in_asset(): void
+    {
+        $user  = User::factory()->create();
+        $from  = Portfolio::factory()->for($user)->create();
+        $to    = Portfolio::factory()->for($user)->create();
+        $asset = Asset::factory()->crypto()->create(['symbol' => 'BTC']);
+
+        Transaction::factory()->for($from)->for($asset)->buy()->create([
+            'quantity'       => '1.0',
+            'price_per_unit' => '30000',
+            'fees'           => '0',
+            'transacted_at'  => '2024-01-01',
+        ]);
+
+        $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($from, $to, [
+            'symbol'         => 'BTC',
+            'asset_type'     => 'crypto',
+            'quantity'       => '1.0',
+            'price_per_unit' => '50000',
+            'fees'           => '0.001',
+            'fee_in_asset'   => '1',
+            'transacted_at'  => '2024-06-01',
+        ]));
+
+        $in = Transaction::where('type', 'transfer_in')->first();
+
+        // total cost = $30,000 for 1.0 BTC; received 0.999 BTC → cost/unit = 30000 / 0.999
+        $expected = round(30000.0 / 0.999, 8);
+        $this->assertEqualsWithDelta($expected, (float) $in->price_per_unit, 0.01);
+    }
+
+    public function test_transfer_in_falls_back_to_form_price_when_no_source_lots(): void
+    {
+        $user = User::factory()->create();
+        $from = Portfolio::factory()->for($user)->create();
+        $to   = Portfolio::factory()->for($user)->create();
+
+        $this->actingAs($user)->post(route('transfers.store'), $this->transferPayload($from, $to, [
+            'price_per_unit' => '40000',
+        ]));
+
+        $in = Transaction::where('type', 'transfer_in')->first();
+
+        $this->assertEquals(40000.0, (float) $in->price_per_unit);
     }
 
     public function test_linked_relations_point_to_correct_portfolios(): void

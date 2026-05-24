@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\AssetType;
 use App\Models\Transaction;
 use App\Services\AssetService;
+use App\Services\RealizedGainService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -41,6 +42,17 @@ class PortfolioTransferController extends Controller
         $asset      = AssetService::findOrCreateBySymbol($symbol, $validated['asset_type']);
         $fees       = (float) ($validated['fees'] ?? 0);
         $feeInAsset = (bool) ($validated['fee_in_asset'] ?? false);
+        $qtySent    = (float) $validated['quantity'];
+
+        // transfer_in records what actually landed — fee was consumed on the sending side
+        $receivedQty = $feeInAsset ? max(0, $qtySent - $fees) : $qtySent;
+
+        // carry the original cost basis from source portfolio into the destination lot
+        $fromPortfolio = $request->user()->portfolios()->findOrFail($validated['from_portfolio_id']);
+        $gainService   = new RealizedGainService();
+        $openLots      = $gainService->openLotsForAsset($fromPortfolio, $asset->id, $validated['transacted_at']);
+        $transferInPrice = $gainService->transferInCostPerUnit($openLots, $qtySent, $receivedQty)
+            ?? (float) $validated['price_per_unit'];
 
         $common = [
             'asset_id'       => $asset->id,
@@ -55,18 +67,14 @@ class PortfolioTransferController extends Controller
         $transferOut = Transaction::create(array_merge($common, [
             'portfolio_id' => $validated['from_portfolio_id'],
             'type'         => 'transfer_out',
-            'quantity'     => $validated['quantity'],
+            'quantity'     => $qtySent,
         ]));
-
-        // transfer_in records what actually landed — fee was consumed on the sending side
-        $receivedQty = $feeInAsset
-            ? max(0, (float) $validated['quantity'] - $fees)
-            : (float) $validated['quantity'];
 
         Transaction::create(array_merge($common, [
             'portfolio_id'       => $validated['to_portfolio_id'],
             'type'               => 'transfer_in',
             'quantity'           => $receivedQty,
+            'price_per_unit'     => $transferInPrice,
             'fee_in_asset'       => false,
             'fees'               => 0,
             'linked_transfer_id' => $transferOut->id,
