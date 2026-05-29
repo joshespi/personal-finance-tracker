@@ -5,7 +5,7 @@
 Self-hosted Laravel app covering both halves of personal finance:
 
 - **Investing** — portfolios, transactions, market-priced assets (Finnhub/CoinGecko), manual assets (incl. proxy-ticker auto-pricing), tax summary, realized gains, dashboards
-- **Budgeting / YNAB-replacement** — envelopes (monthly target + savings goals), cash accounts, income entries, "ready to assign", scheduled/recurring transactions, cashflow report, spending trends, emergency-fund calculator, 60/30/20 budget-rule calculator with dashboard drift banner, FIRE/net-worth forecast
+- **Budgeting** — envelopes (monthly target + savings goals), cash accounts, income entries, "ready to assign", scheduled/recurring transactions, cashflow report, spending trends, emergency-fund calculator, 60/30/20 budget-rule calculator with dashboard drift banner, FIRE/net-worth forecast
 
 ## Stack
 
@@ -95,6 +95,10 @@ Email is used for password reset and email verification on new registrations.
 ```bash
 docker compose exec app php artisan test
 ```
+
+Runs against SQLite in-memory (~460 tests, ~15s). The full suite peaks above PHP's 128M default, so the image ships `memory_limit = 512M` for the CLI via `docker/php/zz-app.ini` — without it the run OOMs partway through the YNAB import tests.
+
+If `php artisan test` reports `Command "test" is not defined`, dev dependencies are missing. The entrypoint runs `composer install --no-dev` on every container start (correct for prod), and `vendor/` is volume-mounted from the host — so a restart strips PHPUnit each time. Reinstall before running tests: `docker compose exec app composer install`.
 
 ## Ports
 

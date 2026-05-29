@@ -66,7 +66,7 @@ class AllocatorController extends Controller
                 $envelopes = $user->envelopes()
                     ->whereNotNull('goal_amount')
                     ->where('is_emergency_fund', false)
-                    ->with('transactions')
+                    ->with(['transactions', 'spendTransactions'])
                     ->get()
                     ->sortBy([
                         [fn ($e) => $e->goal_date === null ? 1 : 0, 'asc'],

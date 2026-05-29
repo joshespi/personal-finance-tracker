@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssetType;
 use App\Models\PortfolioSnapshot;
 use App\Models\User;
 use App\Services\BenchmarkService;
@@ -47,7 +48,7 @@ class DashboardController extends Controller
             $portfolio = $ph['portfolio'];
             $holdings  = $ph['holdings'];
 
-            $costBasis    = $holdings->sum('total_cost') + $portfolio->manualAssets->sum(fn ($ma) => (float) $ma->cost_basis);
+            $costBasis    = $holdings->sum('total_cost') + $portfolio->manualAssets->where('include_in_chart', true)->sum(fn ($ma) => (float) $ma->cost_basis);
             $marketValue  = $holdings->filter(fn ($h) => $h['current_value'] !== null)->sum('current_value');
             $unpricedCost = $holdings->filter(fn ($h) => $h['current_value'] === null)->sum('total_cost');
             $manualValue  = $portfolio->chartManualValue();
@@ -182,7 +183,7 @@ class DashboardController extends Controller
 
         foreach ($allHoldings as $h) {
             $val = $h['effective_value'];
-            match ($h['asset']->asset_type) {
+            match (AssetType::tryFrom($h['asset']->asset_type)?->allocationKey() ?? 'stock') {
                 'crypto'      => $cryptoValue     += $val,
                 'real_estate' => $realEstateValue += $val,
                 'bond'        => $bondValue        += $val,
@@ -231,8 +232,8 @@ class DashboardController extends Controller
 
         foreach ($allHoldings as $h) {
             $val  = (float) $h['effective_value'];
-            $type = $h['asset']->asset_type;
-            $current[array_key_exists($type, $current) ? $type : 'other'] += $val;
+            $type = AssetType::tryFrom($h['asset']->asset_type)?->allocationKey() ?? 'other';
+            $current[$type] += $val;
         }
 
         foreach ($manualBuckets as $type => $val) {

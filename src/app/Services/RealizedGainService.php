@@ -99,12 +99,13 @@ class RealizedGainService
      * FIFO open lots for one asset in a portfolio, up to and including $date.
      * Returns [['qty' => float, 'cost_per_unit' => float], ...].
      */
-    public function openLotsForAsset(Portfolio $portfolio, int $assetId, string $date): array
+    public function openLotsForAsset(Portfolio $portfolio, int $assetId, string $date, ?int $excludeId = null): array
     {
         $txns = $portfolio->transactions()
             ->where('asset_id', $assetId)
             ->whereIn('type', Transaction::POSITION_TYPES)
             ->where('transacted_at', '<=', $date)
+            ->when($excludeId, fn ($q, $id) => $q->where('id', '!=', $id))
             ->orderBy('transacted_at')
             ->get();
 

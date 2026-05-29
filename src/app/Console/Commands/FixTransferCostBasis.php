@@ -45,40 +45,7 @@ class FixTransferCostBasis extends Command
             $qtyReceived    = (float) $transferIn->quantity;
 
             // replay FIFO on source portfolio excluding the transfer_out itself
-            $txns = $fromPortfolio->transactions()
-                ->where('asset_id', $assetId)
-                ->whereIn('type', Transaction::POSITION_TYPES)
-                ->where('transacted_at', '<=', $date)
-                ->where('id', '!=', $transferOut->id)
-                ->orderBy('transacted_at')
-                ->get();
-
-            $openLots = [];
-
-            foreach ($txns as $t) {
-                if (in_array($t->type, Transaction::INFLOW_TYPES)) {
-                    $usdFee     = $t->fee_in_asset ? 0.0 : (float) $t->fees;
-                    $openLots[] = [
-                        'qty'           => (float) $t->quantity,
-                        'cost_per_unit' => (float) $t->price_per_unit + ($usdFee / max(1, (float) $t->quantity)),
-                    ];
-                } elseif (in_array($t->type, Transaction::OUTFLOW_TYPES)) {
-                    $remaining = $t->fee_in_asset
-                        ? (float) $t->quantity + (float) $t->fees
-                        : (float) $t->quantity;
-
-                    while ($remaining > 0.000001 && ! empty($openLots)) {
-                        $matched          = min($openLots[0]['qty'], $remaining);
-                        $openLots[0]['qty'] -= $matched;
-                        $remaining        -= $matched;
-                        if ($openLots[0]['qty'] < 0.000001) {
-                            array_shift($openLots);
-                        }
-                    }
-                }
-            }
-
-            $openLots = array_values(array_filter($openLots, fn ($l) => $l['qty'] > 0.000001));
+            $openLots = $svc->openLotsForAsset($fromPortfolio, $assetId, $date, $transferOut->id);
 
             $correctPrice = $svc->transferInCostPerUnit($openLots, $qtySent, $qtyReceived);
 

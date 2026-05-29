@@ -24,4 +24,15 @@ enum AssetType: string
     {
         return array_column(self::cases(), 'value');
     }
+
+    /** Allocation bucket this type rolls up into for the net-worth pie/rebalancing. */
+    public function allocationKey(): string
+    {
+        return match ($this) {
+            self::Crypto     => 'crypto',
+            self::RealEstate => 'real_estate',
+            self::Bond       => 'bond',
+            self::Stock      => 'stock',
+        };
+    }
 }
