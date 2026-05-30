@@ -42,6 +42,13 @@ services:
     networks:
       - laravel
 
+  node:
+    image: node:24-alpine
+    working_dir: /app
+    volumes:
+      - ./src:/app
+    restart: "no"
+
   nginx:
     image: nginx:alpine
     container_name: port-tracker-nginx

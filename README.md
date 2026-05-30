@@ -53,8 +53,16 @@ The seeder creates a representative dataset: two portfolios (one tax-advantaged)
 ```bash
 docker compose logs -f app
 docker compose exec app php artisan <command>
-docker compose exec app npm run dev
-docker compose exec app npm run build       # production assets
+```
+
+Assets are built via the `node` service (Node is not in the PHP container):
+
+```bash
+# First time or after package.json changes
+docker compose run --rm node npm install
+
+# After any JS/CSS change
+docker compose run --rm node npm run build
 ```
 
 ## Scheduled commands
