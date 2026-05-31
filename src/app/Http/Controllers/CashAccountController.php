@@ -56,28 +56,25 @@ class CashAccountController extends Controller
         return redirect()->route('cash-accounts.show', $account)->with('success', 'Account created.');
     }
 
-    public function show(Request $request, CashAccount $cashAccount): View
+    public function show(CashAccount $cashAccount): View
     {
         $this->authorize('view', $cashAccount);
 
         $cashAccount->load([
-            'transactions'         => fn ($q) => $q->with('envelope:id,name')->orderByDesc('occurred_at')->orderByDesc('id'),
             'scheduledTransactions' => fn ($q) => $q->where('is_active', true)->with('envelope:id,name,color')->orderBy('next_due_at'),
         ]);
-        $cashAccount->current_balance = $cashAccount->transactions->sum(
-            fn ($t) => $t->type === 'deposit' ? (float) $t->amount : -(float) $t->amount
-        );
 
-        $envelopes = $request->user()->envelopes()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+        $cashAccount->current_balance = (float) $cashAccount->transactions()
+            ->selectRaw("SUM(CASE WHEN type = 'deposit' THEN amount ELSE -amount END) as balance")
+            ->value('balance');
 
         return view('cash-accounts.show', [
             'account'      => $cashAccount,
             'accountTypes' => self::ACCOUNT_TYPES,
-            'envelopes'    => $envelopes,
         ]);
     }
 
-    public function edit(Request $request, CashAccount $cashAccount): View
+    public function edit(CashAccount $cashAccount): View
     {
         $this->authorize('update', $cashAccount);
 
@@ -97,7 +94,7 @@ class CashAccountController extends Controller
         return redirect()->route('cash-accounts.show', $cashAccount)->with('success', 'Account updated.');
     }
 
-    public function destroy(Request $request, CashAccount $cashAccount): RedirectResponse
+    public function destroy(CashAccount $cashAccount): RedirectResponse
     {
         $this->authorize('delete', $cashAccount);
 

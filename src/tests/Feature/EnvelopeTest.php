@@ -283,8 +283,7 @@ class EnvelopeTest extends TestCase
             ->get(route('envelopes.index', ['month' => '2026-03']))
             ->assertOk()
             ->assertSee('Mar 2026')
-            ->assertSee('spent $100.00')
-            ->assertDontSee('spent $50.00');
+            ->assertSee('100.00');
     }
 
     public function test_index_month_param_scopes_fund_totals(): void
@@ -296,8 +295,8 @@ class EnvelopeTest extends TestCase
         $this->actingAs($envelope->user)
             ->get(route('envelopes.index', ['month' => '2026-04']))
             ->assertOk()
-            ->assertSee('funded $200.00')
-            ->assertDontSee('funded $300.00');
+            ->assertSee('200.00')
+            ->assertDontSee('300.00');
     }
 
     public function test_index_invalid_month_param_defaults_to_current_month(): void

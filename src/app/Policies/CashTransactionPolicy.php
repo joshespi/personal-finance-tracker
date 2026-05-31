@@ -7,6 +7,11 @@ use App\Models\User;
 
 class CashTransactionPolicy
 {
+    public function update(User $user, CashTransaction $cashTransaction): bool
+    {
+        return $user->id === $cashTransaction->cashAccount->user_id;
+    }
+
     public function delete(User $user, CashTransaction $cashTransaction): bool
     {
         return $user->id === $cashTransaction->cashAccount->user_id;

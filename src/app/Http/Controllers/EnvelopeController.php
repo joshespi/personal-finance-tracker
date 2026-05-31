@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
 use Illuminate\Http\JsonResponse;
@@ -61,13 +62,33 @@ class EnvelopeController extends Controller
                 ? [$key => $grouped[$key]->sortByDesc(fn ($e) => (float) ($e->monthly_target ?? $e->current_balance))->values()]
                 : []);
 
+        $groupTotals = $groups->map(fn ($g) => [
+            'assigned'  => round($g->sum('funded_this_month'), 2),
+            'activity'  => round($g->sum('spent_this_month'), 2),
+            'available' => round($g->sum('current_balance'), 2),
+        ]);
+
+        $prevMonthEnd              = $month->copy()->subMonth()->endOfMonth();
+        $envelopeIds               = $envelopes->pluck('id');
+        $leftOverFromLastMonth     = round(
+            (float) EnvelopeTransaction::whereIn('envelope_id', $envelopeIds)
+                ->where('type', 'fund')
+                ->where('occurred_at', '<=', $prevMonthEnd)
+                ->sum('amount')
+            - (float) CashTransaction::whereIn('envelope_id', $envelopeIds)
+                ->where('type', 'withdrawal')
+                ->where('occurred_at', '<=', $prevMonthEnd)
+                ->sum('amount'),
+            2
+        );
+
         $readyToAssign = round($request->user()->totalCash() - $totalBalance, 2);
 
         ['prevMonth' => $prevMonth, 'nextMonth' => $nextMonth, 'isCurrentMonth' => $isCurrentMonth] = $this->monthNav($month);
 
         return view('envelopes.index', compact(
-            'envelopes', 'groups', 'totalBalance', 'totalSpentMonth', 'totalFundedMonth',
-            'readyToAssign', 'month', 'prevMonth', 'nextMonth', 'isCurrentMonth',
+            'envelopes', 'groups', 'groupTotals', 'totalBalance', 'totalSpentMonth', 'totalFundedMonth',
+            'leftOverFromLastMonth', 'readyToAssign', 'month', 'prevMonth', 'nextMonth', 'isCurrentMonth',
         ));
     }
 

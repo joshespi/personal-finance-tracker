@@ -284,14 +284,12 @@ class CashAccountTest extends TestCase
 
         $response = $this->actingAs($account->user)
             ->get(route('cash-accounts.show', $account))
-            ->assertOk()
-            ->assertSee('cashFilter', false)
-            ->assertSee('id="tx-filter"', false);
+            ->assertOk();
 
-        // Filter input present, each row carries the data attrs the JS uses.
-        $response->assertSee('data-amount="45.32"', false)
-                 ->assertSee('data-desc="whole foods"', false)
-                 ->assertSee('data-amount="1000"', false);
+        // Livewire renders server-side; transaction data is present in initial HTML.
+        $response->assertSee('45.32')
+                 ->assertSee('Whole Foods')
+                 ->assertSee('wire:model', false);
     }
 
     public function test_dashboard_includes_cash_in_net_worth(): void
