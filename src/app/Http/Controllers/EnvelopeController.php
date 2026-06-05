@@ -51,13 +51,8 @@ class EnvelopeController extends Controller
         $totalSpentMonth  = $envelopes->sum('spent_this_month');
         $totalFundedMonth = $envelopes->sum('funded_this_month');
 
-        $grouped = $envelopes->groupBy(fn ($e) => match (true) {
-            $e->is_emergency_fund => 'Emergency Fund',
-            $e->is_mandatory      => 'Mandatory',
-            $e->is_savings        => 'Wealth Building',
-            default               => 'Spending',
-        });
-        $groups = collect(['Emergency Fund', 'Mandatory', 'Wealth Building', 'Spending'])
+        $grouped = $envelopes->groupBy(fn ($e) => $e->category());
+        $groups = collect(Envelope::CATEGORY_ORDER)
             ->mapWithKeys(fn ($key) => $grouped->has($key)
                 ? [$key => $grouped[$key]->sortByDesc(fn ($e) => (float) ($e->monthly_target ?? $e->current_balance))->values()]
                 : []);
@@ -86,9 +81,11 @@ class EnvelopeController extends Controller
 
         ['prevMonth' => $prevMonth, 'nextMonth' => $nextMonth, 'isCurrentMonth' => $isCurrentMonth] = $this->monthNav($month);
 
+        $isFutureMonth = $month->gt(now()->startOfMonth());
+
         return view('envelopes.index', compact(
             'envelopes', 'groups', 'groupTotals', 'totalBalance', 'totalSpentMonth', 'totalFundedMonth',
-            'leftOverFromLastMonth', 'readyToAssign', 'month', 'prevMonth', 'nextMonth', 'isCurrentMonth',
+            'leftOverFromLastMonth', 'readyToAssign', 'month', 'prevMonth', 'nextMonth', 'isCurrentMonth', 'isFutureMonth',
         ));
     }
 
@@ -164,6 +161,7 @@ class EnvelopeController extends Controller
         $validated = $request->validate([
             'envelope_id' => ['required', 'integer'],
             'amount'      => ['required', 'numeric', 'gt:0'],
+            'month'       => ['nullable', 'date_format:Y-m'],
         ]);
 
         $envelope = $user->envelopes()
@@ -174,12 +172,22 @@ class EnvelopeController extends Controller
 
         abort_unless($envelope !== null, 403);
 
+        // Default to today; when assigning into a past month, date it to that month's 1st
+        // so it counts toward that month's "Assigned" total. RTA stays all-time either way.
+        $occurredAt = now()->toDateString();
+        if (! empty($validated['month'])) {
+            $assignMonth = Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth();
+            if ($assignMonth->lt(now()->startOfMonth())) {
+                $occurredAt = $assignMonth->toDateString();
+            }
+        }
+
         EnvelopeTransaction::create([
             'envelope_id' => $validated['envelope_id'],
             'type'        => 'fund',
             'amount'      => $validated['amount'],
             'description' => 'Ready to assign',
-            'occurred_at' => now()->toDateString(),
+            'occurred_at' => $occurredAt,
         ]);
 
         $envelopeBalance = (float) ($envelope->funds_total ?? 0) - (float) ($envelope->spends_total ?? 0);

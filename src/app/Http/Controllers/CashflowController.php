@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CashTransaction;
-use App\Models\EnvelopeTransaction;
+use App\Models\Envelope;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -37,15 +37,21 @@ class CashflowController extends Controller
         $totalSpent = round((float) $envelopes->sum('spent_amount'), 2);
         $net        = round($income - $totalSpent, 2);
 
-        $envelopeRows = $envelopes
-            ->map(fn ($e) => [
-                'envelope' => $e,
-                'spent'    => round((float) $e->spent_amount, 2),
-                'target'   => round((float) $e->monthly_target, 2),
+        $grouped = $envelopes->groupBy(fn ($e) => $e->category());
+
+        $envelopeGroups = collect(Envelope::CATEGORY_ORDER)
+            ->mapWithKeys(fn ($cat) => [
+                $cat => ($grouped[$cat] ?? collect())
+                    ->map(fn ($e) => [
+                        'envelope' => $e,
+                        'spent'    => round((float) $e->spent_amount, 2),
+                        'target'   => round((float) $e->monthly_target, 2),
+                    ])
+                    ->filter(fn ($r) => $r['spent'] > 0 || $r['target'] > 0)
+                    ->sortByDesc('spent')
+                    ->values(),
             ])
-            ->filter(fn ($r) => $r['spent'] > 0 || $r['target'] > 0)
-            ->sortByDesc('spent')
-            ->values();
+            ->filter(fn ($rows) => $rows->isNotEmpty());
 
         $currentYm     = $month->format('Y-m');
         $historyStart  = $month->copy()->subMonths(5)->startOfMonth();
@@ -89,7 +95,7 @@ class CashflowController extends Controller
 
         return view('cashflow', compact(
             'month', 'income', 'totalSpent', 'net',
-            'incomeRows', 'envelopeRows', 'history', 'prevMonth', 'nextMonth', 'isCurrentMonth'
+            'incomeRows', 'envelopeGroups', 'history', 'prevMonth', 'nextMonth', 'isCurrentMonth'
         ));
     }
 }

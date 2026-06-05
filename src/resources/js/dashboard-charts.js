@@ -5,7 +5,7 @@ import {
     PieController, ArcElement,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import { filterByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow, buildNorm, benchTickerColors, DEMO_MASK } from './chart-utils';
+import { filterByRange, resampleByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow, buildNorm, benchTickerColors, DEMO_MASK } from './chart-utils';
 
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
 
@@ -91,10 +91,15 @@ document.addEventListener('DOMContentLoaded', function () {
             },
         });
 
+        // Let Chart.js auto-pick the time unit so resampled long-range data
+        // doesn't try to render a daily tick axis.
+        dashChart.options.scales.x.time.unit = false;
+
         function updateDashChart(range) {
             const filtered = filterByRange(showManual ? allDataFull : allDataMkt, range);
-            dashChart.data.datasets[0].data = filtered.map(r => pointFromRow(r, 'value'));
-            dashChart.data.datasets[1].data = filtered.map(r => pointFromRow(r, 'cost'));
+            const points   = resampleByRange(filtered);
+            dashChart.data.datasets[0].data = points.map(r => pointFromRow(r, 'value'));
+            dashChart.data.datasets[1].data = points.map(r => pointFromRow(r, 'cost'));
             dashChart.update();
             activateBtn('#dash-range-btns', range);
             updateTiles(filtered, range);

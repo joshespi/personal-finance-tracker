@@ -27,11 +27,16 @@ class AssetController extends Controller
 
         if ($request->has('asset_type')) {
             $type = $request->input('asset_type');
-            $asset->update(['asset_type' => $type]);
+            $request->user()->assetClassifications()->updateOrCreate(
+                ['asset_id' => $asset->id],
+                ['asset_type' => $type],
+            );
             return back()->with('success', "{$asset->symbol} reclassified as " . AssetType::from($type)->label() . '.');
         }
 
         if ($request->has('price_source')) {
+            // price_source drives the single shared price feed for this symbol, so it can't be per-user.
+            abort_unless($request->user()->is_admin, 403);
             $source = $request->input('price_source') ?: null;
             $asset->update(['price_source' => $source]);
             $label = $source ? PriceSource::from($source)->label() : 'Auto';

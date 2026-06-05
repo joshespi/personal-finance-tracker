@@ -175,6 +175,19 @@ class LiabilityTest extends TestCase
         $this->assertDatabaseMissing('liability_balances', ['id' => $balance->id]);
     }
 
+    public function test_cannot_delete_another_users_liability_balance(): void
+    {
+        $liability = Liability::factory()->create();
+        $balance   = LiabilityBalance::factory()->for($liability)->create(['balance' => 100000]);
+        $other     = User::factory()->create();
+
+        $this->actingAs($other)
+            ->delete(route('liabilities.balances.destroy', $balance))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('liability_balances', ['id' => $balance->id]);
+    }
+
     public function test_cascade_delete_balances_when_liability_deleted(): void
     {
         $liability = Liability::factory()->create();

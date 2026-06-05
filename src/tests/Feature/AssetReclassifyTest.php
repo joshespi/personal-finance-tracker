@@ -28,7 +28,7 @@ class AssetReclassifyTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_user_can_reclassify_asset(): void
+    public function test_reclassify_stores_per_user_override_and_leaves_global_untouched(): void
     {
         [$user, $asset] = $this->userWithAsset();
 
@@ -36,7 +36,53 @@ class AssetReclassifyTest extends TestCase
             ->patch(route('assets.reclassify', $asset), ['asset_type' => 'crypto'])
             ->assertRedirect();
 
-        $this->assertDatabaseHas('assets', ['id' => $asset->id, 'asset_type' => 'crypto']);
+        $this->assertDatabaseHas('user_asset_classifications', [
+            'user_id'    => $user->id,
+            'asset_id'   => $asset->id,
+            'asset_type' => 'crypto',
+        ]);
+        $this->assertDatabaseHas('assets', ['id' => $asset->id, 'asset_type' => 'stock']);
+    }
+
+    public function test_reclassify_is_per_user(): void
+    {
+        $asset = Asset::factory()->stock()->create(['symbol' => 'ZZZ']);
+
+        $alice = User::factory()->create();
+        $aPort = Portfolio::factory()->for($alice)->create();
+        Transaction::factory()->for($aPort)->for($asset)->buy()->create(['quantity' => 1, 'price_per_unit' => 100]);
+
+        $bob   = User::factory()->create();
+        $bPort = Portfolio::factory()->for($bob)->create();
+        Transaction::factory()->for($bPort)->for($asset)->buy()->create(['quantity' => 1, 'price_per_unit' => 100]);
+
+        $this->actingAs($alice)
+            ->patch(route('assets.reclassify', $asset), ['asset_type' => 'crypto'])
+            ->assertRedirect();
+
+        $aliceHoldings = $this->actingAs($alice)->get(route('dashboard'))->viewData('allHoldings');
+        $this->assertEquals('crypto', $aliceHoldings->firstWhere('asset.symbol', 'ZZZ')['asset']->asset_type);
+
+        $bobHoldings = $this->actingAs($bob)->get(route('dashboard'))->viewData('allHoldings');
+        $this->assertEquals('stock', $bobHoldings->firstWhere('asset.symbol', 'ZZZ')['asset']->asset_type);
+    }
+
+    public function test_reclassify_updates_existing_override(): void
+    {
+        [$user, $asset] = $this->userWithAsset();
+
+        $this->actingAs($user)->patch(route('assets.reclassify', $asset), ['asset_type' => 'crypto']);
+        $this->actingAs($user)->patch(route('assets.reclassify', $asset), ['asset_type' => 'bond']);
+
+        $this->assertEquals(
+            1,
+            \App\Models\UserAssetClassification::where('user_id', $user->id)->where('asset_id', $asset->id)->count()
+        );
+        $this->assertDatabaseHas('user_asset_classifications', [
+            'user_id'    => $user->id,
+            'asset_id'   => $asset->id,
+            'asset_type' => 'bond',
+        ]);
     }
 
     public function test_user_cannot_reclassify_asset_they_do_not_hold(): void
@@ -47,6 +93,8 @@ class AssetReclassifyTest extends TestCase
         $this->actingAs($user)
             ->patch(route('assets.reclassify', $asset), ['asset_type' => 'crypto'])
             ->assertForbidden();
+
+        $this->assertDatabaseMissing('user_asset_classifications', ['asset_id' => $asset->id]);
     }
 
     public function test_reclassify_validates_asset_type(): void
@@ -57,7 +105,7 @@ class AssetReclassifyTest extends TestCase
             ->patch(route('assets.reclassify', $asset), ['asset_type' => 'invalid'])
             ->assertSessionHasErrors('asset_type');
 
-        $this->assertEquals('stock', $asset->fresh()->asset_type);
+        $this->assertDatabaseMissing('user_asset_classifications', ['asset_id' => $asset->id]);
     }
 
     public function test_empty_request_makes_no_changes(): void
@@ -70,11 +118,13 @@ class AssetReclassifyTest extends TestCase
 
         $this->assertEquals('stock', $asset->fresh()->asset_type);
         $this->assertNull($asset->fresh()->price_source);
+        $this->assertDatabaseMissing('user_asset_classifications', ['asset_id' => $asset->id]);
     }
 
-    public function test_user_can_set_price_source(): void
+    public function test_admin_can_set_price_source(): void
     {
         [$user, $asset] = $this->userWithAsset();
+        $user->update(['is_admin' => true]);
 
         $this->actingAs($user)
             ->patch(route('assets.reclassify', $asset), ['price_source' => 'finnhub'])
@@ -83,9 +133,21 @@ class AssetReclassifyTest extends TestCase
         $this->assertDatabaseHas('assets', ['id' => $asset->id, 'price_source' => 'finnhub']);
     }
 
-    public function test_user_can_reset_price_source_to_auto(): void
+    public function test_non_admin_cannot_set_price_source(): void
     {
         [$user, $asset] = $this->userWithAsset();
+
+        $this->actingAs($user)
+            ->patch(route('assets.reclassify', $asset), ['price_source' => 'finnhub'])
+            ->assertForbidden();
+
+        $this->assertNull($asset->fresh()->price_source);
+    }
+
+    public function test_admin_can_reset_price_source_to_auto(): void
+    {
+        [$user, $asset] = $this->userWithAsset();
+        $user->update(['is_admin' => true]);
         $asset->update(['price_source' => 'finnhub']);
 
         $this->actingAs($user)

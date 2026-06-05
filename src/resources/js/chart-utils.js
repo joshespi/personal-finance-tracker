@@ -22,6 +22,23 @@ export function filterByRange(data, range) {
     return cut ? data.filter(r => new Date(r.date) >= cut) : data;
 }
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const weekKey  = d => Math.floor(new Date(d).getTime() / WEEK_MS);
+const monthKey = d => { const t = new Date(d); return t.getFullYear() * 12 + t.getMonth(); };
+
+// Daily snapshots get noisy over long spans. Collapse to period-end points
+// (weekly/monthly) so the long-range trend reads cleanly. Latest point is
+// always preserved, so today's value never drifts.
+export function resampleByRange(data) {
+    if (data.length < 2) return data;
+    const spanDays = (new Date(data[data.length - 1].date) - new Date(data[0].date)) / 86400000;
+    if (spanDays <= 92) return data;
+    const keyFn = spanDays <= 730 ? weekKey : monthKey;
+    const buckets = new Map();
+    for (const r of data) buckets.set(keyFn(r.date), r);
+    return Array.from(buckets.values());
+}
+
 export function activateBtn(containerSel, activeRange) {
     document.querySelectorAll(containerSel + ' button[data-range]').forEach(b => {
         const active = b.dataset.range === activeRange;

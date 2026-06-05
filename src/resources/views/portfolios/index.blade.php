@@ -58,11 +58,61 @@
                     </div>
                 </div>
             @empty
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-center text-gray-500 dark:text-gray-400">
-                    No portfolios yet.
-                    <a href="{{ route('portfolios.create') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline ms-1">Create one.</a>
-                </div>
+                @if ($closedPortfolios->isEmpty())
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-center text-gray-500 dark:text-gray-400">
+                        No portfolios yet.
+                        <a href="{{ route('portfolios.create') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline ms-1">Create one.</a>
+                    </div>
+                @endif
             @endforelse
+
+            @if ($closedPortfolios->isNotEmpty())
+                <div x-data="{ open: false }" class="pt-2">
+                    <button @click="open = !open"
+                            class="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition">
+                        <span x-text="open ? '▾' : '▸'"></span>
+                        Closed ({{ $closedPortfolios->count() }})
+                    </button>
+
+                    <div x-show="open" x-cloak class="mt-3 space-y-4">
+                        @foreach ($closedPortfolios as $portfolio)
+                            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg opacity-75">
+                                <div class="p-6 flex items-start justify-between">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                            <a href="{{ route('portfolios.show', $portfolio) }}" class="hover:underline">
+                                                {{ $demo->n($portfolio->name) }}
+                                            </a>
+                                            <span class="ms-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                                Closed {{ $portfolio->closed_at->format('M Y') }}
+                                            </span>
+                                        </h3>
+                                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                                            {{ $portfolio->currency }}
+                                            &bull; {{ $portfolio->transactions_count }} transaction(s)
+                                            &bull; {{ $portfolio->manual_assets_count }} manual asset(s)
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0 ms-4">
+                                        <a href="{{ route('portfolios.show', $portfolio) }}"
+                                           class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                                            View
+                                        </a>
+                                        <form method="POST" action="{{ route('portfolios.reopen', $portfolio) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit"
+                                                    class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                                                Reopen
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </x-app-layout>

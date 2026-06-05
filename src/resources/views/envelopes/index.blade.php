@@ -187,9 +187,9 @@
                                                 @endif
                                             </div>
 
-                                            {{-- Assigned (input, current month only) --}}
+                                            {{-- Assigned (input editable for current + past months; read-only for future) --}}
                                             <div class="hidden sm:block text-right">
-                                                @if ($isCurrentMonth)
+                                                @if (! $isFutureMonth)
                                                     <div class="relative inline-flex items-center">
                                                         <span class="absolute left-2.5 text-gray-400 text-sm pointer-events-none">$</span>
                                                         <input type="number" step="0.01" min="0"
@@ -325,6 +325,7 @@
         return {
             collapsed:    {},
             activeFilter: 'all',
+            month:        '{{ $month->format('Y-m') }}',
             inputs:       @json($jsInputs),
             balances:     {},
             focusValues:  {},
@@ -391,7 +392,7 @@
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                             'Accept': 'application/json',
                         },
-                        body: JSON.stringify({ envelope_id: id, amount: current }),
+                        body: JSON.stringify({ envelope_id: id, amount: current, month: this.month }),
                     });
                     if (!res.ok) throw new Error();
                     const data = await res.json();

@@ -26,7 +26,7 @@ class ManualAsset extends Model
     protected $fillable = [
         'portfolio_id', 'name', 'description', 'asset_class', 'cost_basis', 'currency',
         'tracking_method', 'proxy_asset_id', 'anchor_value', 'anchor_date', 'anchor_synthetic_shares',
-        'include_in_chart',
+        'include_in_chart', 'include_in_invested',
     ];
 
     protected $casts = [
@@ -35,6 +35,7 @@ class ManualAsset extends Model
         'anchor_date'             => 'date',
         'anchor_synthetic_shares' => 'decimal:8',
         'include_in_chart'        => 'boolean',
+        'include_in_invested'     => 'boolean',
     ];
 
     public function profitLoss(): ?float

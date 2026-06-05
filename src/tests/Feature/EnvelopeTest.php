@@ -174,6 +174,19 @@ class EnvelopeTest extends TestCase
         $this->assertDatabaseMissing('envelope_transactions', ['id' => $tx->id]);
     }
 
+    public function test_cannot_delete_another_users_envelope_transaction(): void
+    {
+        $envelope = Envelope::factory()->create();
+        $tx       = EnvelopeTransaction::factory()->for($envelope)->fund()->create();
+        $other    = User::factory()->create();
+
+        $this->actingAs($other)
+            ->delete(route('envelopes.transactions.destroy', $tx))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('envelope_transactions', ['id' => $tx->id]);
+    }
+
     public function test_funding_from_cash_account_creates_paired_withdrawal(): void
     {
         $envelope = Envelope::factory()->create();
@@ -284,6 +297,28 @@ class EnvelopeTest extends TestCase
             ->assertOk()
             ->assertSee('Mar 2026')
             ->assertSee('100.00');
+    }
+
+    public function test_index_past_month_shows_assign_input(): void
+    {
+        $envelope = Envelope::factory()->create();
+        $pastMonth = now()->subMonths(2)->format('Y-m');
+
+        $this->actingAs($envelope->user)
+            ->get(route('envelopes.index', ['month' => $pastMonth]))
+            ->assertOk()
+            ->assertSee('rta-input w-32', false);
+    }
+
+    public function test_index_future_month_hides_assign_input(): void
+    {
+        $envelope = Envelope::factory()->create();
+        $futureMonth = now()->addMonths(2)->format('Y-m');
+
+        $this->actingAs($envelope->user)
+            ->get(route('envelopes.index', ['month' => $futureMonth]))
+            ->assertOk()
+            ->assertDontSee('rta-input w-32', false);
     }
 
     public function test_index_month_param_scopes_fund_totals(): void

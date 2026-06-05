@@ -17,6 +17,7 @@ class DashboardController extends Controller
     {
         $user       = $request->user();
         $portfolios = $user->portfolios()
+            ->active()
             ->with(['transactions.asset.latestPrice', 'manualAssets.latestValuation', 'manualAssets.proxyAsset.latestPrice'])
             ->get();
 
@@ -48,7 +49,7 @@ class DashboardController extends Controller
             $portfolio = $ph['portfolio'];
             $holdings  = $ph['holdings'];
 
-            $costBasis    = $holdings->sum('total_cost') + $portfolio->manualAssets->where('include_in_chart', true)->sum(fn ($ma) => (float) $ma->cost_basis);
+            $costBasis    = $holdings->sum('total_cost');
             $marketValue  = $holdings->filter(fn ($h) => $h['current_value'] !== null)->sum('current_value');
             $unpricedCost = $holdings->filter(fn ($h) => $h['current_value'] === null)->sum('total_cost');
             $manualValue  = $portfolio->chartManualValue();
@@ -68,6 +69,14 @@ class DashboardController extends Controller
         $portfolioValue   = round($summaries->sum('total_value'), 2);
         $totalCash        = round($user->totalCash(), 2);
         $totalAssets      = round($portfolioValue + $totalCash, 2);
+
+        // Invested = portfolio value minus manual assets flagged out (e.g. primary residence).
+        // Only subtract ones already counted in portfolio_value, i.e. include_in_chart=true.
+        $excludedFromInvested = $portfolios->flatMap->manualAssets
+            ->where('include_in_chart', true)
+            ->where('include_in_invested', false)
+            ->sum(fn ($ma) => $ma->currentValue());
+        $investedValue = round($portfolioValue - $excludedFromInvested, 2);
         $userLiabilities  = $user->liabilities()->with('latestBalance')->get();
         $totalDebt        = round($userLiabilities->sum(fn ($l) => $l->currentBalance()), 2);
 
@@ -95,6 +104,7 @@ class DashboardController extends Controller
                 ? round($summaries->sum(fn ($s) => $s['unrealized'] ?? 0), 2)
                 : null,
             'portfolio_value' => $portfolioValue,
+            'invested_value'  => $investedValue,
             'total_value'     => $totalAssets,
             'total_debt'      => $totalDebt,
             'net_worth'       => round($totalAssets - $totalDebt, 2),
@@ -141,6 +151,8 @@ class DashboardController extends Controller
             $h['pct'] = $allHoldingsTotal > 0 ? round($h['effective_value'] / $allHoldingsTotal * 100, 2) : 0;
             return $h;
         });
+
+        $user->applyAssetClassifications($allHoldings->pluck('asset'));
 
         $manualBuckets = $this->manualAssetBuckets($portfolios);
         $allocation    = $this->buildAllocation($allHoldings, $manualBuckets);
@@ -218,13 +230,13 @@ class DashboardController extends Controller
     private function buildGlobalRebalancing(Collection $allHoldings, array $manualBuckets, User $user): array
     {
         $targets = [
-            'stock'       => (int) $user->target_stock_pct,
-            'crypto'      => (int) $user->target_crypto_pct,
-            'real_estate' => (int) $user->target_real_estate_pct,
-            'bond'        => (int) $user->target_bond_pct,
+            'stock'       => (float) $user->target_stock_pct,
+            'crypto'      => (float) $user->target_crypto_pct,
+            'real_estate' => (float) $user->target_real_estate_pct,
+            'bond'        => (float) $user->target_bond_pct,
         ];
 
-        if (array_sum($targets) === 0) {
+        if (array_sum($targets) == 0) {
             return [];
         }
 

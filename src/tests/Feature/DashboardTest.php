@@ -185,7 +185,7 @@ class DashboardTest extends TestCase
             ->assertDontSee('Interest bleed');
     }
 
-    public function test_portfolio_summary_includes_manual_asset_cost_basis(): void
+    public function test_portfolio_summary_cost_basis_excludes_manual_assets(): void
     {
         $user      = User::factory()->create();
         $portfolio = Portfolio::factory()->for($user)->create();
@@ -202,10 +202,10 @@ class DashboardTest extends TestCase
         $response  = $this->actingAs($user)->get(route('dashboard'));
         $summaries = $response->viewData('summaries');
 
-        $this->assertEquals(30000 + 400000, $summaries->first()['cost_basis']);
+        $this->assertEquals(30000, $summaries->first()['cost_basis']);
     }
 
-    public function test_portfolio_summary_cost_basis_is_manual_asset_only_when_no_transactions(): void
+    public function test_portfolio_summary_cost_basis_is_zero_with_only_manual_assets(): void
     {
         $user      = User::factory()->create();
         $portfolio = Portfolio::factory()->for($user)->create();
@@ -216,7 +216,7 @@ class DashboardTest extends TestCase
         $response  = $this->actingAs($user)->get(route('dashboard'));
         $summaries = $response->viewData('summaries');
 
-        $this->assertEquals(500000, $summaries->first()['cost_basis']);
+        $this->assertEquals(0, $summaries->first()['cost_basis']);
     }
 
     public function test_portfolios_sorted_by_total_value_descending(): void
@@ -254,5 +254,33 @@ class DashboardTest extends TestCase
         $symbols     = $allHoldings->pluck('asset')->map(fn ($a) => $a->symbol)->values()->all();
 
         $this->assertEquals(['BTC', 'ETH', 'DOGE'], $symbols);
+    }
+
+    public function test_market_value_tile_hidden_when_no_manual_assets(): void
+    {
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+        $btc       = $this->makePricedAsset('BTC', 50000.0);
+        Transaction::factory()->for($portfolio)->for($btc)->buy()->create(['quantity' => 1, 'price_per_unit' => 40000]);
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Portfolio Value')
+            ->assertDontSee('tile-market-value', false);
+    }
+
+    public function test_market_value_tile_shown_when_manual_assets_present(): void
+    {
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+        $btc       = $this->makePricedAsset('BTC', 50000.0);
+        Transaction::factory()->for($portfolio)->for($btc)->buy()->create(['quantity' => 1, 'price_per_unit' => 40000]);
+
+        $manual = ManualAsset::factory()->for($portfolio)->create(['include_in_chart' => true]);
+        ManualValuation::factory()->for($manual, 'manualAsset')->create(['value' => 25000]);
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('tile-market-value', false);
     }
 }

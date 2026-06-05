@@ -8,9 +8,9 @@
 
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-6">
                 <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
-                    This app is free and self-hosted. No ads, no analytics, no third-party connections —
-                    just your data on your server. If it's saved you money or time, consider tipping.
-                    No pressure at all.
+                    This app is free and open to self-host. No ads, no analytics, no third-party connections —
+                    your data stays on whatever server runs it and goes nowhere else. If it's saved you money
+                    or time, consider tipping. No pressure at all.
                 </p>
             </div>
 

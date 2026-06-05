@@ -165,6 +165,19 @@ class CashAccountTest extends TestCase
         $this->assertDatabaseMissing('cash_transactions', ['id' => $tx->id]);
     }
 
+    public function test_cannot_delete_another_users_cash_transaction(): void
+    {
+        $account = CashAccount::factory()->create();
+        $tx      = CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create(['amount' => 500]);
+        $other   = User::factory()->create();
+
+        $this->actingAs($other)
+            ->delete(route('cash-accounts.transactions.destroy', $tx))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('cash_transactions', ['id' => $tx->id]);
+    }
+
     public function test_reconcile_creates_deposit_when_actual_exceeds_tracked(): void
     {
         $account = CashAccount::factory()->create();

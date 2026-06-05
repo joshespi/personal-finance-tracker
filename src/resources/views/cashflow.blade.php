@@ -84,43 +84,50 @@
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Spending by Envelope</h3>
                 </div>
 
-                @if ($envelopeRows->isEmpty())
+                @if ($envelopeGroups->isEmpty())
                     <div class="p-6 text-sm text-gray-500 dark:text-gray-400">No envelope activity for this month.</div>
                 @else
-                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
-                        @foreach ($envelopeRows as $row)
-                            @php
-                                $pct  = $row['target'] > 0 ? min(100, round($row['spent'] / $row['target'] * 100)) : null;
-                                $over = $row['target'] > 0 && $row['spent'] > $row['target'];
-                            @endphp
-                            <div class="px-6 py-4">
-                                <div class="flex items-center justify-between mb-1.5">
-                                    <div class="flex items-center gap-2">
-                                        <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                                              style="background-color: {{ $row['envelope']->color }}"></span>
-                                        <a href="{{ route('envelopes.show', $row['envelope']) }}"
-                                           class="text-sm font-medium text-gray-800 dark:text-gray-200 hover:underline">
-                                            {{ $row['envelope']->name }}
-                                        </a>
+                    @foreach ($envelopeGroups as $category => $rows)
+                        @php $groupSpent = $rows->sum('spent'); @endphp
+                        <div class="px-6 py-2 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+                            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $category }}</span>
+                            <span class="text-xs font-mono text-gray-500 dark:text-gray-400">${{ number_format($groupSpent, 2) }}</span>
+                        </div>
+                        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach ($rows as $row)
+                                @php
+                                    $pct  = $row['target'] > 0 ? min(100, round($row['spent'] / $row['target'] * 100)) : null;
+                                    $over = $row['target'] > 0 && $row['spent'] > $row['target'];
+                                @endphp
+                                <div class="px-6 py-4">
+                                    <div class="flex items-center justify-between mb-1.5">
+                                        <div class="flex items-center gap-2">
+                                            <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                                                  style="background-color: {{ $row['envelope']->color }}"></span>
+                                            <a href="{{ route('envelopes.show', $row['envelope']) }}"
+                                               class="text-sm font-medium text-gray-800 dark:text-gray-200 hover:underline">
+                                                {{ $row['envelope']->name }}
+                                            </a>
+                                        </div>
+                                        <div class="text-sm font-mono text-right shrink-0 ml-4">
+                                            <span class="{{ $over ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200' }} font-semibold">
+                                                ${{ number_format($row['spent'], 2) }}
+                                            </span>
+                                            @if ($row['target'] > 0)
+                                                <span class="text-gray-400 dark:text-gray-500"> / ${{ number_format($row['target'], 2) }}</span>
+                                            @endif
+                                        </div>
                                     </div>
-                                    <div class="text-sm font-mono text-right shrink-0 ml-4">
-                                        <span class="{{ $over ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200' }} font-semibold">
-                                            ${{ number_format($row['spent'], 2) }}
-                                        </span>
-                                        @if ($row['target'] > 0)
-                                            <span class="text-gray-400 dark:text-gray-500"> / ${{ number_format($row['target'], 2) }}</span>
-                                        @endif
-                                    </div>
+                                    @if ($pct !== null)
+                                        <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                                            <div class="h-full rounded-full transition-all"
+                                                 style="width: {{ $pct }}%; background-color: {{ $over ? '#dc2626' : $row['envelope']->color }};"></div>
+                                        </div>
+                                    @endif
                                 </div>
-                                @if ($pct !== null)
-                                    <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
-                                        <div class="h-full rounded-full transition-all"
-                                             style="width: {{ $pct }}%; background-color: {{ $over ? '#dc2626' : $row['envelope']->color }};"></div>
-                                    </div>
-                                @endif
-                            </div>
-                        @endforeach
-                    </div>
+                            @endforeach
+                        </div>
+                    @endforeach
                 @endif
             </div>
 

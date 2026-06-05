@@ -26,10 +26,10 @@ class User extends Authenticatable implements MustVerifyEmail
             'password'                     => 'hashed',
             'is_admin'                     => 'boolean',
             'emergency_fund_target_months' => 'integer',
-            'target_stock_pct'             => 'integer',
-            'target_crypto_pct'            => 'integer',
-            'target_real_estate_pct'       => 'integer',
-            'target_bond_pct'              => 'integer',
+            'target_stock_pct'             => 'decimal:2',
+            'target_crypto_pct'            => 'decimal:2',
+            'target_real_estate_pct'       => 'decimal:2',
+            'target_bond_pct'              => 'decimal:2',
             'notify_scheduled_transactions' => 'boolean',
         ];
     }
@@ -42,6 +42,29 @@ class User extends Authenticatable implements MustVerifyEmail
     public function watchlistItems(): HasMany
     {
         return $this->hasMany(WatchlistItem::class);
+    }
+
+    public function assetClassifications(): HasMany
+    {
+        return $this->hasMany(UserAssetClassification::class);
+    }
+
+    // Applies this user's per-asset type overrides onto the given Asset models in place
+    // (allocation + display only — the global Asset.asset_type that drives the price feed is untouched).
+    public function applyAssetClassifications(\Illuminate\Support\Collection $assets): void
+    {
+        $ids = $assets->pluck('id')->filter()->all();
+        if (empty($ids)) {
+            return;
+        }
+
+        $overrides = $this->assetClassifications()->whereIn('asset_id', $ids)->pluck('asset_type', 'asset_id');
+
+        foreach ($assets as $asset) {
+            if ($asset && $overrides->has($asset->id)) {
+                $asset->asset_type = $overrides->get($asset->id);
+            }
+        }
     }
 
     public function loginHistory(): HasMany

@@ -73,9 +73,14 @@ class TransactionController extends Controller
         return view('transactions.index', compact('portfolio', 'transactions', 'sortCol', 'sortDir'));
     }
 
-    public function create(Request $request, Portfolio $portfolio): View
+    public function create(Request $request, Portfolio $portfolio): View|RedirectResponse
     {
         $this->authorize('update', $portfolio);
+
+        if ($portfolio->isClosed()) {
+            return redirect()->route('portfolios.show', $portfolio)
+                ->with('error', 'This portfolio is closed. Reopen it to add transactions.');
+        }
 
         return view('transactions.create', ['portfolio' => $portfolio, 'types' => self::TYPES]);
     }
@@ -83,6 +88,11 @@ class TransactionController extends Controller
     public function store(Request $request, Portfolio $portfolio): RedirectResponse
     {
         $this->authorize('update', $portfolio);
+
+        if ($portfolio->isClosed()) {
+            return redirect()->route('portfolios.show', $portfolio)
+                ->with('error', 'This portfolio is closed. Reopen it to add transactions.');
+        }
 
         $validated = $request->validate([
             'symbol'         => ['required', 'string', 'max:20'],
@@ -122,6 +132,7 @@ class TransactionController extends Controller
         $this->authorize('update', $transaction);
 
         $transaction->load('asset', 'portfolio');
+        $request->user()->applyAssetClassifications(collect([$transaction->asset]));
 
         return view('transactions.edit', [
             'transaction' => $transaction,

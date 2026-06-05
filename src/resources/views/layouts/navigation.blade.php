@@ -17,7 +17,6 @@
                     $portfoliosActive = request()->routeIs('portfolios.*')
                         || request()->routeIs('manual-assets.*')
                         || request()->routeIs('transactions.*')
-                        || request()->routeIs('watchlist.*')
                         || request()->routeIs('tax.*')
                         || request()->routeIs('dividends');
                     $moneyActive = request()->routeIs('cash-accounts.*')
@@ -65,7 +64,6 @@
                                 <x-dropdown-link :href="route('portfolios.index')">{{ __('Portfolios') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('transactions.all')">{{ __('Transactions') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('dividends')">{{ __('Dividend Income') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('watchlist.index')">{{ __('Watchlist') }}</x-dropdown-link>
                                 <x-dropdown-link :href="route('tax.summary')">{{ __('Tax Summary') }}</x-dropdown-link>
                             </div>
                         </div>
@@ -220,9 +218,6 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('dividends')" :active="request()->routeIs('dividends')">
                 {{ __('Dividend Income') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('watchlist.index')" :active="request()->routeIs('watchlist.*')">
-                {{ __('Watchlist') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('tax.summary')" :active="request()->routeIs('tax.*')">
                 {{ __('Tax Summary') }}
