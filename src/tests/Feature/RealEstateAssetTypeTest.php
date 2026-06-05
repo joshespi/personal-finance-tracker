@@ -43,23 +43,9 @@ class RealEstateAssetTypeTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $this->assertSame('real_estate', $asset->fresh()->asset_type);
-    }
-
-    public function test_can_add_real_estate_to_watchlist(): void
-    {
-        $user = User::factory()->create();
-
-        $this->actingAs($user)
-            ->post(route('watchlist.store'), [
-                'symbol'     => 'VNQ',
-                'asset_type' => 'real_estate',
-            ])
-            ->assertRedirect();
-
-        $this->assertDatabaseHas('watchlist_items', [
-            'user_id'    => $user->id,
-            'symbol'     => 'VNQ',
+        $this->assertDatabaseHas('user_asset_classifications', [
+            'user_id'    => $portfolio->user_id,
+            'asset_id'   => $asset->id,
             'asset_type' => 'real_estate',
         ]);
     }

@@ -15,7 +15,19 @@
                       x-data="transactionForm()">
                     @csrf
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-4">
+                        <div>
+                            <x-input-label for="asset_type" value="Asset Type" />
+                            <select id="asset_type" name="asset_type"
+                                    x-model="assetType"
+                                    @change="results = []; query && search()"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                @foreach (App\Enums\AssetType::cases() as $type)
+                                    <option value="{{ $type->value }}" @selected(old('asset_type', 'stock') === $type->value)>{{ $type->label() }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('asset_type')" class="mt-2" />
+                        </div>
                         <div class="relative">
                             <x-input-label for="symbol" value="Symbol" />
                             <input id="symbol" name="symbol" type="text" required maxlength="20"
@@ -46,18 +58,6 @@
                                 </template>
                             </div>
                             <x-input-error :messages="$errors->get('symbol')" class="mt-2" />
-                        </div>
-                        <div>
-                            <x-input-label for="asset_type" value="Asset Type" />
-                            <select id="asset_type" name="asset_type"
-                                    x-model="assetType"
-                                    @change="results = []; query && search()"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                                @foreach (App\Enums\AssetType::cases() as $type)
-                                    <option value="{{ $type->value }}" @selected(old('asset_type', 'stock') === $type->value)>{{ $type->label() }}</option>
-                                @endforeach
-                            </select>
-                            <x-input-error :messages="$errors->get('asset_type')" class="mt-2" />
                         </div>
                     </div>
 

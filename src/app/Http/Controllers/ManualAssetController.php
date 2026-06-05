@@ -22,9 +22,14 @@ class ManualAssetController extends Controller
         return view('manual-assets.index', compact('portfolio', 'manualAssets'));
     }
 
-    public function create(Request $request, Portfolio $portfolio): View
+    public function create(Request $request, Portfolio $portfolio): View|RedirectResponse
     {
         $this->authorize('update', $portfolio);
+
+        if ($portfolio->isClosed()) {
+            return redirect()->route('portfolios.show', $portfolio)
+                ->with('error', 'This portfolio is closed. Reopen it to add assets.');
+        }
 
         return view('manual-assets.create', [
             'portfolio'    => $portfolio,
@@ -36,9 +41,15 @@ class ManualAssetController extends Controller
     {
         $this->authorize('update', $portfolio);
 
+        if ($portfolio->isClosed()) {
+            return redirect()->route('portfolios.show', $portfolio)
+                ->with('error', 'This portfolio is closed. Reopen it to add assets.');
+        }
+
         $validated = $this->validatePayload($request);
         $validated['tracking_method'] ??= 'static';
-        $validated['include_in_chart'] = $request->boolean('include_in_chart');
+        $validated['include_in_chart']    = $request->boolean('include_in_chart');
+        $validated['include_in_invested'] = $request->boolean('include_in_invested');
 
         $asset = $portfolio->manualAssets()->create(array_merge(
             array_diff_key($validated, ['proxy_symbol' => null]),
@@ -85,7 +96,8 @@ class ManualAssetController extends Controller
 
         $validated = $this->validatePayload($request);
         $validated['tracking_method'] ??= 'static';
-        $validated['include_in_chart'] = $request->boolean('include_in_chart');
+        $validated['include_in_chart']    = $request->boolean('include_in_chart');
+        $validated['include_in_invested'] = $request->boolean('include_in_invested');
 
         $manualAsset->update(array_merge(
             array_diff_key($validated, ['proxy_symbol' => null]),
@@ -115,7 +127,8 @@ class ManualAssetController extends Controller
             'asset_class'      => ['required', 'in:' . implode(',', array_keys(ManualAsset::ASSET_CLASSES))],
             'cost_basis'       => ['nullable', 'numeric', 'min:0'],
             'currency'         => ['required', 'string', 'size:3'],
-            'include_in_chart' => ['boolean'],
+            'include_in_chart'    => ['boolean'],
+            'include_in_invested' => ['boolean'],
             'tracking_method'  => ['nullable', 'in:static,proxy_ticker'],
             'proxy_symbol'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'string', 'max:20'],
             'anchor_value'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'numeric', 'gt:0'],

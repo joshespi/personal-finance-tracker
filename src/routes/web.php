@@ -41,7 +41,6 @@ use App\Http\Controllers\TickerSearchController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\TransactionImportController;
 use App\Http\Controllers\YnabImportController;
-use App\Http\Controllers\WatchlistController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('login'));
@@ -101,6 +100,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('portfolios/{portfolio}/chart-visibility', [PortfolioController::class, 'updateChartVisibility'])
         ->name('portfolios.chart-visibility');
 
+    Route::patch('portfolios/{portfolio}/close', [PortfolioController::class, 'close'])->name('portfolios.close');
+    Route::patch('portfolios/{portfolio}/reopen', [PortfolioController::class, 'reopen'])->name('portfolios.reopen');
+
     Route::post('portfolios/{portfolio}/slices', [PortfolioSliceController::class, 'store'])->name('portfolios.slices.store');
     Route::delete('portfolios/{portfolio}/slices/{slice}', [PortfolioSliceController::class, 'destroy'])->name('portfolios.slices.destroy');
 
@@ -148,11 +150,6 @@ Route::middleware('auth')->group(function () {
         ->name('envelopes.transactions.store');
     Route::delete('envelope-transactions/{transaction}', [EnvelopeTransactionController::class, 'destroy'])
         ->name('envelopes.transactions.destroy');
-
-    // Watchlist
-    Route::get('/watchlist', [WatchlistController::class, 'index'])->name('watchlist.index');
-    Route::post('/watchlist', [WatchlistController::class, 'store'])->name('watchlist.store');
-    Route::delete('/watchlist/{watchlistItem}', [WatchlistController::class, 'destroy'])->name('watchlist.destroy');
 
     // Ticker autocomplete
     Route::get('/tickers/search', TickerSearchController::class)->name('tickers.search')->middleware('throttle:30,1');

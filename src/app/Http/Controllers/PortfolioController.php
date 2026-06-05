@@ -15,13 +15,16 @@ class PortfolioController extends Controller
 {
     public function index(Request $request): View
     {
-        $portfolios = $request->user()
+        $all = $request->user()
             ->portfolios()
             ->withCount(['transactions', 'manualAssets'])
             ->orderBy('name')
             ->get();
 
-        return view('portfolios.index', compact('portfolios'));
+        $portfolios       = $all->whereNull('closed_at')->values();
+        $closedPortfolios = $all->whereNotNull('closed_at')->values();
+
+        return view('portfolios.index', compact('portfolios', 'closedPortfolios'));
     }
 
     public function create(): View
@@ -54,6 +57,8 @@ class PortfolioController extends Controller
         $portfolio->load(['transactions.asset.latestPrice', 'manualAssets.latestValuation', 'manualAssets.proxyAsset.latestPrice', 'snapshots', 'slices.asset.latestPrice']);
 
         $holdings = $portfolio->computeHoldings();
+
+        $request->user()->applyAssetClassifications($holdings->pluck('asset'));
 
         $incomeByAsset = $portfolio->transactions
             ->filter(fn ($t) => $t->type === 'dividend')
@@ -124,6 +129,32 @@ class PortfolioController extends Controller
         $portfolio->delete();
 
         return redirect()->route('portfolios.index')->with('success', 'Portfolio deleted.');
+    }
+
+    public function close(Request $request, Portfolio $portfolio): RedirectResponse
+    {
+        $this->authorize('update', $portfolio);
+
+        if (! $portfolio->isClosed()) {
+            $portfolio->closed_at = now();
+            $portfolio->save();
+            ActivityLog::record('portfolio.closed', $portfolio, ['name' => $portfolio->name]);
+        }
+
+        return redirect()->route('portfolios.show', $portfolio)->with('success', 'Portfolio closed.');
+    }
+
+    public function reopen(Request $request, Portfolio $portfolio): RedirectResponse
+    {
+        $this->authorize('update', $portfolio);
+
+        if ($portfolio->isClosed()) {
+            $portfolio->closed_at = null;
+            $portfolio->save();
+            ActivityLog::record('portfolio.reopened', $portfolio, ['name' => $portfolio->name]);
+        }
+
+        return redirect()->route('portfolios.show', $portfolio)->with('success', 'Portfolio reopened.');
     }
 
     public function updateChartVisibility(Request $request, Portfolio $portfolio): RedirectResponse

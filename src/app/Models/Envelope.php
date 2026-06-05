@@ -13,7 +13,19 @@ class Envelope extends Model
 {
     use HasFactory;
 
+    public const CATEGORY_ORDER = ['Emergency Fund', 'Mandatory', 'Wealth Building', 'Spending'];
+
     protected $fillable = ['user_id', 'name', 'monthly_target', 'goal_amount', 'goal_date', 'color', 'sort_order', 'notes', 'is_mandatory', 'is_emergency_fund', 'is_savings'];
+
+    public function category(): string
+    {
+        return match (true) {
+            $this->is_emergency_fund => 'Emergency Fund',
+            $this->is_mandatory      => 'Mandatory',
+            $this->is_savings        => 'Wealth Building',
+            default                  => 'Spending',
+        };
+    }
 
     protected $casts = [
         'monthly_target'    => 'decimal:8',

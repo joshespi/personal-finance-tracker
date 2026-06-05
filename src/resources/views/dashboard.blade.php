@@ -58,11 +58,20 @@
                         <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Investment Portfolio</p>
                         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                             <x-stat-tile>
-                                <x-slot:label>Tracked Assets</x-slot:label>
+                                <x-slot:label>Portfolio Value</x-slot:label>
                                 <p id="tile-total-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
                                     ${{ $demo->amt($totals['portfolio_value']) }}
                                 </p>
                             </x-stat-tile>
+                            {{-- Only show when an asset is flagged out of Invested (e.g. primary residence); otherwise identical to Portfolio Value. --}}
+                            @if (abs($totals['portfolio_value'] - $totals['invested_value']) >= 0.01)
+                                <x-stat-tile>
+                                    <x-slot:label>Invested Assets</x-slot:label>
+                                    <p id="tile-invested-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                        ${{ $demo->amt($totals['invested_value']) }}
+                                    </p>
+                                </x-stat-tile>
+                            @endif
                             <x-stat-tile>
                                 <x-slot:label>Cost Basis</x-slot:label>
                                 <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
@@ -71,12 +80,15 @@
                             </x-stat-tile>
                             @if ($totals['market_value'] !== null)
                                 @php $unr = $totals['unrealized'] ?? 0; @endphp
-                                <x-stat-tile>
-                                    <x-slot:label>Market Value</x-slot:label>
-                                    <p id="tile-market-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                        ${{ $demo->amt($totals['market_value']) }}
-                                    </p>
-                                </x-stat-tile>
+                                {{-- Only show Market Value when it differs from Portfolio Value (i.e. manual assets exist); otherwise the two tiles are identical. --}}
+                                @if (abs($totals['portfolio_value'] - $totals['market_value']) >= 0.01)
+                                    <x-stat-tile>
+                                        <x-slot:label>Market Value</x-slot:label>
+                                        <p id="tile-market-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                            ${{ $demo->amt($totals['market_value']) }}
+                                        </p>
+                                    </x-stat-tile>
+                                @endif
                                 <x-stat-tile>
                                     <x-slot:label>Unrealized P&L</x-slot:label>
                                     <p class="mt-1 text-2xl font-semibold font-mono {{ $unr >= 0 ? 'text-green-600' : 'text-red-600' }}">
@@ -337,9 +349,11 @@
                                         <th @click="sort('asset_type')" class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
                                             Type<span x-text="arrow('asset_type')"></span>
                                         </th>
+                                        @if (auth()->user()?->is_admin)
                                         <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase select-none">
                                             Feed
                                         </th>
+                                        @endif
                                         <th @click="sort('quantity')" class="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none">
                                             Total Qty<span x-text="arrow('quantity')"></span>
                                         </th>
@@ -390,6 +404,7 @@
                                                     </select>
                                                 </form>
                                             </td>
+                                            @if (auth()->user()?->is_admin)
                                             <td class="px-5 py-3">
                                                 <form :action="h.reclassify_url" method="POST" class="inline">
                                                     <input type="hidden" name="_token" value="{{ csrf_token() }}">
@@ -404,6 +419,7 @@
                                                     </select>
                                                 </form>
                                             </td>
+                                            @endif
                                             <td class="px-5 py-3 text-right font-mono text-gray-900 dark:text-gray-100" x-text="fmtQty(h.quantity)"></td>
                                             <td class="px-5 py-3 text-right font-mono text-gray-700 dark:text-gray-300" x-text="fmtMoney(h.total_cost)"></td>
                                             <td class="px-5 py-3 text-right font-mono text-gray-500 dark:text-gray-400" x-text="fmtPrice(h.current_price)"></td>

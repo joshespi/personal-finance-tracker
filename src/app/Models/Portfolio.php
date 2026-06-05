@@ -16,7 +16,23 @@ class Portfolio extends Model
 
     protected $casts = [
         'is_tax_advantaged' => 'boolean',
+        'closed_at'         => 'datetime',
     ];
+
+    public function scopeActive($query)
+    {
+        return $query->whereNull('closed_at');
+    }
+
+    public function scopeClosed($query)
+    {
+        return $query->whereNotNull('closed_at');
+    }
+
+    public function isClosed(): bool
+    {
+        return $this->closed_at !== null;
+    }
 
     public function user(): BelongsTo
     {

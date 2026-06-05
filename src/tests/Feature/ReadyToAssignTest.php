@@ -77,6 +77,65 @@ class ReadyToAssignTest extends TestCase
         $this->assertEquals(600.0, $user->readyToAssign());
     }
 
+    public function test_assign_one_without_month_dates_today(): void
+    {
+        $user     = User::factory()->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        $this->actingAs($user)->postJson(route('envelopes.assign-one'), [
+            'envelope_id' => $envelope->id,
+            'amount'      => 100,
+        ])->assertOk();
+
+        $tx = EnvelopeTransaction::where('envelope_id', $envelope->id)->latest('id')->first();
+        $this->assertEquals(now()->toDateString(), $tx->occurred_at->toDateString());
+    }
+
+    public function test_assign_one_dates_fund_in_past_month(): void
+    {
+        $user     = User::factory()->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        $pastMonth = now()->subMonths(2)->format('Y-m');
+
+        $this->actingAs($user)->postJson(route('envelopes.assign-one'), [
+            'envelope_id' => $envelope->id,
+            'amount'      => 100,
+            'month'       => $pastMonth,
+        ])->assertOk();
+
+        $tx = EnvelopeTransaction::where('envelope_id', $envelope->id)->latest('id')->first();
+        $this->assertEquals($pastMonth, $tx->occurred_at->format('Y-m'));
+        $this->assertEquals($pastMonth . '-01', $tx->occurred_at->format('Y-m-d'));
+    }
+
+    public function test_assign_one_current_month_param_still_dates_today(): void
+    {
+        $user     = User::factory()->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        $this->actingAs($user)->postJson(route('envelopes.assign-one'), [
+            'envelope_id' => $envelope->id,
+            'amount'      => 100,
+            'month'       => now()->format('Y-m'),
+        ])->assertOk();
+
+        $tx = EnvelopeTransaction::where('envelope_id', $envelope->id)->latest('id')->first();
+        $this->assertEquals(now()->toDateString(), $tx->occurred_at->toDateString());
+    }
+
+    public function test_assign_one_rejects_bad_month_format(): void
+    {
+        $user     = User::factory()->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        $this->actingAs($user)->postJson(route('envelopes.assign-one'), [
+            'envelope_id' => $envelope->id,
+            'amount'      => 100,
+            'month'       => '2026-13',
+        ])->assertStatus(422);
+    }
+
     public function test_assign_one_rejects_other_users_envelopes(): void
     {
         $user  = User::factory()->create();

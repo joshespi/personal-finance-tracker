@@ -7,7 +7,17 @@
         </p>
     </header>
 
-    <form method="post" action="{{ route('profile.targets') }}" class="mt-6 space-y-4">
+    <form method="post" action="{{ route('profile.targets') }}" class="mt-6 space-y-4"
+          x-data="{
+              stock: {{ (float) $user->target_stock_pct }},
+              crypto: {{ (float) $user->target_crypto_pct }},
+              real_estate: {{ (float) $user->target_real_estate_pct }},
+              bond: {{ (float) $user->target_bond_pct }},
+              get total() {
+                  return Math.round((parseFloat(this.stock || 0) + parseFloat(this.crypto || 0) + parseFloat(this.real_estate || 0) + parseFloat(this.bond || 0)) * 100) / 100;
+              },
+              get totalOk() { return this.total === 0 || this.total === 100; },
+          }">
         @csrf
         @method('PATCH')
 
@@ -17,29 +27,45 @@
                 <x-text-input id="target_stock_pct" name="target_stock_pct" type="number"
                               class="mt-1 block w-full"
                               :value="old('target_stock_pct', $user->target_stock_pct)"
-                              min="0" max="100" step="1" />
+                              x-model="stock"
+                              min="0" max="100" step="0.5" />
             </div>
             <div>
                 <x-input-label for="target_crypto_pct" value="Crypto %" />
                 <x-text-input id="target_crypto_pct" name="target_crypto_pct" type="number"
                               class="mt-1 block w-full"
                               :value="old('target_crypto_pct', $user->target_crypto_pct)"
-                              min="0" max="100" step="1" />
+                              x-model="crypto"
+                              min="0" max="100" step="0.5" />
             </div>
             <div>
                 <x-input-label for="target_real_estate_pct" value="Real Estate %" />
                 <x-text-input id="target_real_estate_pct" name="target_real_estate_pct" type="number"
                               class="mt-1 block w-full"
                               :value="old('target_real_estate_pct', $user->target_real_estate_pct)"
-                              min="0" max="100" step="1" />
+                              x-model="real_estate"
+                              min="0" max="100" step="0.5" />
             </div>
             <div>
                 <x-input-label for="target_bond_pct" value="Bonds %" />
                 <x-text-input id="target_bond_pct" name="target_bond_pct" type="number"
                               class="mt-1 block w-full"
                               :value="old('target_bond_pct', $user->target_bond_pct)"
-                              min="0" max="100" step="1" />
+                              x-model="bond"
+                              min="0" max="100" step="0.5" />
             </div>
+        </div>
+
+        <div class="flex items-center gap-2 text-sm">
+            <span class="text-gray-500 dark:text-gray-400">Total:</span>
+            <span class="font-mono font-semibold"
+                  :class="totalOk ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                  x-text="total + '%'"></span>
+            <span x-show="!totalOk && total !== 0"
+                  class="text-xs text-red-500 dark:text-red-400"
+                  x-text="'(' + (100 - total).toFixed(2).replace(/\.?0+$/, '') + '% remaining)'"></span>
+            <span x-show="totalOk && total === 100"
+                  class="text-xs text-green-600 dark:text-green-400">✓</span>
         </div>
 
         @if ($errors->investmentTargets->any())
