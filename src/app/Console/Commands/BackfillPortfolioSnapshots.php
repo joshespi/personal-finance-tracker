@@ -313,8 +313,17 @@ class BackfillPortfolioSnapshots extends Command
                 if (! $anchorDate || $anchorDate > $date) {
                     continue;
                 }
-                $price  = $this->closestPrice($pricesByAssetAndDate->get($ma->proxy_asset_id, collect()), $date);
-                $shares = (float) ($ma->anchor_synthetic_shares ?? 0);
+                $price = $this->closestPrice($pricesByAssetAndDate->get($ma->proxy_asset_id, collect()), $date);
+
+                if ($ma->anchor_synthetic_shares !== null) {
+                    $shares = (float) $ma->anchor_synthetic_shares;
+                } else {
+                    // anchor_synthetic_shares wasn't computed at save time (proxy price unavailable then);
+                    // derive it now from the anchor-date price so the backfill scales correctly.
+                    $anchorPrice = $this->closestPrice($pricesByAssetAndDate->get($ma->proxy_asset_id, collect()), $anchorDate);
+                    $shares      = ($anchorPrice && $anchorPrice > 0) ? (float) $ma->anchor_value / $anchorPrice : 0;
+                }
+
                 $total += ($price !== null && $shares > 0)
                     ? round($shares * $price, 2)
                     : (float) ($ma->anchor_value ?? 0);
