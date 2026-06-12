@@ -102,16 +102,8 @@ class BackfillPortfolioSnapshots extends Command
                     $txnsAsOf, $pricesByAssetAndDate, $dateStr
                 );
 
-                $chartedManual = $portfolio->manualAssets->where('include_in_chart', true)->values();
-
                 $manualValue = $this->computeManualValueAsOf(
-                    $chartedManual,
-                    $pricesByAssetAndDate,
-                    $dateStr
-                );
-
-                $excludedValue = $this->computeManualValueAsOf(
-                    $chartedManual->where('include_in_invested', false)->values(),
+                    $portfolio->manualAssets->where('include_in_chart', true)->values(),
                     $pricesByAssetAndDate,
                     $dateStr
                 );
@@ -123,10 +115,9 @@ class BackfillPortfolioSnapshots extends Command
                     PortfolioSnapshot::updateOrCreate(
                         ['portfolio_id' => $portfolio->id, 'recorded_on' => $dateStr],
                         [
-                            'cost_basis'     => $costBasis,
-                            'market_value'   => $marketValue,
-                            'manual_value'   => $manualValue,
-                            'excluded_value' => $excludedValue,
+                            'cost_basis'   => $costBasis,
+                            'market_value' => $marketValue,
+                            'manual_value' => $manualValue,
                         ]
                     );
                     $written++;

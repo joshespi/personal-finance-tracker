@@ -22,23 +22,20 @@ class DashboardController extends Controller
             ->get();
 
         $rawSnapshots = PortfolioSnapshot::whereIn('portfolio_id', $portfolios->pluck('id'))
-            ->selectRaw('recorded_on, SUM(market_value) as mv, SUM(manual_value) as manv, SUM(excluded_value) as exv, SUM(cost_basis) as cb')
+            ->selectRaw('recorded_on, SUM(market_value) as mv, SUM(manual_value) as manv, SUM(cost_basis) as cb')
             ->groupBy('recorded_on')
             ->orderBy('recorded_on')
             ->get()
             ->mapWithKeys(fn ($s) => [$s->recorded_on->toDateString() => [
-                'value'    => round((float) $s->mv + (float) $s->manv, 2),
-                'excluded' => round((float) $s->exv, 2),
-                'cost'     => round((float) $s->cb, 2),
+                'value'        => round((float) $s->mv + (float) $s->manv, 2),
+                'market_value' => round((float) $s->mv, 2),
+                'cost'         => round((float) $s->cb, 2),
             ]]);
 
-        // Full picture: market holdings + all charted manual assets (incl. the house).
         $chartData = $rawSnapshots->map(fn ($v, $date) => ['date' => $date, 'value' => $v['value'], 'cost' => $v['cost']])
             ->values();
 
-        // Invested only: drop manual assets flagged out of "invested" (e.g. the house)
-        // so a single dominant non-investment doesn't clobber the chart scale.
-        $chartDataInvested = $rawSnapshots->map(fn ($v, $date) => ['date' => $date, 'value' => round($v['value'] - $v['excluded'], 2), 'cost' => $v['cost']])
+        $chartDataExManual = $rawSnapshots->map(fn ($v, $date) => ['date' => $date, 'value' => $v['market_value'], 'cost' => $v['cost']])
             ->values();
 
         $benchmarkData = (new BenchmarkService())->all();
@@ -169,7 +166,7 @@ class DashboardController extends Controller
             : null;
 
         return view('dashboard', compact(
-            'summaries', 'totals', 'chartData', 'chartDataInvested', 'allHoldings', 'allocation', 'rebalancing', 'benchmarkData', 'budgetRuleData',
+            'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'rebalancing', 'benchmarkData', 'budgetRuleData',
             'revolvingBalance', 'interestBleedMonthly', 'interestBleedYearly',
             'totalCash', 'readyToAssign', 'ageOfMoney'
         ));

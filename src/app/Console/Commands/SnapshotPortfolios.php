@@ -26,18 +26,16 @@ class SnapshotPortfolios extends Command
             foreach ($portfolios as $portfolio) {
                 $holdings = $portfolio->computeHoldings();
 
-                $costBasis     = $holdings->sum('total_cost');
-                $marketValue   = $holdings->sum('effective_value');
-                $manualValue   = $portfolio->chartManualValue();
-                $excludedValue = $portfolio->chartExcludedValue();
+                $costBasis   = $holdings->sum('total_cost');
+                $marketValue = $holdings->sum('effective_value');
+                $manualValue = $portfolio->chartManualValue();
 
                 PortfolioSnapshot::updateOrCreate(
                     ['portfolio_id' => $portfolio->id, 'recorded_on' => $today],
                     [
-                        'cost_basis'     => $costBasis,
-                        'market_value'   => $marketValue,
-                        'manual_value'   => $manualValue,
-                        'excluded_value' => $excludedValue,
+                        'cost_basis'   => $costBasis,
+                        'market_value' => $marketValue,
+                        'manual_value' => $manualValue,
                     ]
                 );
 
