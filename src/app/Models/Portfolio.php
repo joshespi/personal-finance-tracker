@@ -70,6 +70,18 @@ class Portfolio extends Model
     }
 
     /**
+     * Value of charted manual assets that are flagged out of "invested"
+     * (e.g. primary residence). Subset of chartManualValue().
+     */
+    public function chartExcludedValue(): float
+    {
+        return (float) $this->manualAssets
+            ->where('include_in_chart', true)
+            ->where('include_in_invested', false)
+            ->sum(fn ($ma) => $ma->currentValue());
+    }
+
+    /**
      * Compute holdings from transactions.
      * Requires transactions.asset.latestPrice and manualAssets.latestValuation to be loaded.
      */

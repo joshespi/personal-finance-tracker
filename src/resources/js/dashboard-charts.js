@@ -10,19 +10,23 @@ import { filterByRange, resampleByRange, activateBtn, fmtK, fmtFull, makeTimeSca
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
 
 document.addEventListener('DOMContentLoaded', function () {
-    const { chartData: allDataFull, chartDataExManual: allDataMkt, benchmarkData: benchRaw, allocation: allocData } = window.__dashCharts ?? {};
+    const { chartData: allDataFull, chartDataInvested: allDataInvested, benchmarkData: benchRaw, allocation: allocData } = window.__dashCharts ?? {};
     if (!allDataFull) return;
 
     const isDark     = document.documentElement.classList.contains('dark');
     const gridColor  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
     const labelColor = isDark ? '#9ca3af' : '#6b7280';
 
-    let showManual = localStorage.getItem('dashShowManual') !== 'false';
+    // When on (default), the chart includes non-invested assets (e.g. the home) —
+    // the full net-worth picture. When off, it plots invested holdings only so a
+    // single dominant non-investment doesn't flatten the rest of the chart.
+    let showExcluded = localStorage.getItem('dashShowExcluded') !== 'false';
+    const seriesFor = () => (showExcluded ? allDataFull : allDataInvested);
 
     const manualBtn = document.getElementById('manual-toggle');
     function syncManualToggle() {
         if (!manualBtn) return;
-        if (showManual) {
+        if (showExcluded) {
             manualBtn.classList.add('bg-indigo-100', 'dark:bg-indigo-900/40', 'text-indigo-700', 'dark:text-indigo-300', 'border-indigo-300', 'dark:border-indigo-600');
             manualBtn.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-500', 'dark:text-gray-400', 'border-gray-300', 'dark:border-gray-600');
         } else {
@@ -33,8 +37,8 @@ document.addEventListener('DOMContentLoaded', function () {
     syncManualToggle();
     if (manualBtn) {
         manualBtn.addEventListener('click', () => {
-            showManual = !showManual;
-            localStorage.setItem('dashShowManual', showManual);
+            showExcluded = !showExcluded;
+            localStorage.setItem('dashShowExcluded', showExcluded);
             syncManualToggle();
             updateDashChart(dashRange);
         });
@@ -47,13 +51,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const last  = filtered[filtered.length - 1];
         const first = filtered[0];
 
-        const tileValue = demoMode ? DEMO_MASK : fmtFull(last.value);
-        const mvEl = document.getElementById('tile-market-value');
-        if (mvEl) mvEl.textContent = tileValue;
-
-        const totEl = document.getElementById('tile-total-value');
-        if (totEl) totEl.textContent = tileValue;
-
+        // Portfolio Value and Market Value tiles stay as the server-rendered
+        // live totals (which include manual assets). Only the range-dependent
+        // Gain/Loss tile is recomputed here — the current-value tiles must not
+        // be clobbered with the chart's snapshot endpoint.
         const plEl    = document.getElementById('tile-pl-value');
         const plLabel = document.getElementById('tile-pl-label');
         if (plEl) {
@@ -96,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function () {
         dashChart.options.scales.x.time.unit = false;
 
         function updateDashChart(range) {
-            const filtered = filterByRange(showManual ? allDataFull : allDataMkt, range);
+            const filtered = filterByRange(seriesFor(), range);
             const points   = resampleByRange(filtered);
             dashChart.data.datasets[0].data = points.map(r => pointFromRow(r, 'value'));
             dashChart.data.datasets[1].data = points.map(r => pointFromRow(r, 'cost'));
@@ -131,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         function updateBenchChart(range) {
-            const datasets = [{ label: 'My Portfolio', data: buildNorm(showManual ? allDataFull : allDataMkt, 'value', range), borderColor: '#6366f1', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 }];
+            const datasets = [{ label: 'My Portfolio', data: buildNorm(seriesFor(), 'value', range), borderColor: '#6366f1', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 }];
             Object.keys(benchRaw).forEach(t => datasets.push({
                 label: t, data: buildNorm(benchRaw[t] || [], 'price', range), borderColor: benchTickerColors[t] || '#9ca3af', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0,
             }));

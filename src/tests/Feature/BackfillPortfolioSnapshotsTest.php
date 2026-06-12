@@ -262,6 +262,49 @@ class BackfillPortfolioSnapshotsTest extends TestCase
         $this->assertEquals(0.00, (float) $snapshot->manual_value);
     }
 
+    public function test_non_invested_manual_asset_is_split_into_excluded_value(): void
+    {
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+
+        // Invested manual asset (e.g. a 401k) — counts toward invested.
+        $invested = ManualAsset::factory()->for($portfolio)->create([
+            'tracking_method'     => 'static',
+            'include_in_chart'    => true,
+            'include_in_invested' => true,
+        ]);
+        ManualValuation::factory()->for($invested)->create([
+            'value'     => 30000,
+            'valued_at' => '2024-01-01 00:00:00',
+        ]);
+
+        // Non-invested manual asset (e.g. the home) — charted but excluded from invested.
+        $home = ManualAsset::factory()->for($portfolio)->create([
+            'tracking_method'     => 'static',
+            'include_in_chart'    => true,
+            'include_in_invested' => false,
+        ]);
+        ManualValuation::factory()->for($home)->create([
+            'value'     => 50000,
+            'valued_at' => '2024-01-01 00:00:00',
+        ]);
+
+        $this->artisan('portfolios:backfill-snapshots', [
+            '--from'       => '2024-01-05',
+            '--to'         => '2024-01-05',
+            '--skip-fetch' => true,
+            '--portfolio'  => $portfolio->id,
+        ])->assertExitCode(0);
+
+        $snapshot = PortfolioSnapshot::where('portfolio_id', $portfolio->id)
+            ->where('recorded_on', '2024-01-05')
+            ->firstOrFail();
+
+        // manual_value = both assets; excluded_value = only the non-invested one.
+        $this->assertEquals(80000.00, (float) $snapshot->manual_value);
+        $this->assertEquals(50000.00, (float) $snapshot->excluded_value);
+    }
+
     public function test_updates_existing_snapshot(): void
     {
         $user      = User::factory()->create();

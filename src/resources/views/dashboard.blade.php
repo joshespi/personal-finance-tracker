@@ -203,8 +203,8 @@
                                 <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Portfolio Value</h3>
                                 <button id="manual-toggle"
                                         class="px-2 py-0.5 text-xs rounded font-medium transition border"
-                                        title="Toggle manual assets in chart">
-                                    Manual
+                                        title="Include non-invested assets (e.g. your home) in the chart. Off shows invested holdings only.">
+                                    Non-invested
                                 </button>
                             </div>
                             <div class="flex flex-wrap gap-1" id="dash-range-btns">
@@ -505,11 +505,11 @@
     @if ($chartData->count() > 1 || $allocation['total'] > 0)
         @php
             $jsChartData       = $demo->scaleAmounts($chartData->toArray());
-            $jsChartDataExMan  = $demo->scaleAmounts($chartDataExManual->toArray());
+            $jsChartDataInv    = $demo->scaleAmounts($chartDataInvested->toArray());
             $jsBenchmarkData   = $benchmarkData; // normalized index — no scaling needed
             $jsAllocation      = array_merge($allocation, ['values' => $demo->scaleValues($allocation['values']), 'total' => $demo->scaleScalar($allocation['total'])]);
         @endphp
-        <script>window.__dashCharts = { chartData: @json($jsChartData), chartDataExManual: @json($jsChartDataExMan), benchmarkData: @json($jsBenchmarkData), allocation: @json($jsAllocation) };</script>
+        <script>window.__dashCharts = { chartData: @json($jsChartData), chartDataInvested: @json($jsChartDataInv), benchmarkData: @json($jsBenchmarkData), allocation: @json($jsAllocation) };</script>
         @vite('resources/js/dashboard-charts.js')
     @endif
 </x-app-layout>
