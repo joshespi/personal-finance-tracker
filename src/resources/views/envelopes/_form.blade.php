@@ -57,19 +57,15 @@
 </div>
 
 <div class="flex flex-col gap-2.5">
+    <p class="text-xs font-medium text-gray-500 dark:text-gray-400">
+        Budget category <span class="font-normal">(optional — leave all unchecked for a discretionary "want")</span>
+    </p>
     <label class="flex items-center gap-2.5 cursor-pointer">
         <input type="checkbox" name="is_mandatory" value="1"
                {{ old('is_mandatory', $e?->is_mandatory) ? 'checked' : '' }}
                class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500">
-        <span class="text-sm text-gray-700 dark:text-gray-300">Mandatory expense</span>
-        <span class="text-xs text-gray-400 dark:text-gray-500">(counted in emergency fund target)</span>
-    </label>
-    <label class="flex items-center gap-2.5 cursor-pointer">
-        <input type="checkbox" name="is_emergency_fund" value="1"
-               {{ old('is_emergency_fund', $e?->is_emergency_fund) ? 'checked' : '' }}
-               class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500">
-        <span class="text-sm text-gray-700 dark:text-gray-300">Emergency fund savings</span>
-        <span class="text-xs text-gray-400 dark:text-gray-500">(balance counts as your emergency fund)</span>
+        <span class="text-sm text-gray-700 dark:text-gray-300">Necessity</span>
+        <span class="text-xs text-gray-400 dark:text-gray-500">(a must-pay essential — counts as a 50% Need &amp; sizes your emergency-fund goal)</span>
     </label>
     <label class="flex items-center gap-2.5 cursor-pointer">
         <input type="checkbox" name="is_savings" value="1"
@@ -77,6 +73,13 @@
                class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500">
         <span class="text-sm text-gray-700 dark:text-gray-300">Wealth building</span>
         <span class="text-xs text-gray-400 dark:text-gray-500"
-              title="Use this for retirement contributions and long-term investing — not sinking funds for purchases like a vacation or gadget. Those are deferred wants and belong in your 30% discretionary budget.">(emergency fund &amp; investing — counts toward the 20% target ⓘ)</span>
+              title="Use this for retirement contributions and long-term investing — not sinking funds for purchases like a vacation or gadget. Those are deferred wants and belong in your 30% discretionary budget.">(long-term savings &amp; investing — counts toward your 20% Savings ⓘ)</span>
+    </label>
+    <label class="flex items-center gap-2.5 cursor-pointer">
+        <input type="checkbox" name="is_emergency_fund" value="1"
+               {{ old('is_emergency_fund', $e?->is_emergency_fund) ? 'checked' : '' }}
+               class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500">
+        <span class="text-sm text-gray-700 dark:text-gray-300">This is my emergency fund</span>
+        <span class="text-xs text-gray-400 dark:text-gray-500">(its balance is your actual emergency fund — only one envelope)</span>
     </label>
 </div>
