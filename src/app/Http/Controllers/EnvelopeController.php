@@ -104,7 +104,7 @@ class EnvelopeController extends Controller
 
         $envelope = $request->user()->envelopes()->create($validated);
 
-        return redirect()->route('envelopes.show', $envelope)->with('success', 'Envelope created.');
+        return redirect()->route('envelopes.index')->with('success', 'Envelope created.');
     }
 
     public function show(Request $request, Envelope $envelope): View

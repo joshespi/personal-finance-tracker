@@ -19,21 +19,28 @@
                         || request()->routeIs('transactions.*')
                         || request()->routeIs('tax.*')
                         || request()->routeIs('dividends');
-                    $moneyActive = request()->routeIs('cash-accounts.*')
-                        || request()->routeIs('envelopes.*')
-                        || request()->routeIs('liabilities.*')
-                        || request()->routeIs('analysis')
-                        || request()->routeIs('planning')
-                        || request()->routeIs('cashflow')
-                        || request()->routeIs('spending-trends')
-                        || request()->routeIs('emergency-fund')
-                        || request()->routeIs('budget-rule')
-                        || request()->routeIs('debt-payoff')
-                        || request()->routeIs('allocator')
-                        || request()->routeIs('ready-to-assign')
-                        || request()->routeIs('envelopes.*')
-                        || request()->routeIs('income-entries.*')
-                        || request()->routeIs('scheduled-transactions.*');
+                    // Single source of truth for the "Money" menu, rendered in both the
+                    // desktop dropdown and the mobile nav below.
+                    $moneyLinks = [
+                        ['route' => 'cash-accounts.index',          'label' => 'Spending Accounts',    'active' => 'cash-accounts.*'],
+                        ['route' => 'envelopes.index',              'label' => 'Budget Envelopes',     'active' => 'envelopes.*'],
+                        ['route' => 'budget-rule',                  'label' => '50/30/20 Budget Rule', 'active' => 'budget-rule'],
+                        ['route' => 'emergency-fund',               'label' => 'Emergency Fund',       'active' => 'emergency-fund'],
+                        ['route' => 'allocator',                    'label' => 'Allocator',            'active' => 'allocator'],
+                        ['route' => 'analysis',                     'label' => 'Analysis',             'active' => 'analysis'],
+                        ['route' => 'planning',                     'label' => 'Planning',             'active' => 'planning'],
+                        ['route' => 'cashflow',                     'label' => 'Cashflow',             'active' => 'cashflow'],
+                        ['route' => 'spending-trends',              'label' => 'Spending Trends',      'active' => 'spending-trends'],
+                        ['route' => 'scheduled-transactions.index', 'label' => 'Scheduled',            'active' => 'scheduled-transactions.*'],
+                        ['route' => 'debt-payoff',                  'label' => 'Debt Payoff',          'active' => 'debt-payoff'],
+                        ['route' => 'liabilities.index',            'label' => 'Liabilities',          'active' => 'liabilities.*'],
+                    ];
+                    // The trigger also lights up on routes that aren't direct menu entries.
+                    $moneyPatterns = array_merge(
+                        array_column($moneyLinks, 'active'),
+                        ['ready-to-assign', 'income-entries.*'],
+                    );
+                    $moneyActive = request()->routeIs(...$moneyPatterns);
 
                     $triggerActive = 'inline-flex items-center px-1 pt-1 border-b-2 border-indigo-400 text-sm font-medium leading-5 text-gray-900 dark:text-gray-100 focus:outline-none transition duration-150 ease-in-out';
                     $triggerInactive = 'inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600 focus:outline-none transition duration-150 ease-in-out';
@@ -87,12 +94,9 @@
                              style="display: none;"
                              @click="open = false">
                             <div class="rounded-md ring-1 ring-black ring-opacity-5 dark:ring-gray-700 py-1 bg-white dark:bg-gray-800">
-                                <x-dropdown-link :href="route('cash-accounts.index')">{{ __('Spending Accounts') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('envelopes.index')">{{ __('Budget Envelopes') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('analysis')">{{ __('Analysis') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('planning')">{{ __('Planning') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('scheduled-transactions.index')">{{ __('Scheduled') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('liabilities.index')">{{ __('Liabilities') }}</x-dropdown-link>
+                                @foreach ($moneyLinks as $link)
+                                    <x-dropdown-link :href="route($link['route'])">{{ __($link['label']) }}</x-dropdown-link>
+                                @endforeach
                             </div>
                         </div>
                     </div>
@@ -224,24 +228,11 @@
             </x-responsive-nav-link>
 
             <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Money') }}</p>
-            <x-responsive-nav-link :href="route('cash-accounts.index')" :active="request()->routeIs('cash-accounts.*')">
-                {{ __('Spending Accounts') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('envelopes.index')" :active="request()->routeIs('envelopes.*')">
-                {{ __('Budget Envelopes') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('analysis')" :active="request()->routeIs('analysis')">
-                {{ __('Analysis') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('planning')" :active="request()->routeIs('planning')">
-                {{ __('Planning') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('scheduled-transactions.index')" :active="request()->routeIs('scheduled-transactions.*')">
-                {{ __('Scheduled') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('liabilities.index')" :active="request()->routeIs('liabilities.*')">
-                {{ __('Liabilities') }}
-            </x-responsive-nav-link>
+            @foreach ($moneyLinks as $link)
+                <x-responsive-nav-link :href="route($link['route'])" :active="request()->routeIs($link['active'])">
+                    {{ __($link['label']) }}
+                </x-responsive-nav-link>
+            @endforeach
 
             <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Planning') }}</p>
             <x-responsive-nav-link :href="route('forecast')" :active="request()->routeIs('forecast')">

@@ -1,0 +1,4 @@
+* text=auto eol=lf
+
+# Shell scripts must always use LF — CRLF breaks the shebang inside Linux containers
+*.sh text eol=lf
