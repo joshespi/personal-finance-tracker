@@ -30,6 +30,54 @@
                 </p>
             </div>
 
+            {{-- Quick what-if calculator: type any income to see the 50/30/20 split. Pure client-side. --}}
+            <div x-data="{
+                    income: {{ ($data['monthly_income'] ?? 0) > 0 ? (int) round($data['monthly_income']) : 0 }},
+                    fmt(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
+                 }"
+                 class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 space-y-5">
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Quick calculator</h3>
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        Enter a monthly after-tax income to see the 50/30/20 split.
+                        @if (($data['monthly_income'] ?? 0) > 0) Prefilled with your trailing average — edit it to run what-ifs. @endif
+                    </p>
+                </div>
+
+                <div class="max-w-xs">
+                    <label for="calc-income" class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Monthly after-tax income</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 dark:text-gray-500">$</span>
+                        <input id="calc-income" type="number" min="0" step="50" inputmode="decimal" x-model.number="income"
+                               class="w-full pl-7 pr-3 py-2 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="rounded-lg border border-gray-100 dark:border-gray-700 px-5 py-4">
+                        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <span class="inline-block w-2 h-2 rounded-full bg-indigo-500 mr-1"></span>Necessities <span class="text-gray-400 dark:text-gray-500">50%</span>
+                        </p>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100" x-text="fmt(income * 0.5)"></p>
+                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Rent, utilities, groceries, insurance</p>
+                    </div>
+                    <div class="rounded-lg border border-gray-100 dark:border-gray-700 px-5 py-4">
+                        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <span class="inline-block w-2 h-2 rounded-full bg-sky-400 mr-1"></span>Wants <span class="text-gray-400 dark:text-gray-500">30%</span>
+                        </p>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100" x-text="fmt(income * 0.3)"></p>
+                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Dining, entertainment, subscriptions</p>
+                    </div>
+                    <div class="rounded-lg border border-gray-100 dark:border-gray-700 px-5 py-4">
+                        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span>Savings &amp; debt <span class="text-gray-400 dark:text-gray-500">20%</span>
+                        </p>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-emerald-600 dark:text-emerald-400" x-text="fmt(income * 0.2)"></p>
+                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Emergency fund, investing, extra debt payoff</p>
+                    </div>
+                </div>
+            </div>
+
             @if (! $hasData)
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-sm text-gray-600 dark:text-gray-400 space-y-2">
                     <p class="font-semibold text-gray-800 dark:text-gray-200">No income recorded in the last 6 months.</p>
