@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\CashAccount;
-use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
 use App\Models\Liability;
@@ -42,18 +40,17 @@ class AllocatorTest extends TestCase
     {
         $user = User::factory()->create(['emergency_fund_target_months' => 3]);
 
-        // Mandatory envelope with $600/mo avg spend over 6 months → target = 3 * $600 = $1800
+        // Mandatory envelope funded $600/mo over 6 months → target = 3 * $600 = $1800
         $mandatoryEnv = Envelope::factory()->for($user)->create(['is_mandatory' => true, 'is_emergency_fund' => false]);
-        $account = CashAccount::factory()->for($user)->create();
         foreach (range(0, 5) as $i) {
-            CashTransaction::factory()->for($account)->spend($mandatoryEnv)->create([
+            EnvelopeTransaction::factory()->for($mandatoryEnv)->fund()->create([
                 'amount'      => 600,
                 'occurred_at' => now()->startOfMonth()->subMonths($i),
             ]);
         }
 
         // EF envelope with $0 balance
-        Envelope::factory()->for($user)->create(['is_emergency_fund' => true, 'is_mandatory' => true]);
+        Envelope::factory()->for($user)->create(['is_emergency_fund' => true, 'is_mandatory' => false]);
 
         $this->actingAs($user)
             ->get(route('allocator', ['amount' => 2000]))
@@ -68,15 +65,14 @@ class AllocatorTest extends TestCase
         $user = User::factory()->create(['emergency_fund_target_months' => 3]);
 
         $mandatoryEnv = Envelope::factory()->for($user)->create(['is_mandatory' => true, 'is_emergency_fund' => false]);
-        $account = CashAccount::factory()->for($user)->create();
         foreach (range(0, 5) as $i) {
-            CashTransaction::factory()->for($account)->spend($mandatoryEnv)->create([
+            EnvelopeTransaction::factory()->for($mandatoryEnv)->fund()->create([
                 'amount' => 500, 'occurred_at' => now()->startOfMonth()->subMonths($i),
             ]);
         }
 
         // EF envelope with enough balance (target = 3 * $500 = $1500, balance = $2000)
-        $efEnv = Envelope::factory()->for($user)->create(['is_emergency_fund' => true, 'is_mandatory' => true]);
+        $efEnv = Envelope::factory()->for($user)->create(['is_emergency_fund' => true, 'is_mandatory' => false]);
         EnvelopeTransaction::factory()->fund()->for($efEnv)->create(['amount' => 2000]);
 
         // EF funded → nothing to allocate, "invest" message shown instead

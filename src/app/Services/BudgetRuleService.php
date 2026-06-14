@@ -37,9 +37,11 @@ class BudgetRuleService
             ->sum('cash_transactions.amount');
         $monthlyIncome = round($incomeTotal / self::WINDOW_MONTHS, 2);
 
+        // Mandatory is measured by what you assign to mandatory envelopes (funding),
+        // not by logged cash spend — consistent with how savings is measured below.
         $monthlyMandatory = $mandatoryIds->isEmpty() ? 0.0 : round(
-            (float) CashTransaction::whereIn('envelope_id', $mandatoryIds)
-                ->where('type', 'withdrawal')
+            (float) EnvelopeTransaction::whereIn('envelope_id', $mandatoryIds)
+                ->where('type', 'fund')
                 ->whereBetween('occurred_at', [$windowStart, $windowEnd])
                 ->sum('amount') / self::WINDOW_MONTHS,
             2
