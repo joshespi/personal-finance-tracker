@@ -7,6 +7,66 @@
         </p>
     </div>
 
+    {{-- Scheduled --}}
+    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg mt-8">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Scheduled</h3>
+            <a href="{{ route('scheduled-transactions.create') }}"
+               class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">+ New</a>
+        </div>
+
+        @if ($this->scheduled->isEmpty())
+            <div class="p-6 text-sm text-gray-500 dark:text-gray-400">
+                No scheduled transactions linked to this account.
+                <a href="{{ route('scheduled-transactions.create') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Create one</a>
+                to auto-record recurring deposits or expenses.
+            </div>
+        @else
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                @foreach ($this->scheduled as $s)
+                    @php $isDue = $s->next_due_at->isToday(); $isOverdue = $s->next_due_at->isPast() && !$s->next_due_at->isToday(); @endphp
+                    <div class="px-6 py-3 flex items-center gap-4">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ $s->description }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {{ $s->typeLabel() }} · {{ $s->recurrenceLabel() }}
+                                @if ($s->envelope)
+                                    · <span class="inline-block w-2 h-2 rounded-full align-middle" style="background-color: {{ $s->envelope->color }}"></span>
+                                    {{ $demo->n($s->envelope->name) }}
+                                @endif
+                            </p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <p class="text-sm font-mono font-semibold text-gray-900 dark:text-gray-100">${{ $demo->amt((float)$s->amount) }}</p>
+                            <p class="text-xs mt-0.5 {{ ($isDue || $isOverdue) ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-500 dark:text-gray-400' }}">
+                                @if ($isOverdue) Overdue · @elseif ($isDue) Due · @endif
+                                {{ $s->next_due_at->format('M j, Y') }}
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <form method="POST" action="{{ route('scheduled-transactions.enter-now', $s) }}"
+                                  onsubmit="return confirm('Record &quot;{{ $s->description }}&quot; (${{ $demo->amt((float)$s->amount) }}) now and advance to the next cycle?')">
+                                @csrf
+                                <button type="submit"
+                                        class="inline-flex items-center px-2.5 py-1 bg-indigo-600 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-indigo-500 transition">
+                                    Enter now
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ route('scheduled-transactions.skip', $s) }}"
+                                  onsubmit="return confirm('Skip this occurrence without recording it?')">
+                                @csrf
+                                <button type="submit"
+                                        class="text-xs text-gray-400 dark:text-gray-500 hover:underline">Skip</button>
+                            </form>
+                            <a href="{{ route('scheduled-transactions.edit', $s) }}"
+                               class="text-xs text-gray-400 dark:text-gray-500 hover:underline">Edit</a>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+
     {{-- Add Transaction --}}
     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg mt-8">
         <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
@@ -74,11 +134,12 @@
         <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-3 justify-between">
             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Transactions</h3>
 
-            @if ($this->transactions->isNotEmpty())
+            @if ($this->transactions->isNotEmpty() || $filter)
                 <div class="flex items-center gap-2 flex-1 sm:flex-none sm:min-w-[18rem] max-w-md ml-auto">
-                    <input type="search" wire:model.live.debounce.150ms="filter"
+                    <input type="search" wire:model.live.debounce.300ms="filter"
                            placeholder="Filter: 45.32 or whole foods"
                            class="flex-1 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                    <div wire:loading wire:target="filter" class="text-xs text-gray-400 dark:text-gray-500">…</div>
                     @if ($filter)
                         <button type="button" wire:click="$set('filter', '')"
                                 class="text-xs text-gray-500 dark:text-gray-400 hover:underline">Clear</button>
@@ -87,20 +148,10 @@
             @endif
         </div>
 
-        @php
-            $filtered = $this->transactions->filter(function ($t) {
-                if (! $this->filter) return true;
-                $f = strtolower(trim($this->filter));
-                $asNum = is_numeric($f) ? (float) $f : null;
-                if ($asNum !== null && $asNum > 0) {
-                    return abs((float) $t->amount - $asNum) < 0.005;
-                }
-                return str_contains(strtolower($t->description ?? ''), $f);
-            });
-        @endphp
-
         @if ($this->transactions->isEmpty())
-            <div class="p-6 text-sm text-gray-500 dark:text-gray-400">No transactions yet.</div>
+            <div class="p-6 text-sm text-gray-500 dark:text-gray-400">
+                {{ $filter ? 'No transactions match the current filter.' : 'No transactions yet.' }}
+            </div>
         @else
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
@@ -115,7 +166,7 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-                        @forelse ($filtered as $t)
+                        @foreach ($this->transactions as $t)
                             @if ($editingId === $t->id)
                                 <tr class="bg-indigo-50 dark:bg-indigo-900/20">
                                     <td class="px-4 py-2">
@@ -197,16 +248,16 @@
                                     </td>
                                 </tr>
                             @endif
-                        @empty
-                            <tr>
-                                <td colspan="6" class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
-                                    No transactions match the current filter.
-                                </td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
+
+            @if ($this->transactions->hasPages())
+                <div class="px-6 py-3 border-t border-gray-100 dark:border-gray-700">
+                    {{ $this->transactions->links() }}
+                </div>
+            @endif
         @endif
     </div>
 </div>

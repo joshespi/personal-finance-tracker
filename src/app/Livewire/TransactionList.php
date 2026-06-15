@@ -7,9 +7,12 @@ use App\Models\CashTransaction;
 use App\Models\Envelope;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 class TransactionList extends Component
 {
+    use WithPagination;
+
     public CashAccount $account;
 
     public string $newType = 'deposit';
@@ -27,6 +30,9 @@ class TransactionList extends Component
 
     public string $filter = '';
 
+    /** Rows per page. */
+    public const PER_PAGE = 50;
+
     public function mount(CashAccount $account): void
     {
         abort_unless($account->user_id === auth()->id(), 403);
@@ -36,18 +42,49 @@ class TransactionList extends Component
 
     public function getTransactionsProperty()
     {
-        return $this->account->transactions()
+        return $this->filteredQuery()
             ->with('envelope:id,name')
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
+            ->paginate(self::PER_PAGE);
+    }
+
+    /** Account transactions narrowed by the current filter (amount match or description search). */
+    private function filteredQuery()
+    {
+        $query = $this->account->transactions();
+        $f = strtolower(trim($this->filter));
+
+        if ($f !== '') {
+            $asNum = is_numeric($f) ? (float) $f : null;
+            if ($asNum !== null && $asNum > 0) {
+                $query->whereRaw('ABS(amount - ?) < 0.005', [$asNum]);
+            } else {
+                $query->whereRaw('LOWER(description) LIKE ?', ['%' . $f . '%']);
+            }
+        }
+
+        return $query;
+    }
+
+    /** Whole-account balance — independent of the filter and pagination. */
+    public function getBalanceProperty(): float
+    {
+        return $this->account->balance();
+    }
+
+    public function getScheduledProperty()
+    {
+        return $this->account->scheduledTransactions()
+            ->where('is_active', true)
+            ->with('envelope:id,name,color')
+            ->orderBy('next_due_at')
             ->get();
     }
 
-    public function getBalanceProperty(): float
+    public function updatedFilter(): void
     {
-        return $this->transactions->sum(
-            fn ($t) => $t->type === 'deposit' ? (float) $t->amount : -(float) $t->amount
-        );
+        $this->resetPage();
     }
 
     public function getEnvelopesProperty()
@@ -84,12 +121,13 @@ class TransactionList extends Component
 
         $this->reset(['newAmount', 'newDescription', 'newEnvelopeId']);
         $this->newOccurredAt = now()->format('Y-m-d');
+        $this->resetPage();
     }
 
     public function startEdit(int $id): void
     {
-        $t = $this->transactions->firstWhere('id', $id);
-        abort_unless($t && $t->cashAccount->user_id === auth()->id(), 403);
+        $t = $this->account->transactions()->find($id);
+        abort_unless($t, 404);
 
         $this->editingId = $id;
         $this->editType = $t->type;

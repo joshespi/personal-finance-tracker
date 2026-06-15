@@ -240,6 +240,37 @@ class DevSeeder extends Seeder
                 ['type' => 'deposit', 'amount' => 1000],
             );
         }
+
+        $this->seedHighVolume($checking);
+    }
+
+    /** Bulk daily spending so the register spans multiple pages and the filter has plenty to match. */
+    private function seedHighVolume(CashAccount $account): void
+    {
+        $merchants = [
+            ['Whole Foods',   72.41],
+            ['Starbucks',      6.45],
+            ['Amazon',        31.99],
+            ['Shell Gas',     48.20],
+            ['Chipotle',      14.85],
+            ['Target',        63.17],
+            ['Netflix',       15.49],
+            ['Costco',       128.74],
+            ['Uber',          22.30],
+            ['Home Depot',    41.06],
+        ];
+
+        // 150 days, one transaction per day → ~3 pages at 50/page.
+        for ($i = 0; $i < 150; $i++) {
+            [$name, $base] = $merchants[$i % count($merchants)];
+            $amount = round($base + ($i % 7) * 1.13, 2); // small deterministic variation
+            $date   = CarbonImmutable::now()->subDays($i)->setTime(12, 0)->toDateTimeString();
+
+            CashTransaction::firstOrCreate(
+                ['cash_account_id' => $account->id, 'occurred_at' => $date, 'description' => $name],
+                ['type' => 'withdrawal', 'amount' => $amount],
+            );
+        }
     }
 
     private function seedEnvelopes(User $user): void

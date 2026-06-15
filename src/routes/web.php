@@ -142,6 +142,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('scheduled-transactions', ScheduledTransactionController::class);
     Route::patch('scheduled-transactions/{scheduledTransaction}/toggle', [ScheduledTransactionController::class, 'toggle'])
         ->name('scheduled-transactions.toggle');
+    Route::post('scheduled-transactions/{scheduledTransaction}/enter-now', [ScheduledTransactionController::class, 'enterNow'])
+        ->name('scheduled-transactions.enter-now');
+    Route::post('scheduled-transactions/{scheduledTransaction}/skip', [ScheduledTransactionController::class, 'skip'])
+        ->name('scheduled-transactions.skip');
 
     Route::post('envelopes/assign-one', [EnvelopeController::class, 'assignOne'])->name('envelopes.assign-one');
     Route::resource('envelopes', EnvelopeController::class);

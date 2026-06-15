@@ -70,6 +70,24 @@ class ScheduledTransactionController extends Controller
         return redirect()->route('scheduled-transactions.index');
     }
 
+    /** Record the next occurrence now (it happened early) and advance the schedule. */
+    public function enterNow(Request $request, ScheduledTransaction $scheduledTransaction, ScheduledTransactionService $service): RedirectResponse
+    {
+        $this->authorize('update', $scheduledTransaction);
+        $service->enterNow($scheduledTransaction);
+
+        return back()->with('success', "Recorded \"{$scheduledTransaction->description}\" — next due {$scheduledTransaction->next_due_at->format('M j, Y')}.");
+    }
+
+    /** Skip the next occurrence without recording, advancing the schedule. */
+    public function skip(Request $request, ScheduledTransaction $scheduledTransaction, ScheduledTransactionService $service): RedirectResponse
+    {
+        $this->authorize('update', $scheduledTransaction);
+        $service->skipNext($scheduledTransaction);
+
+        return back()->with('success', "Skipped — next due {$scheduledTransaction->next_due_at->format('M j, Y')}.");
+    }
+
     private function validated(Request $request): array
     {
         $type   = $request->input('type');

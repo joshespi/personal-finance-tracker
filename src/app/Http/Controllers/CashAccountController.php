@@ -60,13 +60,7 @@ class CashAccountController extends Controller
     {
         $this->authorize('view', $cashAccount);
 
-        $cashAccount->load([
-            'scheduledTransactions' => fn ($q) => $q->where('is_active', true)->with('envelope:id,name,color')->orderBy('next_due_at'),
-        ]);
-
-        $cashAccount->current_balance = (float) $cashAccount->transactions()
-            ->selectRaw("SUM(CASE WHEN type = 'deposit' THEN amount ELSE -amount END) as balance")
-            ->value('balance');
+        $cashAccount->current_balance = $cashAccount->balance();
 
         return view('cash-accounts.show', [
             'account'      => $cashAccount,

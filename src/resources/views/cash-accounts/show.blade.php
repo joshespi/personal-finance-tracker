@@ -72,46 +72,6 @@
             @endif
 
             <livewire:transaction-list :account="$account" />
-            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
-                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Scheduled</h3>
-                    <a href="{{ route('scheduled-transactions.create') }}"
-                       class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">+ New</a>
-                </div>
-
-                @if ($account->scheduledTransactions->isEmpty())
-                    <div class="p-6 text-sm text-gray-500 dark:text-gray-400">
-                        No scheduled transactions linked to this account.
-                        <a href="{{ route('scheduled-transactions.create') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Create one</a>
-                        to auto-record recurring deposits or expenses.
-                    </div>
-                @else
-                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
-                        @foreach ($account->scheduledTransactions as $s)
-                            <div class="px-6 py-3 flex items-center gap-4 {{ !$s->is_active ? 'opacity-50' : '' }}">
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ $s->description }}</p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                        {{ $s->typeLabel() }} · {{ $s->recurrenceLabel() }}
-                                        @if ($s->envelope)
-                                            · <span class="inline-block w-2 h-2 rounded-full align-middle" style="background-color: {{ $s->envelope->color }}"></span>
-                                            {{ $demo->n($s->envelope->name) }}
-                                        @endif
-                                    </p>
-                                </div>
-                                <div class="text-right shrink-0">
-                                    <p class="text-sm font-mono font-semibold text-gray-900 dark:text-gray-100">${{ $demo->amt((float)$s->amount) }}</p>
-                                    <p class="text-xs mt-0.5 {{ $s->is_active && $s->next_due_at->isPast() ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-500 dark:text-gray-400' }}">
-                                        {{ $s->next_due_at->format('M j, Y') }}
-                                    </p>
-                                </div>
-                                <a href="{{ route('scheduled-transactions.edit', $s) }}"
-                                   class="text-xs text-gray-400 dark:text-gray-500 hover:underline shrink-0">Edit</a>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
 
         </div>
     </div>

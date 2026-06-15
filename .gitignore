@@ -16,8 +16,6 @@ docker-compose.override.yml
 .env
 
 db_data
-ROADMAP.md
-CLAUDE.md
 backups/*.sql
 .agents
 .claude

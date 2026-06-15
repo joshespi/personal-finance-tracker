@@ -29,6 +29,33 @@ class ScheduledTransactionService
         return $due;
     }
 
+    /**
+     * Fire the next occurrence immediately — e.g. it happened earlier than scheduled —
+     * then advance the schedule one cycle. The transaction is dated $date (today by default).
+     */
+    public function enterNow(ScheduledTransaction $scheduled, ?Carbon $date = null): void
+    {
+        $scheduled->loadMissing(['envelope', 'cashAccount', 'liability.latestBalance']);
+
+        DB::transaction(function () use ($scheduled, $date) {
+            $this->createTransactions($scheduled, $date ?? today());
+            $this->advanceCycle($scheduled);
+        });
+    }
+
+    /** Skip the next occurrence without recording anything, advancing one cycle. */
+    public function skipNext(ScheduledTransaction $scheduled): void
+    {
+        $this->advanceCycle($scheduled);
+    }
+
+    /** Move the schedule forward one cycle and persist. */
+    private function advanceCycle(ScheduledTransaction $scheduled): void
+    {
+        $scheduled->next_due_at = $this->advance($scheduled->next_due_at, $scheduled->recurrence);
+        $scheduled->save();
+    }
+
     private function materializeOne(ScheduledTransaction $scheduled): int
     {
         $date    = $scheduled->next_due_at->copy();
