@@ -51,6 +51,29 @@ class CashAccount extends Model
         return $this->balanceQuery(false);
     }
 
+    /**
+     * Working, cleared and pending balances in a single query — for views that show all
+     * three at once. Pending is derived arithmetically rather than summed a third time.
+     *
+     * @return array{working: float, cleared: float, uncleared: float}
+     */
+    public function balances(): array
+    {
+        $row = $this->transactions()
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = 'deposit' THEN amount ELSE -amount END), 0) AS working")
+            ->selectRaw("COALESCE(SUM(CASE WHEN cleared = 1 THEN (CASE WHEN type = 'deposit' THEN amount ELSE -amount END) ELSE 0 END), 0) AS cleared")
+            ->first();
+
+        $working = (float) $row->working;
+        $cleared = (float) $row->cleared;
+
+        return [
+            'working'   => $working,
+            'cleared'   => $cleared,
+            'uncleared' => round($working - $cleared, 2),
+        ];
+    }
+
     private function balanceQuery(?bool $cleared = null): float
     {
         $query = $this->transactions();

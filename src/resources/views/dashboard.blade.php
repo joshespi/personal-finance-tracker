@@ -110,7 +110,26 @@
                     {{-- Section 2: Full Financial Picture --}}
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Full Financial Picture</p>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        @php
+                            // Count the tiles actually rendered below, then choose a column count
+                            // that never leaves a single orphan on the last row (avoid a remainder
+                            // of 1). Prefer more columns; literal class strings keep Tailwind happy.
+                            $tileCount = 5; // Cash, Total Assets, Total Debt, Net Worth, Ready to Assign
+                            if ($totals['debt_to_asset'] !== null) $tileCount++;
+                            if ($budgetRuleData['emergency_target'] > 0) $tileCount++;
+                            if ($budgetRuleData['has_data']) {
+                                $tileCount++; // Monthly Spend
+                                if ($ageOfMoney !== null) $tileCount++; // Age of Money
+                            }
+                            $gridCols = 'sm:grid-cols-4';
+                            foreach ([4 => 'sm:grid-cols-4', 3 => 'sm:grid-cols-3', 2 => 'sm:grid-cols-2'] as $c => $cls) {
+                                if ($tileCount % $c !== 1) {
+                                    $gridCols = $cls;
+                                    break;
+                                }
+                            }
+                        @endphp
+                        <div class="grid grid-cols-2 {{ $gridCols }} gap-4">
                             <x-stat-tile>
                                 <x-slot:label>Cash Balance</x-slot:label>
                                 <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">

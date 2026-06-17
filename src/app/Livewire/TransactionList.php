@@ -69,20 +69,10 @@ class TransactionList extends Component
         return $query;
     }
 
-    /** Whole-account working balance — independent of the filter and pagination. */
-    public function getBalanceProperty(): float
+    /** Working/cleared/pending balances (one query) — independent of the filter and pagination. */
+    public function getBalancesProperty(): array
     {
-        return $this->account->balance();
-    }
-
-    public function getClearedBalanceProperty(): float
-    {
-        return $this->account->clearedBalance();
-    }
-
-    public function getUnclearedBalanceProperty(): float
-    {
-        return $this->account->unclearedBalance();
+        return $this->account->balances();
     }
 
     public function getScheduledProperty()

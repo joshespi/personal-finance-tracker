@@ -38,7 +38,8 @@ class ScheduledTransactionService
         $scheduled->loadMissing(['envelope', 'cashAccount', 'liability.latestBalance']);
 
         DB::transaction(function () use ($scheduled, $date) {
-            $this->createTransactions($scheduled, $date ?? today());
+            // "Enter now" is a deliberate user action — record it as cleared.
+            $this->createTransactions($scheduled, $date ?? today(), cleared: true);
             $this->advanceCycle($scheduled);
         });
     }
@@ -64,7 +65,8 @@ class ScheduledTransactionService
         $cap     = 24;
 
         while ($date->lte($today) && $created < $cap) {
-            $this->createTransactions($scheduled, $date);
+            // Auto-materialized occurrences haven't posted to the bank yet — enter them pending.
+            $this->createTransactions($scheduled, $date, cleared: false);
             $date = $this->advance($date, $scheduled->recurrence);
             $created++;
         }
@@ -75,18 +77,18 @@ class ScheduledTransactionService
         return $created;
     }
 
-    private function createTransactions(ScheduledTransaction $scheduled, Carbon $date): void
+    private function createTransactions(ScheduledTransaction $scheduled, Carbon $date, bool $cleared): void
     {
         match ($scheduled->type) {
-            'envelope_fund'    => $this->envelopeFund($scheduled, $date),
-            'envelope_spend'   => $this->envelopeSpend($scheduled, $date),
-            'cash_deposit'     => $this->cashDeposit($scheduled, $date),
-            'cash_withdrawal'  => $this->cashWithdrawal($scheduled, $date),
-            'mortgage_payment' => $this->mortgagePayment($scheduled, $date),
+            'envelope_fund'    => $this->envelopeFund($scheduled, $date, $cleared),
+            'envelope_spend'   => $this->envelopeSpend($scheduled, $date, $cleared),
+            'cash_deposit'     => $this->cashDeposit($scheduled, $date, $cleared),
+            'cash_withdrawal'  => $this->cashWithdrawal($scheduled, $date, $cleared),
+            'mortgage_payment' => $this->mortgagePayment($scheduled, $date, $cleared),
         };
     }
 
-    private function envelopeFund(ScheduledTransaction $s, Carbon $date): void
+    private function envelopeFund(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
         $s->envelope->transactions()->create([
             'type'        => 'fund',
@@ -101,11 +103,12 @@ class ScheduledTransactionService
                 'amount'      => $s->amount,
                 'description' => 'Funded envelope: ' . $s->envelope->name,
                 'occurred_at' => $date,
+                'cleared'     => $cleared,
             ]);
         }
     }
 
-    private function envelopeSpend(ScheduledTransaction $s, Carbon $date): void
+    private function envelopeSpend(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
         $s->cashAccount->transactions()->create([
             'type'        => 'withdrawal',
@@ -113,30 +116,33 @@ class ScheduledTransactionService
             'amount'      => $s->amount,
             'description' => $s->description,
             'occurred_at' => $date,
+            'cleared'     => $cleared,
         ]);
     }
 
-    private function cashDeposit(ScheduledTransaction $s, Carbon $date): void
+    private function cashDeposit(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
         $s->cashAccount->transactions()->create([
             'type'        => 'deposit',
             'amount'      => $s->amount,
             'description' => $s->description,
             'occurred_at' => $date,
+            'cleared'     => $cleared,
         ]);
     }
 
-    private function cashWithdrawal(ScheduledTransaction $s, Carbon $date): void
+    private function cashWithdrawal(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
         $s->cashAccount->transactions()->create([
             'type'        => 'withdrawal',
             'amount'      => $s->amount,
             'description' => $s->description,
             'occurred_at' => $date,
+            'cleared'     => $cleared,
         ]);
     }
 
-    private function mortgagePayment(ScheduledTransaction $s, Carbon $date): void
+    private function mortgagePayment(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
         $s->cashAccount->transactions()->create([
             'type'        => 'withdrawal',
@@ -144,6 +150,7 @@ class ScheduledTransactionService
             'amount'      => $s->amount,
             'description' => $s->description,
             'occurred_at' => $date,
+            'cleared'     => $cleared,
         ]);
 
         if ($s->liability) {

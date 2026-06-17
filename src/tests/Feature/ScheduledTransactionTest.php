@@ -235,6 +235,42 @@ class ScheduledTransactionTest extends TestCase
         ]);
     }
 
+    public function test_materialize_enters_cash_transactions_as_pending(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+        ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->pastDue()->create([
+            'type'   => 'cash_deposit',
+            'amount' => 500,
+        ]);
+
+        app(ScheduledTransactionService::class)->materializeForUser($user);
+
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $account->id,
+            'amount'          => 500,
+            'cleared'         => false,
+        ]);
+    }
+
+    public function test_enter_now_records_cash_transaction_as_cleared(): void
+    {
+        $user      = User::factory()->create();
+        $account   = CashAccount::factory()->for($user)->create();
+        $scheduled = ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->pastDue()->create([
+            'type'   => 'cash_deposit',
+            'amount' => 500,
+        ]);
+
+        app(ScheduledTransactionService::class)->enterNow($scheduled);
+
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $account->id,
+            'amount'          => 500,
+            'cleared'         => true,
+        ]);
+    }
+
     public function test_materialize_creates_cash_withdrawal(): void
     {
         $user      = User::factory()->create();

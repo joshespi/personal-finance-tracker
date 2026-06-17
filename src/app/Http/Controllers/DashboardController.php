@@ -141,7 +141,7 @@ class DashboardController extends Controller
                     'portfolios'      => $portfolios,
                 ];
             })
-            ->filter(fn ($h) => $h['quantity'] > 0)
+            ->filter(fn ($h) => $h['quantity'] > 0 && round($h['effective_value'], 2) > 0)
             ->sortByDesc('effective_value')
             ->values();
 

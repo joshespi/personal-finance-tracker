@@ -60,8 +60,9 @@ class CashAccountController extends Controller
     {
         $this->authorize('view', $cashAccount);
 
-        $cashAccount->current_balance = $cashAccount->balance();
-        $cashAccount->cleared_balance = $cashAccount->clearedBalance();
+        $balances = $cashAccount->balances();
+        $cashAccount->current_balance = $balances['working'];
+        $cashAccount->cleared_balance = $balances['cleared'];
 
         return view('cash-accounts.show', [
             'account'      => $cashAccount,

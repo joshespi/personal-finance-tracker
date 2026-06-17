@@ -9,8 +9,6 @@ use App\Models\LiabilityBalance;
 use App\Models\Portfolio;
 use App\Models\User;
 use App\Livewire\TransactionList;
-use App\Services\DemoMode;
-use Illuminate\Support\Facades\View;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -169,7 +167,6 @@ class CashAccountTest extends TestCase
 
     public function test_livewire_add_transaction_defaults_to_pending(): void
     {
-        View::share('demo', app(DemoMode::class));
         $account = CashAccount::factory()->create();
 
         Livewire::actingAs($account->user)
@@ -188,7 +185,6 @@ class CashAccountTest extends TestCase
 
     public function test_livewire_toggle_cleared_flips_status(): void
     {
-        View::share('demo', app(DemoMode::class));
         $account = CashAccount::factory()->create();
         $tx = CashTransaction::factory()->for($account, 'cashAccount')->deposit()->pending()->create(['amount' => 75]);
 

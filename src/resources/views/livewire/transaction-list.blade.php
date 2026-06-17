@@ -1,25 +1,26 @@
 <div>
-    {{-- Balance card: Cleared + Uncleared = Working --}}
+    {{-- Balance card: Cleared + Pending = Working --}}
+    @php $bal = $this->balances; @endphp
     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
         <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
             <div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Cleared Balance</p>
-                <p class="mt-1 text-xl font-semibold font-mono {{ $this->clearedBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
-                    {{ $this->clearedBalance < 0 ? '−' : '' }}${{ $demo->amt(abs($this->clearedBalance)) }}
+                <p class="mt-1 text-xl font-semibold font-mono {{ $bal['cleared'] >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
+                    {{ $bal['cleared'] < 0 ? '−' : '' }}${{ $demo->amt(abs($bal['cleared'])) }}
                 </p>
             </div>
             <span class="text-2xl text-gray-300 dark:text-gray-600 font-light">+</span>
             <div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Pending Balance</p>
-                <p class="mt-1 text-xl font-semibold font-mono {{ $this->unclearedBalance == 0 ? 'text-gray-400 dark:text-gray-500' : ($this->unclearedBalance > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600') }}">
-                    {{ $this->unclearedBalance < 0 ? '−' : '' }}${{ $demo->amt(abs($this->unclearedBalance)) }}
+                <p class="mt-1 text-xl font-semibold font-mono {{ $bal['uncleared'] == 0 ? 'text-gray-400 dark:text-gray-500' : ($bal['uncleared'] > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600') }}">
+                    {{ $bal['uncleared'] < 0 ? '−' : '' }}${{ $demo->amt(abs($bal['uncleared'])) }}
                 </p>
             </div>
             <span class="text-2xl text-gray-300 dark:text-gray-600 font-light">=</span>
             <div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Working Balance</p>
-                <p class="mt-1 text-3xl font-semibold font-mono {{ $this->balance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
-                    {{ $this->balance < 0 ? '−' : '' }}${{ $demo->amt(abs($this->balance)) }}
+                <p class="mt-1 text-3xl font-semibold font-mono {{ $bal['working'] >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
+                    {{ $bal['working'] < 0 ? '−' : '' }}${{ $demo->amt(abs($bal['working'])) }}
                 </p>
             </div>
         </div>
@@ -261,19 +262,15 @@
                                         @endif
                                     </td>
                                     <td class="px-6 py-3">
-                                        @if ($t->cleared)
-                                            <button type="button" wire:click.stop="toggleCleared({{ $t->id }})"
-                                                    title="Cleared — click to mark pending"
-                                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/70 transition">
-                                                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Cleared
-                                            </button>
-                                        @else
-                                            <button type="button" wire:click.stop="toggleCleared({{ $t->id }})"
-                                                    title="Pending — click to mark cleared"
-                                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">
-                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending
-                                            </button>
-                                        @endif
+                                        @php
+                                            [$dot, $badge, $label, $title] = $t->cleared
+                                                ? ['bg-green-500', 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/70', 'Cleared', 'Cleared — click to mark pending']
+                                                : ['bg-amber-500', 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/70', 'Pending', 'Pending — click to mark cleared'];
+                                        @endphp
+                                        <button type="button" wire:click.stop="toggleCleared({{ $t->id }})" title="{{ $title }}"
+                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition {{ $badge }}">
+                                            <span class="w-1.5 h-1.5 rounded-full {{ $dot }}"></span> {{ $label }}
+                                        </button>
                                     </td>
                                     <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $t->description ?? '—' }}</td>
                                     <td class="px-6 py-3 text-gray-500 dark:text-gray-400">
