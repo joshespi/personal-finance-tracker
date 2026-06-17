@@ -7,7 +7,7 @@
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
             {{-- Input form --}}
             <form method="GET" action="{{ route('forecast') }}" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-5">

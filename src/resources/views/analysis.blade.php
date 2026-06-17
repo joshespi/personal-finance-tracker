@@ -75,7 +75,7 @@
 
         {{-- ═══════════════════════════════ CASHFLOW TAB ═══════════════════════════════ --}}
         @if ($tab === 'cashflow')
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-8">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
@@ -176,7 +176,7 @@
 
         {{-- ═══════════════════════════════ TRENDS TAB ═══════════════════════════════ --}}
         @elseif ($tab === 'trends')
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-8">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
             @if ($datasets->isEmpty())
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
@@ -241,7 +241,7 @@
 
         {{-- ═══════════════════════════════ 50/30/20 TAB ═══════════════════════════════ --}}
         @else
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8 space-y-8">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
             @php
                 $hasData = $data['has_data'];

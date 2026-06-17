@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="py-10">
-        <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
 
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-6">
                 <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
