@@ -262,6 +262,12 @@ class DashboardController extends Controller
         $rows = [];
         foreach ($targets as $type => $targetPct) {
             $currentVal  = round($current[$type], 2);
+
+            // Skip classes the user neither targets nor holds (e.g. Bonds at 0% / $0).
+            if ($targetPct == 0 && $currentVal == 0) {
+                continue;
+            }
+
             $targetVal   = round($total * $targetPct / 100, 2);
             $currentPct  = round($currentVal / $total * 100, 1);
             $diff        = round($targetVal - $currentVal, 2);
