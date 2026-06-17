@@ -7,6 +7,7 @@ use App\Models\CashTransaction;
 use App\Models\Envelope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CashTransactionController extends Controller
 {
@@ -15,12 +16,16 @@ class CashTransactionController extends Controller
         $this->authorize('update', $cashAccount);
 
         $validated = $request->validate([
-            'type'        => ['required', 'in:deposit,withdrawal'],
-            'amount'      => ['required', 'numeric', 'gt:0'],
-            'description' => ['nullable', 'string', 'max:500'],
-            'occurred_at' => ['required', 'date'],
-            'envelope_id' => ['nullable', 'integer', 'exists:envelopes,id'],
-            'cleared'     => ['nullable', 'boolean'],
+            'type'               => ['required', 'in:deposit,withdrawal'],
+            'amount'             => ['required', 'numeric', 'gt:0'],
+            'description'        => ['nullable', 'string', 'max:500'],
+            'occurred_at'        => ['required', 'date'],
+            'envelope_id'        => ['nullable', 'integer', 'exists:envelopes,id'],
+            'income_category_id' => [
+                'nullable', 'integer',
+                Rule::exists('income_categories', 'id')->where('user_id', $request->user()->id),
+            ],
+            'cleared'            => ['nullable', 'boolean'],
         ]);
 
         $validated['cleared'] = $request->boolean('cleared');
@@ -33,6 +38,11 @@ class CashTransactionController extends Controller
             );
         } else {
             $validated['envelope_id'] = null;
+        }
+
+        // A category only applies to deposits; ownership is enforced by the validation rule above.
+        if ($validated['type'] !== 'deposit') {
+            $validated['income_category_id'] = null;
         }
 
         $cashAccount->transactions()->create($validated);

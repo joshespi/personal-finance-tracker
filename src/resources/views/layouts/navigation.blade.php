@@ -24,6 +24,7 @@
                     $moneyLinks = [
                         ['route' => 'cash-accounts.index',          'label' => 'Spending Accounts',    'active' => 'cash-accounts.*'],
                         ['route' => 'envelopes.index',              'label' => 'Budget Envelopes',     'active' => 'envelopes.*'],
+                        ['route' => 'income-categories.index',      'label' => 'Income Categories',    'active' => 'income-categories.*'],
                         ['route' => 'budget-rule',                  'label' => '50/30/20 Budget Rule', 'active' => 'budget-rule'],
                         ['route' => 'emergency-fund',               'label' => 'Emergency Fund',       'active' => 'emergency-fund'],
                         ['route' => 'allocator',                    'label' => 'Allocator',            'active' => 'allocator'],
@@ -281,10 +282,11 @@
 
 @auth
 @php
-    $qaAccounts   = Auth::user()->cashAccounts()->orderBy('name')->get(['id', 'name']);
-    $qaEnvelopes  = Auth::user()->envelopes()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
-    $qaPortfolios = Auth::user()->portfolios()->orderBy('name')->get(['id', 'name']);
-    $qaToday      = now()->format('Y-m-d');
+    $qaAccounts         = Auth::user()->cashAccounts()->orderBy('name')->get(['id', 'name']);
+    $qaEnvelopes        = Auth::user()->envelopes()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+    $qaPortfolios       = Auth::user()->portfolios()->orderBy('name')->get(['id', 'name']);
+    $qaIncomeCategories = Auth::user()->incomeCategories()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+    $qaToday            = now()->format('Y-m-d');
 @endphp
 <div x-data="{
         open: false,
@@ -362,6 +364,17 @@
                                 <input type="text" name="description" maxlength="500" placeholder="Optional"
                                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
                             </div>
+                            @if ($qaIncomeCategories->isNotEmpty())
+                                <div x-show="cashType === 'deposit'" x-cloak>
+                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Income category</label>
+                                    <select name="income_category_id" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="">— Uncategorized —</option>
+                                        @foreach ($qaIncomeCategories as $cat)
+                                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endif
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Date</label>
                                 <input type="date" name="occurred_at" required value="{{ $qaToday }}"

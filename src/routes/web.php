@@ -19,6 +19,7 @@ use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\ScheduledTransactionController;
 use App\Http\Controllers\EmergencyFundController;
 use App\Http\Controllers\ForecastController;
+use App\Http\Controllers\IncomeCategoryController;
 use App\Http\Controllers\IncomeEntryController;
 use App\Http\Controllers\ReadyToAssignController;
 use App\Http\Controllers\SpendingTrendsController;
@@ -138,6 +139,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/ready-to-assign', fn() => redirect()->route('envelopes.index'))->name('ready-to-assign');
     Route::post('/income-entries', [IncomeEntryController::class, 'store'])->name('income-entries.store');
     Route::delete('/income-entries/{incomeEntry}', [IncomeEntryController::class, 'destroy'])->name('income-entries.destroy');
+
+    Route::resource('income-categories', IncomeCategoryController::class)->except(['show']);
 
     Route::resource('scheduled-transactions', ScheduledTransactionController::class);
     Route::patch('scheduled-transactions/{scheduledTransaction}/toggle', [ScheduledTransactionController::class, 'toggle'])

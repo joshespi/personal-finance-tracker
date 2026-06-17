@@ -11,7 +11,7 @@ class CashTransaction extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['cash_account_id', 'envelope_id', 'type', 'cleared', 'amount', 'description', 'occurred_at'];
+    protected $fillable = ['cash_account_id', 'envelope_id', 'income_category_id', 'type', 'cleared', 'amount', 'description', 'occurred_at'];
 
     protected $casts = [
         'occurred_at' => 'date',
@@ -27,5 +27,10 @@ class CashTransaction extends Model
     public function envelope(): BelongsTo
     {
         return $this->belongsTo(Envelope::class);
+    }
+
+    public function incomeCategory(): BelongsTo
+    {
+        return $this->belongsTo(IncomeCategory::class);
     }
 }

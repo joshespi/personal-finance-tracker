@@ -106,7 +106,7 @@ class ExportController extends Controller
 
         $liabilities = $user->liabilities()->with('balances')->get();
 
-        $cashAccounts = $user->cashAccounts()->with('transactions')->get();
+        $cashAccounts = $user->cashAccounts()->with('transactions.incomeCategory:id,name')->get();
 
         $envelopes = $user->envelopes()->with('transactions')->get();
 
@@ -166,12 +166,18 @@ class ExportController extends Controller
                 'currency'     => $a->currency,
                 'notes'        => $a->notes,
                 'transactions' => $a->transactions->map(fn ($t) => [
-                    'date'        => $t->occurred_at->toDateString(),
-                    'type'        => $t->type,
-                    'amount'      => (float) $t->amount,
-                    'description' => $t->description,
-                    'cleared'     => (bool) $t->cleared,
+                    'date'            => $t->occurred_at->toDateString(),
+                    'type'            => $t->type,
+                    'amount'          => (float) $t->amount,
+                    'description'     => $t->description,
+                    'income_category' => $t->incomeCategory?->name,
+                    'cleared'         => (bool) $t->cleared,
                 ])->values(),
+            ])->values(),
+            'income_categories'    => $user->incomeCategories()->orderBy('sort_order')->orderBy('name')->get()->map(fn ($c) => [
+                'name'       => $c->name,
+                'color'      => $c->color,
+                'sort_order' => $c->sort_order,
             ])->values(),
             'envelopes'            => $envelopes->map(fn ($e) => [
                 'name'           => $e->name,
@@ -191,10 +197,11 @@ class ExportController extends Controller
                     'description' => $t->description,
                 ])->values(),
             ])->values(),
-            'income_entries'       => $user->incomeEntries()->orderBy('occurred_at')->get()->map(fn ($i) => [
-                'date'        => $i->occurred_at->toDateString(),
-                'amount'      => (float) $i->amount,
-                'description' => $i->description,
+            'income_entries'       => $user->incomeEntries()->with('incomeCategory:id,name')->orderBy('occurred_at')->get()->map(fn ($i) => [
+                'date'            => $i->occurred_at->toDateString(),
+                'amount'          => (float) $i->amount,
+                'description'     => $i->description,
+                'income_category' => $i->incomeCategory?->name,
             ])->values(),
             'scheduled_transactions' => $user->scheduledTransactions()->get()->map(fn ($s) => [
                 'description'  => $s->description,

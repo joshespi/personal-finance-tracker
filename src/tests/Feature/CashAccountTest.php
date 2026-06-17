@@ -139,6 +139,13 @@ class CashAccountTest extends TestCase
         $this->assertEquals(800.0, $account->clearedBalance());
         $this->assertEquals(-20.0, $account->unclearedBalance());
         $this->assertEquals(780.0, $account->balance());
+
+        // balances() must agree with the scalar methods. Regression guard: the "cleared"
+        // alias used to hit CashTransaction's boolean cast and collapse the sum to 0/1.
+        $this->assertEquals(
+            ['working' => 780.0, 'cleared' => 800.0, 'uncleared' => -20.0],
+            $account->balances(),
+        );
     }
 
     public function test_reconcile_targets_cleared_balance_and_ignores_pending(): void

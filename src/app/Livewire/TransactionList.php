@@ -6,6 +6,7 @@ use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -20,6 +21,7 @@ class TransactionList extends Component
     public string $newDescription = '';
     public string $newOccurredAt = '';
     public ?int $newEnvelopeId = null;
+    public ?int $newIncomeCategoryId = null;
     public bool $newCleared = false;
 
     public ?int $editingId = null;
@@ -28,6 +30,7 @@ class TransactionList extends Component
     public string $editDescription = '';
     public string $editOccurredAt = '';
     public ?int $editEnvelopeId = null;
+    public ?int $editIncomeCategoryId = null;
     public bool $editCleared = false;
 
     public string $filter = '';
@@ -45,7 +48,7 @@ class TransactionList extends Component
     public function getTransactionsProperty()
     {
         return $this->filteredQuery()
-            ->with('envelope:id,name')
+            ->with(['envelope:id,name', 'incomeCategory:id,name,color'])
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
             ->paginate(self::PER_PAGE);
@@ -94,17 +97,26 @@ class TransactionList extends Component
         return auth()->user()->envelopes()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
     }
 
+    public function getIncomeCategoriesProperty()
+    {
+        return auth()->user()->incomeCategories()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+    }
+
     public function addTransaction(): void
     {
         Gate::authorize('update', $this->account);
 
         $data = $this->validate([
-            'newType'        => ['required', 'in:deposit,withdrawal'],
-            'newAmount'      => ['required', 'numeric', 'gt:0'],
-            'newDescription' => ['nullable', 'string', 'max:500'],
-            'newOccurredAt'  => ['required', 'date'],
-            'newEnvelopeId'  => ['nullable', 'integer', 'exists:envelopes,id'],
-            'newCleared'     => ['boolean'],
+            'newType'             => ['required', 'in:deposit,withdrawal'],
+            'newAmount'           => ['required', 'numeric', 'gt:0'],
+            'newDescription'      => ['nullable', 'string', 'max:500'],
+            'newOccurredAt'       => ['required', 'date'],
+            'newEnvelopeId'       => ['nullable', 'integer', 'exists:envelopes,id'],
+            'newIncomeCategoryId' => [
+                'nullable', 'integer',
+                Rule::exists('income_categories', 'id')->where('user_id', auth()->id()),
+            ],
+            'newCleared'          => ['boolean'],
         ]);
 
         $envelopeId = null;
@@ -115,15 +127,16 @@ class TransactionList extends Component
         }
 
         $this->account->transactions()->create([
-            'type'        => $data['newType'],
-            'amount'      => $data['newAmount'],
-            'description' => $data['newDescription'] ?: null,
-            'occurred_at' => $data['newOccurredAt'],
-            'envelope_id' => $envelopeId,
-            'cleared'     => $this->newCleared,
+            'type'               => $data['newType'],
+            'amount'             => $data['newAmount'],
+            'description'        => $data['newDescription'] ?: null,
+            'occurred_at'        => $data['newOccurredAt'],
+            'envelope_id'        => $envelopeId,
+            'income_category_id' => $this->resolveIncomeCategoryId($data['newIncomeCategoryId'], $data['newType']),
+            'cleared'            => $this->newCleared,
         ]);
 
-        $this->reset(['newAmount', 'newDescription', 'newEnvelopeId', 'newCleared']);
+        $this->reset(['newAmount', 'newDescription', 'newEnvelopeId', 'newIncomeCategoryId', 'newCleared']);
         $this->newOccurredAt = now()->format('Y-m-d');
         $this->resetPage();
     }
@@ -139,6 +152,7 @@ class TransactionList extends Component
         $this->editDescription = $t->description ?? '';
         $this->editOccurredAt = $t->occurred_at->format('Y-m-d');
         $this->editEnvelopeId = $t->envelope_id;
+        $this->editIncomeCategoryId = $t->income_category_id;
         $this->editCleared = (bool) $t->cleared;
 
         $this->resetErrorBag();
@@ -151,12 +165,16 @@ class TransactionList extends Component
         Gate::authorize('update', $t);
 
         $data = $this->validate([
-            'editType'        => ['required', 'in:deposit,withdrawal'],
-            'editAmount'      => ['required', 'numeric', 'gt:0'],
-            'editDescription' => ['nullable', 'string', 'max:500'],
-            'editOccurredAt'  => ['required', 'date'],
-            'editEnvelopeId'  => ['nullable', 'integer', 'exists:envelopes,id'],
-            'editCleared'     => ['boolean'],
+            'editType'             => ['required', 'in:deposit,withdrawal'],
+            'editAmount'           => ['required', 'numeric', 'gt:0'],
+            'editDescription'      => ['nullable', 'string', 'max:500'],
+            'editOccurredAt'       => ['required', 'date'],
+            'editEnvelopeId'       => ['nullable', 'integer', 'exists:envelopes,id'],
+            'editIncomeCategoryId' => [
+                'nullable', 'integer',
+                Rule::exists('income_categories', 'id')->where('user_id', auth()->id()),
+            ],
+            'editCleared'          => ['boolean'],
         ]);
 
         $envelopeId = null;
@@ -167,15 +185,22 @@ class TransactionList extends Component
         }
 
         $t->update([
-            'type'        => $data['editType'],
-            'amount'      => $data['editAmount'],
-            'description' => $data['editDescription'] ?: null,
-            'occurred_at' => $data['editOccurredAt'],
-            'envelope_id' => $envelopeId,
-            'cleared'     => $this->editCleared,
+            'type'               => $data['editType'],
+            'amount'             => $data['editAmount'],
+            'description'        => $data['editDescription'] ?: null,
+            'occurred_at'        => $data['editOccurredAt'],
+            'envelope_id'        => $envelopeId,
+            'income_category_id' => $this->resolveIncomeCategoryId($data['editIncomeCategoryId'], $data['editType']),
+            'cleared'            => $this->editCleared,
         ]);
 
         $this->editingId = null;
+    }
+
+    /** A category only applies to deposits; ownership is enforced by validation. */
+    private function resolveIncomeCategoryId(?int $categoryId, string $type): ?int
+    {
+        return $type === 'deposit' ? $categoryId : null;
     }
 
     /** Flip a single transaction between cleared and pending (the status-column toggle). */

@@ -141,6 +141,25 @@
                     </div>
                 @endif
 
+                <div x-show="type === 'deposit'" x-cloak>
+                    <x-input-label for="newIncomeCategoryId" value="Income category (optional)" />
+                    @if ($this->incomeCategories->isNotEmpty())
+                        <select id="newIncomeCategoryId" wire:model="newIncomeCategoryId"
+                                class="mt-1 block w-52 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                            <option value="">— Uncategorized —</option>
+                            @foreach ($this->incomeCategories as $cat)
+                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    @else
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 w-52">
+                            <a href="{{ route('income-categories.create') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Add categories</a>
+                            to label your income.
+                        </p>
+                    @endif
+                    <x-input-error :messages="$errors->get('newIncomeCategoryId')" class="mt-2" />
+                </div>
+
                 <div class="pb-2">
                     <label class="inline-flex items-center gap-2 cursor-pointer select-none" title="Leave unchecked for a pending transaction that hasn't cleared the bank yet">
                         <input type="checkbox" wire:model="newCleared"
@@ -188,7 +207,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Description</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Envelope</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Envelope / Category</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Amount</th>
                             <th class="px-6 py-3"></th>
                         </tr>
@@ -196,14 +215,14 @@
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($this->transactions as $t)
                             @if ($editingId === $t->id)
-                                <tr class="bg-indigo-50 dark:bg-indigo-900/20">
+                                <tr class="bg-indigo-50 dark:bg-indigo-900/20" x-data="{ etype: @entangle('editType') }">
                                     <td class="px-4 py-2">
                                         <input type="date" wire:model="editOccurredAt"
                                                class="block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md shadow-sm text-sm focus:border-indigo-500 focus:ring-indigo-500" />
                                         <x-input-error :messages="$errors->get('editOccurredAt')" class="mt-1" />
                                     </td>
                                     <td class="px-4 py-2">
-                                        <select wire:model="editType"
+                                        <select wire:model="editType" x-model="etype"
                                                 class="block w-32 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md shadow-sm text-sm focus:border-indigo-500 focus:ring-indigo-500">
                                             <option value="deposit">Deposit</option>
                                             <option value="withdrawal">Withdrawal</option>
@@ -224,14 +243,22 @@
                                         <x-input-error :messages="$errors->get('editDescription')" class="mt-1" />
                                     </td>
                                     <td class="px-4 py-2">
-                                        <select wire:model="editEnvelopeId"
+                                        <select wire:model="editEnvelopeId" x-show="etype === 'withdrawal'"
                                                 class="block w-44 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md shadow-sm text-sm focus:border-indigo-500 focus:ring-indigo-500">
                                             <option value="">— None —</option>
                                             @foreach ($this->envelopes as $env)
                                                 <option value="{{ $env->id }}">{{ $env->name }}</option>
                                             @endforeach
                                         </select>
+                                        <select wire:model="editIncomeCategoryId" x-show="etype === 'deposit'" x-cloak
+                                                class="block w-44 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md shadow-sm text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                            <option value="">— Uncategorized —</option>
+                                            @foreach ($this->incomeCategories as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </select>
                                         <x-input-error :messages="$errors->get('editEnvelopeId')" class="mt-1" />
+                                        <x-input-error :messages="$errors->get('editIncomeCategoryId')" class="mt-1" />
                                     </td>
                                     <td class="px-4 py-2 text-right">
                                         <input type="number" wire:model="editAmount" min="0" step="any"
@@ -278,6 +305,11 @@
                                             <a href="{{ route('envelopes.show', $t->envelope) }}"
                                                wire:click.stop
                                                class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">{{ $demo->n($t->envelope->name) }}</a>
+                                        @elseif ($t->incomeCategory)
+                                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                                <span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $t->incomeCategory->color }}"></span>
+                                                {{ $t->incomeCategory->name }}
+                                            </span>
                                         @else
                                             <span class="text-gray-300 dark:text-gray-600">—</span>
                                         @endif

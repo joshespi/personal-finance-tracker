@@ -59,7 +59,9 @@ class CashAccount extends Model
      */
     public function balances(): array
     {
-        $row = $this->transactions()
+        // toBase() so the result is a plain row, not a CashTransaction model — otherwise the
+        // "cleared" alias would hit the model's boolean cast and collapse the sum to 0/1.
+        $row = $this->transactions()->toBase()
             ->selectRaw("COALESCE(SUM(CASE WHEN type = 'deposit' THEN amount ELSE -amount END), 0) AS working")
             ->selectRaw("COALESCE(SUM(CASE WHEN cleared = 1 THEN (CASE WHEN type = 'deposit' THEN amount ELSE -amount END) ELSE 0 END), 0) AS cleared")
             ->first();

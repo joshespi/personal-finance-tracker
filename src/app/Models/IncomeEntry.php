@@ -10,7 +10,7 @@ class IncomeEntry extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'amount', 'description', 'occurred_at'];
+    protected $fillable = ['user_id', 'income_category_id', 'amount', 'description', 'occurred_at'];
 
     protected $casts = [
         'occurred_at' => 'date',
@@ -20,5 +20,10 @@ class IncomeEntry extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function incomeCategory(): BelongsTo
+    {
+        return $this->belongsTo(IncomeCategory::class);
     }
 }
