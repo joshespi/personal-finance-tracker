@@ -170,6 +170,7 @@ class ExportController extends Controller
                     'type'        => $t->type,
                     'amount'      => (float) $t->amount,
                     'description' => $t->description,
+                    'cleared'     => (bool) $t->cleared,
                 ])->values(),
             ])->values(),
             'envelopes'            => $envelopes->map(fn ($e) => [

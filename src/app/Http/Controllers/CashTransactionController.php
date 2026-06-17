@@ -20,7 +20,10 @@ class CashTransactionController extends Controller
             'description' => ['nullable', 'string', 'max:500'],
             'occurred_at' => ['required', 'date'],
             'envelope_id' => ['nullable', 'integer', 'exists:envelopes,id'],
+            'cleared'     => ['nullable', 'boolean'],
         ]);
+
+        $validated['cleared'] = $request->boolean('cleared');
 
         if (! empty($validated['envelope_id'])) {
             abort_unless(

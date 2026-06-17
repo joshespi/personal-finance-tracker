@@ -8,6 +8,10 @@ use App\Models\Liability;
 use App\Models\LiabilityBalance;
 use App\Models\Portfolio;
 use App\Models\User;
+use App\Livewire\TransactionList;
+use App\Services\DemoMode;
+use Illuminate\Support\Facades\View;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class CashAccountTest extends TestCase
@@ -124,6 +128,75 @@ class CashAccountTest extends TestCase
         CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create(['amount' => 50]);
 
         $this->assertEquals(800.0, $account->balance());
+    }
+
+    public function test_cleared_and_uncleared_balances_split_working_balance(): void
+    {
+        $account = CashAccount::factory()->create();
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->cleared()->create(['amount' => 1000]);
+        CashTransaction::factory()->for($account, 'cashAccount')->withdrawal()->cleared()->create(['amount' => 200]);
+        CashTransaction::factory()->for($account, 'cashAccount')->withdrawal()->pending()->create(['amount' => 50]);
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->pending()->create(['amount' => 30]);
+
+        $this->assertEquals(800.0, $account->clearedBalance());
+        $this->assertEquals(-20.0, $account->unclearedBalance());
+        $this->assertEquals(780.0, $account->balance());
+    }
+
+    public function test_reconcile_targets_cleared_balance_and_ignores_pending(): void
+    {
+        $account = CashAccount::factory()->create();
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->cleared()->create(['amount' => 1000]);
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->pending()->create(['amount' => 500]);
+
+        // Bank reports 1010 cleared; the $500 pending deposit must not affect the adjustment.
+        $this->actingAs($account->user)
+            ->post(route('cash-accounts.reconcile', $account), [
+                'actual_balance' => '1010.00',
+                'occurred_at'    => '2026-05-17',
+            ])
+            ->assertRedirect(route('cash-accounts.show', $account));
+
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $account->id,
+            'type'            => 'deposit',
+            'amount'          => '10.00',
+            'description'     => 'Reconciliation adjustment',
+            'cleared'         => true,
+        ]);
+        $this->assertEquals(1010.0, $account->fresh()->clearedBalance());
+    }
+
+    public function test_livewire_add_transaction_defaults_to_pending(): void
+    {
+        View::share('demo', app(DemoMode::class));
+        $account = CashAccount::factory()->create();
+
+        Livewire::actingAs($account->user)
+            ->test(TransactionList::class, ['account' => $account])
+            ->set('newType', 'deposit')
+            ->set('newAmount', '120')
+            ->set('newOccurredAt', '2026-06-01')
+            ->call('addTransaction');
+
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $account->id,
+            'amount'          => 120,
+            'cleared'         => false,
+        ]);
+    }
+
+    public function test_livewire_toggle_cleared_flips_status(): void
+    {
+        View::share('demo', app(DemoMode::class));
+        $account = CashAccount::factory()->create();
+        $tx = CashTransaction::factory()->for($account, 'cashAccount')->deposit()->pending()->create(['amount' => 75]);
+
+        Livewire::actingAs($account->user)
+            ->test(TransactionList::class, ['account' => $account])
+            ->call('toggleCleared', $tx->id);
+
+        $this->assertTrue($tx->fresh()->cleared);
     }
 
     public function test_transaction_validation_rejects_zero_amount(): void

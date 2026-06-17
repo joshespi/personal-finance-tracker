@@ -24,6 +24,8 @@ class CashTransactionFactory extends Factory
 
     public function deposit(): static    { return $this->state(['type' => 'deposit']); }
     public function withdrawal(): static { return $this->state(['type' => 'withdrawal']); }
+    public function cleared(): static    { return $this->state(['cleared' => true]); }
+    public function pending(): static    { return $this->state(['cleared' => false]); }
 
     public function spend(\App\Models\Envelope $envelope): static
     {

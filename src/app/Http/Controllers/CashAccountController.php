@@ -61,6 +61,7 @@ class CashAccountController extends Controller
         $this->authorize('view', $cashAccount);
 
         $cashAccount->current_balance = $cashAccount->balance();
+        $cashAccount->cleared_balance = $cashAccount->clearedBalance();
 
         return view('cash-accounts.show', [
             'account'      => $cashAccount,
@@ -106,7 +107,8 @@ class CashAccountController extends Controller
             'occurred_at'    => ['required', 'date'],
         ]);
 
-        $current    = $cashAccount->balance();
+        // Reconcile against the cleared balance — that's the figure your bank reports.
+        $current    = $cashAccount->clearedBalance();
         $actual     = (float) $validated['actual_balance'];
         $difference = round($actual - $current, 2);
 
@@ -120,6 +122,7 @@ class CashAccountController extends Controller
             'amount'      => abs($difference),
             'description' => 'Reconciliation adjustment',
             'occurred_at' => $validated['occurred_at'],
+            'cleared'     => true,
         ]);
 
         $sign = $difference > 0 ? '+' : '−';

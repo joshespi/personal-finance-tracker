@@ -33,9 +33,33 @@ class CashAccount extends Model
         return $this->hasMany(ScheduledTransaction::class);
     }
 
+    /** Working balance — every transaction, cleared or not. */
     public function balance(): float
     {
-        return (float) $this->transactions()
+        return $this->balanceQuery();
+    }
+
+    /** Cleared balance — only transactions that have cleared the bank. */
+    public function clearedBalance(): float
+    {
+        return $this->balanceQuery(true);
+    }
+
+    /** Uncleared (pending) balance — working minus cleared. */
+    public function unclearedBalance(): float
+    {
+        return $this->balanceQuery(false);
+    }
+
+    private function balanceQuery(?bool $cleared = null): float
+    {
+        $query = $this->transactions();
+
+        if ($cleared !== null) {
+            $query->where('cleared', $cleared);
+        }
+
+        return (float) $query
             ->selectRaw("COALESCE(SUM(CASE WHEN type = 'deposit' THEN amount ELSE -amount END), 0) AS bal")
             ->value('bal');
     }

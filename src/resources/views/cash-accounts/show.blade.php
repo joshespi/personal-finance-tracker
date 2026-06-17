@@ -80,7 +80,7 @@
             close() { $store.reconcile.open = false; $store.reconcile.actualBalance = '' },
             get diff() {
                 const a = parseFloat($store.reconcile.actualBalance);
-                const c = {{ round($demo->scaleScalar($account->current_balance), 2) }};
+                const c = {{ round($demo->scaleScalar($account->cleared_balance), 2) }};
                 if (isNaN(a)) return null;
                 return Math.round((a - c) * 100) / 100;
             }
@@ -94,9 +94,9 @@
             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Reconcile Account</h3>
 
             <div class="flex items-center justify-between text-sm">
-                <span class="text-gray-500 dark:text-gray-400">Tracked balance</span>
+                <span class="text-gray-500 dark:text-gray-400">Cleared balance</span>
                 <span class="font-mono font-semibold text-gray-900 dark:text-gray-100">
-                    {{ $account->current_balance < 0 ? '−' : '' }}${{ $demo->amt(abs($account->current_balance)) }}
+                    {{ $account->cleared_balance < 0 ? '−' : '' }}${{ $demo->amt(abs($account->cleared_balance)) }}
                 </span>
             </div>
 

@@ -20,6 +20,7 @@ class TransactionList extends Component
     public string $newDescription = '';
     public string $newOccurredAt = '';
     public ?int $newEnvelopeId = null;
+    public bool $newCleared = false;
 
     public ?int $editingId = null;
     public string $editType = 'deposit';
@@ -27,6 +28,7 @@ class TransactionList extends Component
     public string $editDescription = '';
     public string $editOccurredAt = '';
     public ?int $editEnvelopeId = null;
+    public bool $editCleared = false;
 
     public string $filter = '';
 
@@ -67,10 +69,20 @@ class TransactionList extends Component
         return $query;
     }
 
-    /** Whole-account balance — independent of the filter and pagination. */
+    /** Whole-account working balance — independent of the filter and pagination. */
     public function getBalanceProperty(): float
     {
         return $this->account->balance();
+    }
+
+    public function getClearedBalanceProperty(): float
+    {
+        return $this->account->clearedBalance();
+    }
+
+    public function getUnclearedBalanceProperty(): float
+    {
+        return $this->account->unclearedBalance();
     }
 
     public function getScheduledProperty()
@@ -102,6 +114,7 @@ class TransactionList extends Component
             'newDescription' => ['nullable', 'string', 'max:500'],
             'newOccurredAt'  => ['required', 'date'],
             'newEnvelopeId'  => ['nullable', 'integer', 'exists:envelopes,id'],
+            'newCleared'     => ['boolean'],
         ]);
 
         $envelopeId = null;
@@ -117,9 +130,10 @@ class TransactionList extends Component
             'description' => $data['newDescription'] ?: null,
             'occurred_at' => $data['newOccurredAt'],
             'envelope_id' => $envelopeId,
+            'cleared'     => $this->newCleared,
         ]);
 
-        $this->reset(['newAmount', 'newDescription', 'newEnvelopeId']);
+        $this->reset(['newAmount', 'newDescription', 'newEnvelopeId', 'newCleared']);
         $this->newOccurredAt = now()->format('Y-m-d');
         $this->resetPage();
     }
@@ -135,6 +149,7 @@ class TransactionList extends Component
         $this->editDescription = $t->description ?? '';
         $this->editOccurredAt = $t->occurred_at->format('Y-m-d');
         $this->editEnvelopeId = $t->envelope_id;
+        $this->editCleared = (bool) $t->cleared;
 
         $this->resetErrorBag();
     }
@@ -151,6 +166,7 @@ class TransactionList extends Component
             'editDescription' => ['nullable', 'string', 'max:500'],
             'editOccurredAt'  => ['required', 'date'],
             'editEnvelopeId'  => ['nullable', 'integer', 'exists:envelopes,id'],
+            'editCleared'     => ['boolean'],
         ]);
 
         $envelopeId = null;
@@ -166,9 +182,20 @@ class TransactionList extends Component
             'description' => $data['editDescription'] ?: null,
             'occurred_at' => $data['editOccurredAt'],
             'envelope_id' => $envelopeId,
+            'cleared'     => $this->editCleared,
         ]);
 
         $this->editingId = null;
+    }
+
+    /** Flip a single transaction between cleared and pending (the status-column toggle). */
+    public function toggleCleared(int $id): void
+    {
+        $t = $this->account->transactions()->find($id);
+        abort_unless($t, 404);
+        Gate::authorize('update', $t);
+
+        $t->update(['cleared' => ! $t->cleared]);
     }
 
     public function cancelEdit(): void

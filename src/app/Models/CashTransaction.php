@@ -11,11 +11,12 @@ class CashTransaction extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['cash_account_id', 'envelope_id', 'type', 'amount', 'description', 'occurred_at'];
+    protected $fillable = ['cash_account_id', 'envelope_id', 'type', 'cleared', 'amount', 'description', 'occurred_at'];
 
     protected $casts = [
         'occurred_at' => 'date',
         'amount'      => 'decimal:8',
+        'cleared'     => 'boolean',
     ];
 
     public function cashAccount(): BelongsTo

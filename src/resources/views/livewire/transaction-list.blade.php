@@ -1,10 +1,28 @@
 <div>
-    {{-- Balance card --}}
+    {{-- Balance card: Cleared + Uncleared = Working --}}
     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Current Balance</p>
-        <p class="mt-1 text-3xl font-semibold font-mono {{ $this->balance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
-            {{ $this->balance < 0 ? '−' : '' }}${{ $demo->amt(abs($this->balance)) }}
-        </p>
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Cleared Balance</p>
+                <p class="mt-1 text-xl font-semibold font-mono {{ $this->clearedBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
+                    {{ $this->clearedBalance < 0 ? '−' : '' }}${{ $demo->amt(abs($this->clearedBalance)) }}
+                </p>
+            </div>
+            <span class="text-2xl text-gray-300 dark:text-gray-600 font-light">+</span>
+            <div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Pending Balance</p>
+                <p class="mt-1 text-xl font-semibold font-mono {{ $this->unclearedBalance == 0 ? 'text-gray-400 dark:text-gray-500' : ($this->unclearedBalance > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600') }}">
+                    {{ $this->unclearedBalance < 0 ? '−' : '' }}${{ $demo->amt(abs($this->unclearedBalance)) }}
+                </p>
+            </div>
+            <span class="text-2xl text-gray-300 dark:text-gray-600 font-light">=</span>
+            <div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Working Balance</p>
+                <p class="mt-1 text-3xl font-semibold font-mono {{ $this->balance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
+                    {{ $this->balance < 0 ? '−' : '' }}${{ $demo->amt(abs($this->balance)) }}
+                </p>
+            </div>
+        </div>
     </div>
 
     {{-- Scheduled --}}
@@ -122,6 +140,14 @@
                     </div>
                 @endif
 
+                <div class="pb-2">
+                    <label class="inline-flex items-center gap-2 cursor-pointer select-none" title="Leave unchecked for a pending transaction that hasn't cleared the bank yet">
+                        <input type="checkbox" wire:model="newCleared"
+                               class="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-indigo-600 focus:ring-indigo-500" />
+                        <span class="text-sm text-gray-700 dark:text-gray-300">Cleared</span>
+                    </label>
+                </div>
+
                 <div class="pb-0.5">
                     <x-primary-button>Record</x-primary-button>
                 </div>
@@ -159,6 +185,7 @@
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Description</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Envelope</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Amount</th>
@@ -181,6 +208,13 @@
                                             <option value="withdrawal">Withdrawal</option>
                                         </select>
                                         <x-input-error :messages="$errors->get('editType')" class="mt-1" />
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                                            <input type="checkbox" wire:model="editCleared"
+                                                   class="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-indigo-600 focus:ring-indigo-500" />
+                                            <span class="text-xs text-gray-600 dark:text-gray-400">Cleared</span>
+                                        </label>
                                     </td>
                                     <td class="px-4 py-2">
                                         <input type="text" wire:model="editDescription" maxlength="500"
@@ -224,6 +258,21 @@
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">Deposit</span>
                                         @else
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300">Withdrawal</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-3">
+                                        @if ($t->cleared)
+                                            <button type="button" wire:click.stop="toggleCleared({{ $t->id }})"
+                                                    title="Cleared — click to mark pending"
+                                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/70 transition">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Cleared
+                                            </button>
+                                        @else
+                                            <button type="button" wire:click.stop="toggleCleared({{ $t->id }})"
+                                                    title="Pending — click to mark cleared"
+                                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending
+                                            </button>
                                         @endif
                                     </td>
                                     <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $t->description ?? '—' }}</td>
