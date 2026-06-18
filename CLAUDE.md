@@ -20,10 +20,10 @@ The app runs in Docker Compose (PHP 8.5-FPM `app`, MariaDB 11.8 `db`, Nginx, and
 docker compose exec app php artisan <command>     # artisan/composer in the PHP container
 docker compose run --rm node npm run build         # build assets after any JS/CSS change
 docker compose run --rm node npm install           # after package.json changes
-docker compose exec app composer install           # restore dev deps (entrypoint installs --no-dev)
+docker compose exec app composer install           # manual dep restore (rarely needed locally now)
 ```
 
-The `app` entrypoint runs `composer install --no-dev`, `migrate --force`, and `optimize` on every start. Because `vendor/` is host-volume-mounted, restarts strip PHPUnit — reinstall dev deps before testing.
+The `app` entrypoint runs `composer install`, `migrate --force`, and `optimize` on every start. It installs **with** dev dependencies unless `APP_ENV=production` (which uses `--no-dev`), so local restarts keep PHPUnit/Pint and tests run without a manual reinstall. Editing `docker/php/entrypoint.sh` requires an image rebuild (`docker compose build app`) to take effect.
 
 ## Tests
 

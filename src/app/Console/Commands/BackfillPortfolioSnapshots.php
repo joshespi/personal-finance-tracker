@@ -90,6 +90,11 @@ class BackfillPortfolioSnapshots extends Command
         $period  = CarbonPeriod::create($from, $to);
         $written = 0;
 
+        // Chart-eligible manual assets don't change across the date range — filter once per portfolio.
+        $chartManualAssets = $portfolios->mapWithKeys(fn ($p) => [
+            $p->id => $p->manualAssets->where('include_in_chart', true)->values(),
+        ]);
+
         foreach ($period as $date) {
             $dateStr = $date->toDateString();
 
@@ -103,7 +108,7 @@ class BackfillPortfolioSnapshots extends Command
                 );
 
                 $manualValue = $this->computeManualValueAsOf(
-                    $portfolio->manualAssets->where('include_in_chart', true)->values(),
+                    $chartManualAssets[$portfolio->id],
                     $pricesByAssetAndDate,
                     $dateStr
                 );

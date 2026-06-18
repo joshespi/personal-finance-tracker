@@ -28,11 +28,8 @@ enum AssetType: string
     /** Allocation bucket this type rolls up into for the net-worth pie/rebalancing. */
     public function allocationKey(): string
     {
-        return match ($this) {
-            self::Crypto     => 'crypto',
-            self::RealEstate => 'real_estate',
-            self::Bond       => 'bond',
-            self::Stock      => 'stock',
-        };
+        // Buckets are 1:1 with the backing values today; keep this seam for any
+        // future type that should roll up into an existing bucket.
+        return $this->value;
     }
 }

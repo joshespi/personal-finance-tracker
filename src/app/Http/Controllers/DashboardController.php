@@ -82,16 +82,9 @@ class DashboardController extends Controller
 
         $readyToAssign = $user->readyToAssign();
 
-        [$revolvingBalance, $interestBleedMonthly] = $userLiabilities
-            ->filter(fn ($l) => $l->isRevolving() && $l->currentBalance() > 0)
-            ->reduce(function ($carry, $l) {
-                $bal = $l->currentBalance();
-                $carry[0] += $bal;
-                $carry[1] += $bal * ((float) ($l->interest_rate ?? 0) / 100 / 12);
-                return $carry;
-            }, [0.0, 0.0]);
-        $revolvingBalance     = round($revolvingBalance, 2);
-        $interestBleedMonthly = round($interestBleedMonthly, 2);
+        $revolving            = $userLiabilities->filter(fn ($l) => $l->isRevolving() && $l->currentBalance() > 0);
+        $revolvingBalance     = round($revolving->sum(fn ($l) => $l->currentBalance()), 2);
+        $interestBleedMonthly = round($revolving->sum(fn ($l) => $l->monthlyInterest()), 2);
         $interestBleedYearly  = round($interestBleedMonthly * 12, 2);
 
         $totals = [

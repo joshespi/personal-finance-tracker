@@ -74,4 +74,10 @@ class Liability extends Model
     {
         return $this->latestBalance ? (float) $this->latestBalance->balance : 0.0;
     }
+
+    /** Unrounded monthly interest accrual on the current balance at the stored APR. */
+    public function monthlyInterest(): float
+    {
+        return $this->currentBalance() * ((float) ($this->interest_rate ?? 0) / 100 / 12);
+    }
 }
