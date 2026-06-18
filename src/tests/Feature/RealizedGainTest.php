@@ -21,7 +21,7 @@ class RealizedGainTest extends TestCase
             ->create(['quantity' => 1.0, 'price_per_unit' => 50000, 'transacted_at' => '2024-06-01']);
 
         $portfolio->load('transactions.asset');
-        $result = (new RealizedGainService())->compute($portfolio);
+        $result = (new RealizedGainService)->compute($portfolio);
 
         $this->assertCount(1, $result['lots']);
         $this->assertEquals(10000.00, $result['totalGain']);
@@ -38,7 +38,7 @@ class RealizedGainTest extends TestCase
             ->create(['quantity' => 1.0, 'price_per_unit' => 3000, 'transacted_at' => '2024-06-01']);
 
         $portfolio->load('transactions.asset');
-        $result = (new RealizedGainService())->compute($portfolio);
+        $result = (new RealizedGainService)->compute($portfolio);
 
         $this->assertCount(1, $result['lots']);
         $this->assertEquals(1000.00, $result['totalGain']);
@@ -57,7 +57,7 @@ class RealizedGainTest extends TestCase
             ->create(['quantity' => 15, 'price_per_unit' => 150, 'transacted_at' => '2024-07-01']);
 
         $portfolio->load('transactions.asset');
-        $result = (new RealizedGainService())->compute($portfolio);
+        $result = (new RealizedGainService)->compute($portfolio);
 
         $this->assertEquals(650.00, $result['totalGain']);
         $this->assertCount(2, $result['lots']);
@@ -74,7 +74,7 @@ class RealizedGainTest extends TestCase
             ->create(['quantity' => 100, 'price_per_unit' => 50, 'transacted_at' => '2021-03-01']);
 
         $portfolio->load('transactions.asset');
-        $result = (new RealizedGainService())->compute($portfolio);
+        $result = (new RealizedGainService)->compute($portfolio);
 
         $this->assertEquals(-25000.00, $result['totalGain']);
     }
@@ -94,12 +94,12 @@ class RealizedGainTest extends TestCase
             ->create(['quantity' => 1, 'price_per_unit' => 150, 'transacted_at' => '2023-09-01']);
 
         $portfolio->load('transactions.asset');
-        $result = (new RealizedGainService())->compute($portfolio);
+        $result = (new RealizedGainService)->compute($portfolio);
 
         $this->assertArrayHasKey(2022, $result['byYear']);
         $this->assertArrayHasKey(2023, $result['byYear']);
         $this->assertEquals(100.00, $result['byYear'][2022]);
-        $this->assertEquals(50.00,  $result['byYear'][2023]);
+        $this->assertEquals(50.00, $result['byYear'][2023]);
     }
 
     public function test_portfolio_show_renders_realized_gains_section(): void

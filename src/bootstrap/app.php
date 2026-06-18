@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\HandleImpersonation;
+use App\Http\Middleware\ShareDemoMode;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -22,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: env('TRUSTED_PROXIES', null));
         $middleware->alias(['admin' => EnsureUserIsAdmin::class]);
         $middleware->appendToGroup('web', HandleImpersonation::class);
-        $middleware->appendToGroup('web', \App\Http\Middleware\ShareDemoMode::class);
+        $middleware->appendToGroup('web', ShareDemoMode::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

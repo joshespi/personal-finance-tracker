@@ -38,7 +38,7 @@ class DashboardController extends Controller
         $chartDataExManual = $rawSnapshots->map(fn ($v, $date) => ['date' => $date, 'value' => $v['market_value'], 'cost' => $v['cost']])
             ->values();
 
-        $benchmarkData = (new BenchmarkService())->all();
+        $benchmarkData = (new BenchmarkService)->all();
 
         $portfolioHoldings = $portfolios->map(fn ($p) => [
             'portfolio' => $p,
@@ -53,8 +53,8 @@ class DashboardController extends Controller
             $marketValue  = $holdings->filter(fn ($h) => $h['current_value'] !== null)->sum('current_value');
             $unpricedCost = $holdings->filter(fn ($h) => $h['current_value'] === null)->sum('total_cost');
             $manualValue  = $portfolio->chartManualValue();
-            $unrealized = $holdings->filter(fn ($h) => $h['unrealized_gain'] !== null)->sum('unrealized_gain');
-            $hasPrice   = $holdings->contains(fn ($h) => $h['current_value'] !== null);
+            $unrealized   = $holdings->filter(fn ($h) => $h['unrealized_gain'] !== null)->sum('unrealized_gain');
+            $hasPrice     = $holdings->contains(fn ($h) => $h['current_value'] !== null);
 
             return [
                 'portfolio'    => $portfolio,
@@ -66,9 +66,9 @@ class DashboardController extends Controller
             ];
         })->sortByDesc('total_value')->values();
 
-        $portfolioValue   = round($summaries->sum('total_value'), 2);
-        $totalCash        = round($user->totalCash(), 2);
-        $totalAssets      = round($portfolioValue + $totalCash, 2);
+        $portfolioValue = round($summaries->sum('total_value'), 2);
+        $totalCash      = round($user->totalCash(), 2);
+        $totalAssets    = round($portfolioValue + $totalCash, 2);
 
         // Invested = portfolio value minus manual assets flagged out (e.g. primary residence).
         // Only subtract ones already counted in portfolio_value, i.e. include_in_chart=true.
@@ -76,9 +76,9 @@ class DashboardController extends Controller
             ->where('include_in_chart', true)
             ->where('include_in_invested', false)
             ->sum(fn ($ma) => $ma->currentValue());
-        $investedValue = round($portfolioValue - $excludedFromInvested, 2);
-        $userLiabilities  = $user->liabilities()->with('latestBalance')->get();
-        $totalDebt        = round($userLiabilities->sum(fn ($l) => $l->currentBalance()), 2);
+        $investedValue   = round($portfolioValue - $excludedFromInvested, 2);
+        $userLiabilities = $user->liabilities()->with('latestBalance')->get();
+        $totalDebt       = round($userLiabilities->sum(fn ($l) => $l->currentBalance()), 2);
 
         $readyToAssign = $user->readyToAssign();
 
@@ -88,12 +88,12 @@ class DashboardController extends Controller
         $interestBleedYearly  = round($interestBleedMonthly * 12, 2);
 
         $totals = [
-            'cost_basis'      => round($summaries->sum('cost_basis'), 2),
-            'market_value'    => $summaries->contains(fn ($s) => $s['market_value'] !== null)
+            'cost_basis'   => round($summaries->sum('cost_basis'), 2),
+            'market_value' => $summaries->contains(fn ($s) => $s['market_value'] !== null)
                 ? round($summaries->sum(fn ($s) => $s['market_value'] ?? $s['cost_basis']), 2)
                 : null,
-            'manual_value'    => round($summaries->sum('manual_value'), 2),
-            'unrealized'      => $summaries->contains(fn ($s) => $s['unrealized'] !== null)
+            'manual_value' => round($summaries->sum('manual_value'), 2),
+            'unrealized'   => $summaries->contains(fn ($s) => $s['unrealized'] !== null)
                 ? round($summaries->sum(fn ($s) => $s['unrealized'] ?? 0), 2)
                 : null,
             'portfolio_value' => $portfolioValue,
@@ -142,6 +142,7 @@ class DashboardController extends Controller
 
         $allHoldings = $allHoldings->map(function ($h) use ($allHoldingsTotal) {
             $h['pct'] = $allHoldingsTotal > 0 ? round($h['effective_value'] / $allHoldingsTotal * 100, 2) : 0;
+
             return $h;
         });
 
@@ -189,17 +190,17 @@ class DashboardController extends Controller
         foreach ($allHoldings as $h) {
             $val = $h['effective_value'];
             match (AssetType::tryFrom($h['asset']->asset_type)?->allocationKey() ?? 'stock') {
-                'crypto'      => $cryptoValue     += $val,
+                'crypto'      => $cryptoValue += $val,
                 'real_estate' => $realEstateValue += $val,
-                'bond'        => $bondValue        += $val,
-                default       => $stockValue      += $val,
+                'bond'        => $bondValue += $val,
+                default       => $stockValue += $val,
             };
         }
 
-        $stockValue      += $manualBuckets['stock'];
-        $cryptoValue     += $manualBuckets['crypto'];
+        $stockValue += $manualBuckets['stock'];
+        $cryptoValue += $manualBuckets['crypto'];
         $realEstateValue += $manualBuckets['real_estate'];
-        $bondValue       += $manualBuckets['bond'];
+        $bondValue += $manualBuckets['bond'];
         $otherManualValue = $manualBuckets['other'];
 
         $total = $stockValue + $cryptoValue + $realEstateValue + $bondValue + $otherManualValue;
@@ -254,18 +255,18 @@ class DashboardController extends Controller
 
         $rows = [];
         foreach ($targets as $type => $targetPct) {
-            $currentVal  = round($current[$type], 2);
+            $currentVal = round($current[$type], 2);
 
             // Skip classes the user neither targets nor holds (e.g. Bonds at 0% / $0).
             if ($targetPct == 0 && $currentVal == 0) {
                 continue;
             }
 
-            $targetVal   = round($total * $targetPct / 100, 2);
-            $currentPct  = round($currentVal / $total * 100, 1);
-            $diff        = round($targetVal - $currentVal, 2);
-            $rows[]      = [
-                'label'      => $labels[$type],
+            $targetVal  = round($total * $targetPct / 100, 2);
+            $currentPct = round($currentVal / $total * 100, 1);
+            $diff       = round($targetVal - $currentVal, 2);
+            $rows[]     = [
+                'label'       => $labels[$type],
                 'current_pct' => $currentPct,
                 'target_pct'  => $targetPct,
                 'current_val' => $currentVal,

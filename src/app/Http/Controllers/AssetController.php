@@ -31,7 +31,8 @@ class AssetController extends Controller
                 ['asset_id' => $asset->id],
                 ['asset_type' => $type],
             );
-            return back()->with('success', "{$asset->symbol} reclassified as " . AssetType::from($type)->label() . '.');
+
+            return back()->with('success', "{$asset->symbol} reclassified as ".AssetType::from($type)->label().'.');
         }
 
         if ($request->has('price_source')) {
@@ -40,6 +41,7 @@ class AssetController extends Controller
             $source = $request->input('price_source') ?: null;
             $asset->update(['price_source' => $source]);
             $label = $source ? PriceSource::from($source)->label() : 'Auto';
+
             return back()->with('success', "{$asset->symbol} price feed set to {$label}.");
         }
 

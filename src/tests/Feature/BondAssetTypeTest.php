@@ -35,5 +35,4 @@ class BondAssetTypeTest extends TestCase
         $this->assertSame(950.0, $allocation['values'][$bondIdx]);
         $this->assertSame(0.0, $allocation['values'][$stockIdx]);
     }
-
 }

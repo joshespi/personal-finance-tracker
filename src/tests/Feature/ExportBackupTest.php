@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Asset;
+use App\Models\CashAccount;
+use App\Models\CashTransaction;
 use App\Models\Liability;
 use App\Models\LiabilityBalance;
 use App\Models\Portfolio;
 use App\Models\Transaction;
-use App\Models\Asset;
 use App\Models\User;
 use Tests\TestCase;
 
@@ -92,8 +94,8 @@ class ExportBackupTest extends TestCase
     public function test_backup_includes_cash_account_transactions(): void
     {
         $user    = User::factory()->create();
-        $account = \App\Models\CashAccount::factory()->for($user)->create(['name' => 'Main Checking']);
-        \App\Models\CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create([
+        $account = CashAccount::factory()->for($user)->create(['name' => 'Main Checking']);
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create([
             'amount'      => 500,
             'description' => 'Paycheck',
         ]);

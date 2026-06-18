@@ -14,7 +14,7 @@ class AssetPrice extends Model
 
     protected $casts = [
         'recorded_at' => 'datetime',
-        'price'        => 'decimal:8',
+        'price'       => 'decimal:8',
     ];
 
     public function asset(): BelongsTo

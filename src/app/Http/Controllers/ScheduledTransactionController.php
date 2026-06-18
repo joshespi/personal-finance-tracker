@@ -26,8 +26,9 @@ class ScheduledTransactionController extends Controller
 
     public function create(Request $request): View
     {
-        $envelopes   = $request->user()->envelopes()->orderBy('sort_order')->get();
+        $envelopes    = $request->user()->envelopes()->orderBy('sort_order')->get();
         $cashAccounts = $request->user()->cashAccounts()->orderBy('name')->get();
+
         return view('scheduled-transactions.create', compact('envelopes', 'cashAccounts'));
     }
 
@@ -35,6 +36,7 @@ class ScheduledTransactionController extends Controller
     {
         $data = $this->validated($request);
         $request->user()->scheduledTransactions()->create($data);
+
         return redirect()->route('scheduled-transactions.index')
             ->with('success', 'Scheduled transaction created.');
     }
@@ -42,8 +44,9 @@ class ScheduledTransactionController extends Controller
     public function edit(Request $request, ScheduledTransaction $scheduledTransaction): View
     {
         $this->authorize('update', $scheduledTransaction);
-        $envelopes   = $request->user()->envelopes()->orderBy('sort_order')->get();
+        $envelopes    = $request->user()->envelopes()->orderBy('sort_order')->get();
         $cashAccounts = $request->user()->cashAccounts()->orderBy('name')->get();
+
         return view('scheduled-transactions.edit', compact('scheduledTransaction', 'envelopes', 'cashAccounts'));
     }
 
@@ -51,6 +54,7 @@ class ScheduledTransactionController extends Controller
     {
         $this->authorize('update', $scheduledTransaction);
         $scheduledTransaction->update($this->validated($request));
+
         return redirect()->route('scheduled-transactions.index')
             ->with('success', 'Scheduled transaction updated.');
     }
@@ -59,6 +63,7 @@ class ScheduledTransactionController extends Controller
     {
         $this->authorize('delete', $scheduledTransaction);
         $scheduledTransaction->delete();
+
         return redirect()->route('scheduled-transactions.index')
             ->with('success', 'Scheduled transaction deleted.');
     }
@@ -67,6 +72,7 @@ class ScheduledTransactionController extends Controller
     {
         $this->authorize('update', $scheduledTransaction);
         $scheduledTransaction->update(['is_active' => ! $scheduledTransaction->is_active]);
+
         return redirect()->route('scheduled-transactions.index');
     }
 
@@ -93,22 +99,22 @@ class ScheduledTransactionController extends Controller
         $type   = $request->input('type');
         $userId = $request->user()->id;
 
-        $envelopeRule     = Rule::exists('envelopes', 'id')->where('user_id', $userId);
-        $cashAccountRule  = Rule::exists('cash_accounts', 'id')->where('user_id', $userId);
+        $envelopeRule    = Rule::exists('envelopes', 'id')->where('user_id', $userId);
+        $cashAccountRule = Rule::exists('cash_accounts', 'id')->where('user_id', $userId);
 
         return $request->validate([
-            'description'    => 'required|string|max:500',
-            'amount'         => 'required|numeric|min:0.01',
-            'type'           => 'required|in:envelope_fund,envelope_spend,cash_deposit,cash_withdrawal',
-            'recurrence'     => 'required|in:monthly,weekly,biweekly',
-            'next_due_at'    => 'required|date',
-            'envelope_id'    => in_array($type, ['envelope_fund', 'envelope_spend'])
+            'description' => 'required|string|max:500',
+            'amount'      => 'required|numeric|min:0.01',
+            'type'        => 'required|in:envelope_fund,envelope_spend,cash_deposit,cash_withdrawal',
+            'recurrence'  => 'required|in:monthly,weekly,biweekly',
+            'next_due_at' => 'required|date',
+            'envelope_id' => in_array($type, ['envelope_fund', 'envelope_spend'])
                 ? ['required', $envelopeRule]
                 : 'nullable',
             'cash_account_id' => in_array($type, ['cash_deposit', 'cash_withdrawal', 'envelope_spend'])
                 ? ['required', $cashAccountRule]
                 : ['nullable', $cashAccountRule],
-            'is_active'      => 'boolean',
+            'is_active' => 'boolean',
         ]);
     }
 }

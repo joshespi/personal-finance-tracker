@@ -25,6 +25,7 @@ class YnabImportController extends Controller
 
         if (empty($rows)) {
             Storage::delete($jsonPath);
+
             return back()->withErrors(['csv_file' => 'No valid transactions found. Make sure this is a YNAB "All Transactions" CSV export.']);
         }
 
@@ -35,7 +36,7 @@ class YnabImportController extends Controller
 
     public function preview(Request $request, YnabImportService $importer): View|RedirectResponse
     {
-        if (!$jsonPath = $this->activeImportPath()) {
+        if (! $jsonPath = $this->activeImportPath()) {
             return redirect()->route('import.ynab')
                 ->withErrors(['csv_file' => 'No import in progress. Please upload your CSV again.']);
         }
@@ -49,7 +50,7 @@ class YnabImportController extends Controller
 
     public function commit(Request $request, YnabImportService $importer): RedirectResponse
     {
-        if (!$jsonPath = $this->activeImportPath()) {
+        if (! $jsonPath = $this->activeImportPath()) {
             return redirect()->route('import.ynab')
                 ->withErrors(['csv_file' => 'Import session expired. Please upload again.']);
         }
@@ -83,9 +84,10 @@ class YnabImportController extends Controller
     private function activeImportPath(): ?string
     {
         $path = session()->get('ynab_json_path');
-        if (!is_string($path) || !Storage::exists($path)) {
+        if (! is_string($path) || ! Storage::exists($path)) {
             return null;
         }
+
         return $path;
     }
 }

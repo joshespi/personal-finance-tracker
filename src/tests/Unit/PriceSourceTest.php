@@ -16,13 +16,13 @@ class PriceSourceTest extends TestCase
 
     public function test_labels_are_human_readable(): void
     {
-        $this->assertSame('Finnhub',   PriceSource::Finnhub->label());
+        $this->assertSame('Finnhub', PriceSource::Finnhub->label());
         $this->assertSame('CoinGecko', PriceSource::CoinGecko->label());
     }
 
     public function test_values_are_lowercase_strings(): void
     {
-        $this->assertSame('finnhub',   PriceSource::Finnhub->value);
+        $this->assertSame('finnhub', PriceSource::Finnhub->value);
         $this->assertSame('coingecko', PriceSource::CoinGecko->value);
     }
 }

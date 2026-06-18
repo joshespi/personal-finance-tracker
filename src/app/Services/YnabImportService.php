@@ -15,6 +15,7 @@ class YnabImportService
         $rows     = $this->parseCsv($uploadedPath);
         $jsonPath = "ynab-imports/parsed-{$userId}.json";
         Storage::put($jsonPath, json_encode($rows));
+
         return [$jsonPath, $rows];
     }
 
@@ -33,11 +34,11 @@ class YnabImportService
                 $ynabName = $row['account'];
                 $mapValue = $accountMap[$ynabName] ?? null;
 
-                if (!$mapValue || $mapValue === 'skip') {
+                if (! $mapValue || $mapValue === 'skip') {
                     continue;
                 }
 
-                if (!isset($accountCache[$ynabName])) {
+                if (! isset($accountCache[$ynabName])) {
                     if ($mapValue === 'new') {
                         $accountCache[$ynabName] = $user->cashAccounts()->create([
                             'name'         => $ynabName,
@@ -46,7 +47,7 @@ class YnabImportService
                         ]);
                     } else {
                         $accountCache[$ynabName] = $user->cashAccounts()->find((int) $mapValue);
-                        if (!$accountCache[$ynabName]) {
+                        if (! $accountCache[$ynabName]) {
                             continue;
                         }
                     }
@@ -88,6 +89,7 @@ class YnabImportService
 
             if ($header === null) {
                 $header = array_map('trim', $line);
+
                 continue;
             }
 
@@ -100,7 +102,7 @@ class YnabImportService
                 $line
             );
 
-            $inflow  = $this->parseAmount($row['Inflow']  ?? '');
+            $inflow  = $this->parseAmount($row['Inflow'] ?? '');
             $outflow = $this->parseAmount($row['Outflow'] ?? '');
 
             if ($inflow == 0.0 && $outflow == 0.0) {
@@ -108,11 +110,11 @@ class YnabImportService
             }
 
             $rows[] = [
-                'account'  => trim($row['Account']  ?? ''),
-                'date'     => $this->parseDate($row['Date']     ?? ''),
-                'payee'    => trim($row['Payee']    ?? ''),
+                'account'  => trim($row['Account'] ?? ''),
+                'date'     => $this->parseDate($row['Date'] ?? ''),
+                'payee'    => trim($row['Payee'] ?? ''),
                 'category' => trim($row['Category'] ?? ''),
-                'memo'     => trim($row['Memo']     ?? ''),
+                'memo'     => trim($row['Memo'] ?? ''),
                 'type'     => $inflow > 0 ? 'deposit' : 'withdrawal',
                 'amount'   => $inflow > 0 ? $inflow : $outflow,
             ];
@@ -126,6 +128,7 @@ class YnabImportService
     private function parseAmount(string $val): float
     {
         $cleaned = preg_replace('/[^0-9.]/', '', $val);
+
         return $cleaned !== '' ? (float) $cleaned : 0.0;
     }
 
@@ -141,6 +144,7 @@ class YnabImportService
     private function buildDescription(array $row): string
     {
         $parts = array_filter([$row['payee'], $row['category'], $row['memo']]);
+
         return implode(' · ', $parts);
     }
 }

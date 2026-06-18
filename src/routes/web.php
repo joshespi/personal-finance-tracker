@@ -6,42 +6,42 @@ use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\ToolsController as AdminToolsController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\AllocatorController;
 use App\Http\Controllers\AllTransactionsController;
 use App\Http\Controllers\AnalysisController;
-use App\Http\Controllers\DividendController;
+use App\Http\Controllers\AssetController;
 use App\Http\Controllers\BudgetRuleController;
-use App\Http\Controllers\AllocatorController;
-use App\Http\Controllers\DebtPayoffController;
-use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\CashAccountController;
-use App\Http\Controllers\CashTransactionController;
 use App\Http\Controllers\CashflowController;
-use App\Http\Controllers\ScheduledTransactionController;
+use App\Http\Controllers\CashTransactionController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DebtPayoffController;
+use App\Http\Controllers\DividendController;
 use App\Http\Controllers\EmergencyFundController;
-use App\Http\Controllers\ForecastController;
-use App\Http\Controllers\IncomeCategoryController;
-use App\Http\Controllers\IncomeEntryController;
-use App\Http\Controllers\ReadyToAssignController;
-use App\Http\Controllers\SpendingTrendsController;
 use App\Http\Controllers\EnvelopeController;
 use App\Http\Controllers\EnvelopeTransactionController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\ForecastController;
+use App\Http\Controllers\IncomeCategoryController;
+use App\Http\Controllers\IncomeEntryController;
 use App\Http\Controllers\JournalEntryController;
 use App\Http\Controllers\LiabilityBalanceController;
 use App\Http\Controllers\LiabilityController;
-use App\Http\Controllers\TaxSummaryController;
-use App\Http\Controllers\AssetController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ManualAssetController;
 use App\Http\Controllers\ManualValuationController;
+use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\PortfolioSliceController;
 use App\Http\Controllers\PortfolioTransferController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ScheduledTransactionController;
+use App\Http\Controllers\SpendingTrendsController;
+use App\Http\Controllers\TaxSummaryController;
 use App\Http\Controllers\TickerSearchController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\TransactionImportController;
 use App\Http\Controllers\YnabImportController;
+use App\Services\DemoMode;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('login'));
@@ -57,7 +57,8 @@ Route::get('/dashboard', DashboardController::class)
 Route::middleware('auth')->group(function () {
 
     Route::post('/demo-mode/toggle', function () {
-        app(\App\Services\DemoMode::class)->toggle();
+        app(DemoMode::class)->toggle();
+
         return redirect()->back();
     })->name('demo-mode.toggle');
 
@@ -136,7 +137,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/allocator', AllocatorController::class)->name('allocator');
     Route::get('/budget-rule', BudgetRuleController::class)->name('budget-rule');
     Route::get('/forecast', ForecastController::class)->name('forecast');
-    Route::get('/ready-to-assign', fn() => redirect()->route('envelopes.index'))->name('ready-to-assign');
+    Route::get('/ready-to-assign', fn () => redirect()->route('envelopes.index'))->name('ready-to-assign');
     Route::post('/income-entries', [IncomeEntryController::class, 'store'])->name('income-entries.store');
     Route::delete('/income-entries/{incomeEntry}', [IncomeEntryController::class, 'destroy'])->name('income-entries.destroy');
 

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Enums\PriceSource;
 use App\Models\Asset;
 use App\Models\AssetPrice;
+use App\Models\ManualAsset;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -13,11 +14,12 @@ use Illuminate\Support\Facades\Log;
 class FetchAssetPrices extends Command
 {
     protected $signature = 'assets:fetch-prices';
+
     protected $description = 'Fetch latest prices for all tracked assets from CoinGecko (crypto) and Finnhub (stocks, bonds + real estate)';
 
     public function handle(): int
     {
-        $proxyIds = \App\Models\ManualAsset::whereNotNull('proxy_asset_id')->pluck('proxy_asset_id');
+        $proxyIds = ManualAsset::whereNotNull('proxy_asset_id')->pluck('proxy_asset_id');
 
         $assets = Asset::where(function ($q) use ($proxyIds) {
             $q->whereHas('transactions')->orWhereIn('id', $proxyIds);
@@ -25,6 +27,7 @@ class FetchAssetPrices extends Command
 
         if ($assets->isEmpty()) {
             $this->info('No assets with transactions found.');
+
             return self::SUCCESS;
         }
 
@@ -62,7 +65,8 @@ class FetchAssetPrices extends Command
 
         if (! $response->successful()) {
             Log::error('CoinGecko price fetch failed', ['status' => $response->status()]);
-            $this->error('CoinGecko API error (HTTP ' . $response->status() . ')');
+            $this->error('CoinGecko API error (HTTP '.$response->status().')');
+
             return;
         }
 
@@ -74,6 +78,7 @@ class FetchAssetPrices extends Command
 
             if (! $coin) {
                 $this->warn("  {$asset->symbol}: not found in top 250 coins — set coingecko_id manually if needed");
+
                 continue;
             }
 
@@ -98,6 +103,7 @@ class FetchAssetPrices extends Command
 
         if (! $apiKey) {
             $this->error('FINNHUB_API_KEY not set in .env — skipping stocks');
+
             return;
         }
 
@@ -113,6 +119,7 @@ class FetchAssetPrices extends Command
 
             if (! $response->successful()) {
                 $this->warn("  {$asset->symbol}: request failed (HTTP {$response->status()})");
+
                 continue;
             }
 
@@ -121,6 +128,7 @@ class FetchAssetPrices extends Command
 
             if (! $price || $price <= 0) {
                 $this->warn("  {$asset->symbol}: no valid price returned");
+
                 continue;
             }
 

@@ -14,7 +14,7 @@ class ManualValuation extends Model
 
     protected $casts = [
         'valued_at' => 'datetime',
-        'value'      => 'decimal:8',
+        'value'     => 'decimal:8',
     ];
 
     public function manualAsset(): BelongsTo

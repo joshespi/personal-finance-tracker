@@ -39,10 +39,10 @@ class BackfillPortfolioSnapshotsTest extends TestCase
         ]);
 
         $this->artisan('portfolios:backfill-snapshots', [
-            '--from'        => '2024-01-03',
-            '--to'          => '2024-01-03',
-            '--skip-fetch'  => true,
-            '--portfolio'   => $portfolio->id,
+            '--from'       => '2024-01-03',
+            '--to'         => '2024-01-03',
+            '--skip-fetch' => true,
+            '--portfolio'  => $portfolio->id,
         ])->assertExitCode(0);
 
         $snapshot = PortfolioSnapshot::where('portfolio_id', $portfolio->id)
@@ -162,7 +162,7 @@ class BackfillPortfolioSnapshotsTest extends TestCase
         $portfolio = Portfolio::factory()->for($user)->create();
 
         $manualAsset = ManualAsset::factory()->for($portfolio)->create([
-            'tracking_method' => 'static',
+            'tracking_method'  => 'static',
             'include_in_chart' => true,
         ]);
 
@@ -194,9 +194,9 @@ class BackfillPortfolioSnapshotsTest extends TestCase
 
     public function test_proxy_ticker_manual_asset_uses_proxy_price_times_shares(): void
     {
-        $user        = User::factory()->create();
-        $portfolio   = Portfolio::factory()->for($user)->create();
-        $proxyAsset  = Asset::factory()->stock()->create();
+        $user       = User::factory()->create();
+        $portfolio  = Portfolio::factory()->for($user)->create();
+        $proxyAsset = Asset::factory()->stock()->create();
 
         ManualAsset::factory()->for($portfolio)->create([
             'tracking_method'         => 'proxy_ticker',

@@ -19,7 +19,7 @@ class TickerSearchController extends Controller
             return response()->json([]);
         }
 
-        $local = Asset::where('symbol', 'like', strtoupper($query) . '%')
+        $local = Asset::where('symbol', 'like', strtoupper($query).'%')
             ->where('asset_type', $assetType)
             ->limit(5)
             ->get(['symbol', 'name', 'asset_type'])
@@ -78,6 +78,7 @@ class TickerSearchController extends Controller
                 ->all();
         } catch (\Exception $e) {
             Log::warning('Ticker search failed', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -105,6 +106,7 @@ class TickerSearchController extends Controller
                 ->all();
         } catch (\Exception $e) {
             Log::warning('Crypto search failed', ['error' => $e->getMessage()]);
+
             return [];
         }
     }

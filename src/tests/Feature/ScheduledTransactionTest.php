@@ -7,6 +7,7 @@ use App\Models\Envelope;
 use App\Models\ScheduledTransaction;
 use App\Models\User;
 use App\Services\ScheduledTransactionService;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ScheduledTransactionTest extends TestCase
@@ -79,12 +80,12 @@ class ScheduledTransactionTest extends TestCase
         $envelope = Envelope::factory()->for($user)->create();
 
         $this->actingAs($user)->post(route('scheduled-transactions.store'), [
-            'description'    => 'Netflix',
-            'amount'         => '15.99',
-            'type'           => 'envelope_spend',
-            'recurrence'     => 'monthly',
-            'next_due_at'    => today()->addMonth()->toDateString(),
-            'envelope_id'    => $envelope->id,
+            'description'     => 'Netflix',
+            'amount'          => '15.99',
+            'type'            => 'envelope_spend',
+            'recurrence'      => 'monthly',
+            'next_due_at'     => today()->addMonth()->toDateString(),
+            'envelope_id'     => $envelope->id,
             'cash_account_id' => $account->id,
         ])->assertRedirect(route('scheduled-transactions.index'));
 
@@ -218,8 +219,8 @@ class ScheduledTransactionTest extends TestCase
 
     public function test_materialize_creates_cash_deposit(): void
     {
-        $user      = User::factory()->create();
-        $account   = CashAccount::factory()->for($user)->create();
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
         ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->pastDue()->create([
             'type'   => 'cash_deposit',
             'amount' => 500,
@@ -273,8 +274,8 @@ class ScheduledTransactionTest extends TestCase
 
     public function test_materialize_creates_cash_withdrawal(): void
     {
-        $user      = User::factory()->create();
-        $account   = CashAccount::factory()->for($user)->create();
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
         ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->pastDue()->create([
             'type' => 'cash_withdrawal',
         ]);
@@ -324,8 +325,8 @@ class ScheduledTransactionTest extends TestCase
 
     public function test_materialize_skips_inactive_scheduled_transactions(): void
     {
-        $user      = User::factory()->create();
-        $account   = CashAccount::factory()->for($user)->create();
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
         ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->inactive()->pastDue()->create();
 
         $fired = app(ScheduledTransactionService::class)->materializeForUser($user);
@@ -336,8 +337,8 @@ class ScheduledTransactionTest extends TestCase
 
     public function test_materialize_skips_future_scheduled_transactions(): void
     {
-        $user      = User::factory()->create();
-        $account   = CashAccount::factory()->for($user)->create();
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
         ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->future()->create();
 
         $fired = app(ScheduledTransactionService::class)->materializeForUser($user);
@@ -354,7 +355,7 @@ class ScheduledTransactionTest extends TestCase
         ];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('recurrenceAdvanceProvider')]
+    #[DataProvider('recurrenceAdvanceProvider')]
     public function test_materialize_advances_next_due_at(string $recurrence, \Closure $expectedDate): void
     {
         $user      = User::factory()->create();
@@ -371,8 +372,8 @@ class ScheduledTransactionTest extends TestCase
 
     public function test_materialize_catches_up_multiple_missed_occurrences(): void
     {
-        $user      = User::factory()->create();
-        $account   = CashAccount::factory()->for($user)->create();
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
         // 20 days ago with weekly recurrence: -20, -13, -6 → 3 occurrences; next = +1 day (future)
         ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->create([
             'next_due_at' => today()->subDays(20),

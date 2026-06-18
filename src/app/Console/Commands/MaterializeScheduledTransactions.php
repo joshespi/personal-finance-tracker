@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Mail;
 
 class MaterializeScheduledTransactions extends Command
 {
-    protected $signature   = 'transactions:materialize';
+    protected $signature = 'transactions:materialize';
+
     protected $description = 'Materialize due scheduled transactions for all users and notify them by email';
 
     public function handle(ScheduledTransactionService $service): int
@@ -23,6 +24,7 @@ class MaterializeScheduledTransactions extends Command
 
         if ($userIds->isEmpty()) {
             $this->info('No scheduled transactions due today.');
+
             return self::SUCCESS;
         }
 
@@ -39,8 +41,9 @@ class MaterializeScheduledTransactions extends Command
             $totalUsers++;
             $totalTransactions += $fired->count();
 
-            if (!$user->notify_scheduled_transactions) {
+            if (! $user->notify_scheduled_transactions) {
                 $this->line("  {$user->email}: {$fired->count()} transaction(s) materialized (email muted)");
+
                 return;
             }
 

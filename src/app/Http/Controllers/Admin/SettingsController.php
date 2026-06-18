@@ -32,7 +32,7 @@ class SettingsController extends Controller
         $user = $request->user();
 
         Mail::raw(
-            "Test email from Finance Tracker.\n\nSent to: {$user->email}\nMailer: " . config('mail.default'),
+            "Test email from Finance Tracker.\n\nSent to: {$user->email}\nMailer: ".config('mail.default'),
             fn ($m) => $m->to($user->email)->subject('Finance Tracker — test email')
         );
 

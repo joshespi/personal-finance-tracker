@@ -47,17 +47,17 @@ class Liability extends Model
 
     public function paymentEnvelope(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Envelope::class, 'payment_envelope_id');
+        return $this->belongsTo(Envelope::class, 'payment_envelope_id');
     }
 
     public function paymentCashAccount(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\CashAccount::class, 'payment_cash_account_id');
+        return $this->belongsTo(CashAccount::class, 'payment_cash_account_id');
     }
 
     public function linkedSchedule(): HasOne
     {
-        return $this->hasOne(\App\Models\ScheduledTransaction::class);
+        return $this->hasOne(ScheduledTransaction::class);
     }
 
     public function totalMonthlyPayment(): float

@@ -19,7 +19,7 @@ class CashflowController extends Controller
         $envelopes = $user
             ->envelopes()
             ->withSum(['spendTransactions as spent_amount' => fn ($q) => $q
-                ->whereBetween('occurred_at', [$month, $monthEnd])
+                ->whereBetween('occurred_at', [$month, $monthEnd]),
             ], 'amount')
             ->orderBy('sort_order')
             ->get();
@@ -53,9 +53,9 @@ class CashflowController extends Controller
             ])
             ->filter(fn ($rows) => $rows->isNotEmpty());
 
-        $currentYm     = $month->format('Y-m');
-        $historyStart  = $month->copy()->subMonths(5)->startOfMonth();
-        $historyEnd    = $month->copy()->subMonth()->endOfMonth();
+        $currentYm    = $month->format('Y-m');
+        $historyStart = $month->copy()->subMonths(5)->startOfMonth();
+        $historyEnd   = $month->copy()->subMonth()->endOfMonth();
 
         $incomeByMonth = [$currentYm => $income];
         $spentByMonth  = [$currentYm => $totalSpent];
@@ -71,12 +71,12 @@ class CashflowController extends Controller
             ->get(['occurred_at', 'amount']);
 
         foreach ($historyIncome as $row) {
-            $ym = $row->occurred_at->format('Y-m');
+            $ym                 = $row->occurred_at->format('Y-m');
             $incomeByMonth[$ym] = ($incomeByMonth[$ym] ?? 0) + (float) $row->amount;
         }
 
         foreach ($historySpent as $row) {
-            $ym = $row->occurred_at->format('Y-m');
+            $ym                = $row->occurred_at->format('Y-m');
             $spentByMonth[$ym] = ($spentByMonth[$ym] ?? 0) + (float) $row->amount;
         }
 

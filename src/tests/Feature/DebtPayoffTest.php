@@ -30,13 +30,13 @@ class DebtPayoffTest extends TestCase
         $user = User::factory()->create();
 
         $mortgage = Liability::factory()->for($user)->create([
-            'liability_type' => 'mortgage',
-            'interest_rate'  => 7.0,
+            'liability_type'  => 'mortgage',
+            'interest_rate'   => 7.0,
             'minimum_payment' => 1500,
         ]);
         LiabilityBalance::factory()->for($mortgage)->create(['balance' => 300000]);
 
-        $data = (new DebtPayoffService())->compute($user->fresh());
+        $data = (new DebtPayoffService)->compute($user->fresh());
 
         $this->assertCount(0, $data['debts']);
         $this->assertCount(1, $data['mortgages']);
@@ -62,7 +62,7 @@ class DebtPayoffTest extends TestCase
         ]);
         LiabilityBalance::factory()->for($debtB)->create(['balance' => 2000]);
 
-        $data = (new DebtPayoffService())->compute($user->fresh());
+        $data = (new DebtPayoffService)->compute($user->fresh());
 
         // Snowball: A (smaller) paid first → A's payoff month < B's
         $this->assertLessThan(
@@ -75,15 +75,15 @@ class DebtPayoffTest extends TestCase
     {
         // Call simulate() directly with extra payment so priority truly gets more money.
         // With $300 extra going to the high-rate priority, it's paid off long before the low-rate debt.
-        $service = new DebtPayoffService();
+        $service = new DebtPayoffService;
 
         $debtData = [
-            ['id' => 1, 'name' => 'Low Rate',  'balance' => 1000.0, 'apr' => 5.0,
-             'monthly_rate' => 5.0 / 1200,  'monthly_interest' => 1000 * 5.0 / 1200,
-             'min_payment' => 50.0, 'min_payment_set' => true, 'negative_amortization' => false],
-            ['id' => 2, 'name' => 'High Rate', 'balance' => 1000.0, 'apr' => 20.0,
-             'monthly_rate' => 20.0 / 1200, 'monthly_interest' => 1000 * 20.0 / 1200,
-             'min_payment' => 50.0, 'min_payment_set' => true, 'negative_amortization' => false],
+            ['id'              => 1, 'name' => 'Low Rate',  'balance' => 1000.0, 'apr' => 5.0,
+                'monthly_rate' => 5.0 / 1200,  'monthly_interest' => 1000 * 5.0 / 1200,
+                'min_payment'  => 50.0, 'min_payment_set' => true, 'negative_amortization' => false],
+            ['id'              => 2, 'name' => 'High Rate', 'balance' => 1000.0, 'apr' => 20.0,
+                'monthly_rate' => 20.0 / 1200, 'monthly_interest' => 1000 * 20.0 / 1200,
+                'min_payment'  => 50.0, 'min_payment_set' => true, 'negative_amortization' => false],
         ];
 
         // Avalanche order: id=2 (20%) first, then id=1 (5%)
@@ -109,7 +109,7 @@ class DebtPayoffTest extends TestCase
         ]);
         LiabilityBalance::factory()->for($debtB)->create(['balance' => 200]);
 
-        $data = (new DebtPayoffService())->compute($user->fresh());
+        $data = (new DebtPayoffService)->compute($user->fresh());
 
         // Month 1: A paid off ($100 min pays it fully)
         // Month 1: B gets $50 min → $150 remaining
@@ -128,7 +128,7 @@ class DebtPayoffTest extends TestCase
         ]);
         LiabilityBalance::factory()->for($debt)->create(['balance' => 300]);
 
-        $data = (new DebtPayoffService())->compute($user->fresh());
+        $data = (new DebtPayoffService)->compute($user->fresh());
 
         // $300 / $100/mo = 3 months exactly
         $this->assertSame(3, $data['snowball']['months']);
@@ -145,7 +145,7 @@ class DebtPayoffTest extends TestCase
         ]);
         LiabilityBalance::factory()->for($debt)->create(['balance' => 1000]);
 
-        $data = (new DebtPayoffService())->compute($user->fresh());
+        $data = (new DebtPayoffService)->compute($user->fresh());
 
         $this->assertTrue($data['debts'][0]['negative_amortization']);
         $this->assertSame(1, $data['negative_amortization_count']);
@@ -161,7 +161,7 @@ class DebtPayoffTest extends TestCase
         ]);
         LiabilityBalance::factory()->for($debt)->create(['balance' => 1000]);
 
-        $data = (new DebtPayoffService())->compute($user->fresh());
+        $data = (new DebtPayoffService)->compute($user->fresh());
 
         $this->assertFalse($data['debts'][0]['min_payment_set']);
         $this->assertSame(25.0, $data['debts'][0]['min_payment']);
@@ -181,7 +181,7 @@ class DebtPayoffTest extends TestCase
         ]);
         LiabilityBalance::factory()->for($mortgage)->create(['balance' => 200000]); // $1000/mo interest
 
-        $data = (new DebtPayoffService())->compute($user->fresh());
+        $data = (new DebtPayoffService)->compute($user->fresh());
 
         // 1000 * 0.24 / 12 = 20; 200000 * 0.06 / 12 = 1000; total = 1020
         $this->assertEqualsWithDelta(1020.0, $data['total_monthly_interest'], 0.5);
@@ -197,7 +197,7 @@ class DebtPayoffTest extends TestCase
         ]);
         LiabilityBalance::factory()->for($otherDebt)->create(['balance' => 5000]);
 
-        $data = (new DebtPayoffService())->compute($user->fresh());
+        $data = (new DebtPayoffService)->compute($user->fresh());
 
         $this->assertFalse($data['has_data']);
     }

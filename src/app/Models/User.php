@@ -6,11 +6,12 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 
 #[Fillable(['name', 'email', 'password', 'is_admin', 'emergency_fund_target_months', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'notify_scheduled_transactions'])]
 #[Hidden(['password', 'remember_token'])]
@@ -22,14 +23,14 @@ class User extends Authenticatable implements MustVerifyEmail
     protected function casts(): array
     {
         return [
-            'email_verified_at'            => 'datetime',
-            'password'                     => 'hashed',
-            'is_admin'                     => 'boolean',
-            'emergency_fund_target_months' => 'integer',
-            'target_stock_pct'             => 'decimal:2',
-            'target_crypto_pct'            => 'decimal:2',
-            'target_real_estate_pct'       => 'decimal:2',
-            'target_bond_pct'              => 'decimal:2',
+            'email_verified_at'             => 'datetime',
+            'password'                      => 'hashed',
+            'is_admin'                      => 'boolean',
+            'emergency_fund_target_months'  => 'integer',
+            'target_stock_pct'              => 'decimal:2',
+            'target_crypto_pct'             => 'decimal:2',
+            'target_real_estate_pct'        => 'decimal:2',
+            'target_bond_pct'               => 'decimal:2',
             'notify_scheduled_transactions' => 'boolean',
         ];
     }
@@ -51,7 +52,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     // Applies this user's per-asset type overrides onto the given Asset models in place
     // (allocation + display only — the global Asset.asset_type that drives the price feed is untouched).
-    public function applyAssetClassifications(\Illuminate\Support\Collection $assets): void
+    public function applyAssetClassifications(Collection $assets): void
     {
         $ids = $assets->pluck('id')->filter()->all();
         if (empty($ids)) {
@@ -143,6 +144,7 @@ class User extends Authenticatable implements MustVerifyEmail
                 ->selectRaw("COALESCE(SUM(CASE WHEN cash_transactions.type = 'deposit' THEN cash_transactions.amount ELSE -cash_transactions.amount END), 0) AS bal")
                 ->value('bal');
         }
+
         return $this->totalCashCache;
     }
 
@@ -156,6 +158,7 @@ class User extends Authenticatable implements MustVerifyEmail
                 ->get()
                 ->sum(fn ($l) => $l->currentBalance());
         }
+
         return $this->totalDebtCache;
     }
 }

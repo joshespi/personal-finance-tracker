@@ -35,10 +35,10 @@ class PortfolioController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'               => ['required', 'string', 'max:100'],
-            'description'        => ['nullable', 'string', 'max:1000'],
-            'currency'           => ['required', 'string', 'size:3'],
-            'is_tax_advantaged'  => ['boolean'],
+            'name'              => ['required', 'string', 'max:100'],
+            'description'       => ['nullable', 'string', 'max:1000'],
+            'currency'          => ['required', 'string', 'size:3'],
+            'is_tax_advantaged' => ['boolean'],
         ]);
 
         $validated['is_tax_advantaged'] = $request->boolean('is_tax_advantaged');
@@ -77,10 +77,10 @@ class PortfolioController extends Controller
                 'cost'  => round((float) $s->cost_basis, 2),
             ])->values();
 
-        $gainService   = new RealizedGainService();
+        $gainService   = new RealizedGainService;
         $realizedGains = $gainService->compute($portfolio);
         $twr           = $gainService->computeTwr($portfolio);
-        $benchmarkData = (new BenchmarkService())->all();
+        $benchmarkData = (new BenchmarkService)->all();
         $allocation    = $this->buildAllocation($holdings, $portfolio);
         $rebalancing   = $this->buildSliceRebalancing($holdings, $portfolio);
 
@@ -109,9 +109,9 @@ class PortfolioController extends Controller
         ]);
 
         $portfolio->update([
-            'name'             => $validated['name'],
-            'description'      => $validated['description'] ?? null,
-            'currency'         => $validated['currency'],
+            'name'              => $validated['name'],
+            'description'       => $validated['description'] ?? null,
+            'currency'          => $validated['currency'],
             'is_tax_advantaged' => $request->boolean('is_tax_advantaged'),
         ]);
 

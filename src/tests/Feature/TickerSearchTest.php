@@ -52,8 +52,8 @@ class TickerSearchTest extends TestCase
         $data = $response->json();
         $this->assertNotEmpty($data);
         $this->assertArrayHasKey('symbol', $data[0]);
-        $this->assertArrayHasKey('name',   $data[0]);
-        $this->assertArrayHasKey('type',   $data[0]);
+        $this->assertArrayHasKey('name', $data[0]);
+        $this->assertArrayHasKey('type', $data[0]);
     }
 
     public function test_crypto_search_filters_by_type(): void

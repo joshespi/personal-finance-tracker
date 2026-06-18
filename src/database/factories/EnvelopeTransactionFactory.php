@@ -22,6 +22,13 @@ class EnvelopeTransactionFactory extends Factory
         ];
     }
 
-    public function fund(): static  { return $this->state(['type' => 'fund']); }
-    public function spend(): static { return $this->state(['type' => 'spend']); }
+    public function fund(): static
+    {
+        return $this->state(['type' => 'fund']);
+    }
+
+    public function spend(): static
+    {
+        return $this->state(['type' => 'spend']);
+    }
 }

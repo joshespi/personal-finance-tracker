@@ -85,8 +85,8 @@ class MaterializeScheduledTransactionsTest extends TestCase
     {
         Mail::fake();
 
-        $userA   = User::factory()->create(['notify_scheduled_transactions' => true]);
-        $userB   = User::factory()->create(['notify_scheduled_transactions' => true]);
+        $userA    = User::factory()->create(['notify_scheduled_transactions' => true]);
+        $userB    = User::factory()->create(['notify_scheduled_transactions' => true]);
         $accountA = CashAccount::factory()->for($userA)->create();
         $accountB = CashAccount::factory()->for($userB)->create();
 

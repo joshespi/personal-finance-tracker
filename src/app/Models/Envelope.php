@@ -5,7 +5,6 @@ namespace App\Models;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\CashTransaction;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -56,11 +55,13 @@ class Envelope extends Model
         if ($this->relationLoaded('transactions') && $this->relationLoaded('spendTransactions')) {
             $funded = $this->transactions->where('type', 'fund')->sum('amount');
             $spent  = $this->spendTransactions->sum('amount');
+
             return (float) $funded - (float) $spent;
         }
 
         $funded = (float) $this->transactions()->where('type', 'fund')->sum('amount');
         $spent  = (float) $this->spendTransactions()->sum('amount');
+
         return $funded - $spent;
     }
 

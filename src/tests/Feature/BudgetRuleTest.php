@@ -48,7 +48,7 @@ class BudgetRuleTest extends TestCase
             'amount' => 1500, 'occurred_at' => now()->toDateString(),
         ]);
 
-        $data = (new BudgetRuleService())->compute($user->fresh());
+        $data = (new BudgetRuleService)->compute($user->fresh());
 
         $this->assertSame(1000.0, $data['monthly_income']);
         $this->assertSame(500.0, $data['monthly_mandatory']);
@@ -73,7 +73,7 @@ class BudgetRuleTest extends TestCase
             'amount' => 4200, 'occurred_at' => now()->toDateString(),
         ]);
 
-        $data = (new BudgetRuleService())->compute($user->fresh());
+        $data = (new BudgetRuleService)->compute($user->fresh());
 
         $this->assertTrue($data['drift']['mandatory_over']);
     }
@@ -90,7 +90,7 @@ class BudgetRuleTest extends TestCase
             'amount' => 600, 'occurred_at' => now()->toDateString(),
         ]);
 
-        $data = (new BudgetRuleService())->compute($user->fresh());
+        $data = (new BudgetRuleService)->compute($user->fresh());
 
         $this->assertTrue($data['drift']['savings_under']);
     }
@@ -107,7 +107,7 @@ class BudgetRuleTest extends TestCase
             'amount' => 1500, 'occurred_at' => now()->toDateString(),
         ]);
 
-        $data = (new BudgetRuleService())->compute($user->fresh());
+        $data = (new BudgetRuleService)->compute($user->fresh());
 
         $this->assertSame(250.0, $data['monthly_savings']);
     }
@@ -125,7 +125,7 @@ class BudgetRuleTest extends TestCase
         $ef = Envelope::factory()->for($user)->create(['is_emergency_fund' => true]);
         EnvelopeTransaction::factory()->for($ef)->fund()->create(['amount' => 1000, 'occurred_at' => now()->toDateString()]);
 
-        $data = (new BudgetRuleService())->compute($user->fresh());
+        $data = (new BudgetRuleService)->compute($user->fresh());
 
         $this->assertSame('building', $data['phase']);
         $this->assertFalse($data['emergency_funded']);
@@ -146,7 +146,7 @@ class BudgetRuleTest extends TestCase
         $ef = Envelope::factory()->for($user)->create(['is_emergency_fund' => true]);
         EnvelopeTransaction::factory()->for($ef)->fund()->create(['amount' => 1500, 'occurred_at' => now()->toDateString()]);
 
-        $data = (new BudgetRuleService())->compute($user->fresh());
+        $data = (new BudgetRuleService)->compute($user->fresh());
 
         $this->assertSame('funded', $data['phase']);
         $this->assertTrue($data['emergency_funded']);
@@ -161,7 +161,7 @@ class BudgetRuleTest extends TestCase
         $m = Envelope::factory()->for($user12)->create(['is_mandatory' => true]);
         EnvelopeTransaction::factory()->for($m)->fund()->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
 
-        $data = (new BudgetRuleService())->compute($user12->fresh());
+        $data = (new BudgetRuleService)->compute($user12->fresh());
         // baseline $500 * 12 = $6000 target
         $this->assertSame(6000.0, $data['emergency_target']);
         $this->assertSame(12, $data['target_months']);
@@ -175,7 +175,7 @@ class BudgetRuleTest extends TestCase
             'amount' => 99999, 'occurred_at' => now()->subMonths(8)->toDateString(),
         ]);
 
-        $data = (new BudgetRuleService())->compute($user->fresh());
+        $data = (new BudgetRuleService)->compute($user->fresh());
 
         $this->assertSame(0.0, $data['monthly_income']);
         $this->assertFalse($data['has_data']);
@@ -183,15 +183,15 @@ class BudgetRuleTest extends TestCase
 
     public function test_cross_user_data_does_not_leak(): void
     {
-        $user        = User::factory()->create();
-        $other       = User::factory()->create();
+        $user         = User::factory()->create();
+        $other        = User::factory()->create();
         $otherAccount = CashAccount::factory()->for($other)->create();
         CashTransaction::factory()->for($otherAccount)->deposit()->create(['amount' => 6000, 'occurred_at' => now()->toDateString()]);
 
         $env = Envelope::factory()->for($other)->create(['is_mandatory' => true]);
         EnvelopeTransaction::factory()->for($env)->fund()->create(['amount' => 3000, 'occurred_at' => now()->toDateString()]);
 
-        $data = (new BudgetRuleService())->compute($user->fresh());
+        $data = (new BudgetRuleService)->compute($user->fresh());
 
         $this->assertSame(0.0, $data['monthly_income']);
         $this->assertSame(0.0, $data['monthly_mandatory']);

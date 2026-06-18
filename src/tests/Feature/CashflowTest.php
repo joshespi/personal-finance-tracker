@@ -71,8 +71,8 @@ class CashflowTest extends TestCase
 
     public function test_does_not_show_other_users_deposits(): void
     {
-        $user        = User::factory()->create();
-        $other       = User::factory()->create();
+        $user         = User::factory()->create();
+        $other        = User::factory()->create();
         $otherAccount = CashAccount::factory()->for($other)->create();
 
         CashTransaction::factory()->for($otherAccount)->deposit()->create([

@@ -28,7 +28,7 @@ class AnalysisController extends Controller
         $envelopes = $user
             ->envelopes()
             ->withSum(['spendTransactions as spent_amount' => fn ($q) => $q
-                ->whereBetween('occurred_at', [$month, $monthEnd])
+                ->whereBetween('occurred_at', [$month, $monthEnd]),
             ], 'amount')
             ->orderBy('sort_order')
             ->get();
@@ -67,7 +67,7 @@ class AnalysisController extends Controller
             ->whereBetween('cash_transactions.occurred_at', [$historyStart, $historyEnd])
             ->select('cash_transactions.occurred_at', 'cash_transactions.amount')
             ->get() as $row) {
-            $ym = $row->occurred_at->format('Y-m');
+            $ym                 = $row->occurred_at->format('Y-m');
             $incomeByMonth[$ym] = ($incomeByMonth[$ym] ?? 0) + (float) $row->amount;
         }
 
@@ -75,7 +75,7 @@ class AnalysisController extends Controller
             ->where('type', 'withdrawal')
             ->whereBetween('occurred_at', [$historyStart, $historyEnd])
             ->get(['occurred_at', 'amount']) as $row) {
-            $ym = $row->occurred_at->format('Y-m');
+            $ym                = $row->occurred_at->format('Y-m');
             $spentByMonth[$ym] = ($spentByMonth[$ym] ?? 0) + (float) $row->amount;
         }
 
@@ -125,9 +125,8 @@ class AnalysisController extends Controller
 
         $byEnvelopeMonth = [];
         foreach ($spendRows as $row) {
-            $key = $row->occurred_at->format('Y-m');
-            $byEnvelopeMonth[$row->envelope_id][$key] =
-                ($byEnvelopeMonth[$row->envelope_id][$key] ?? 0) + (float) $row->amount;
+            $key                                      = $row->occurred_at->format('Y-m');
+            $byEnvelopeMonth[$row->envelope_id][$key] = ($byEnvelopeMonth[$row->envelope_id][$key] ?? 0) + (float) $row->amount;
         }
 
         $monthLabels = $monthStarts->map(fn ($m) => $m->format('M Y'));

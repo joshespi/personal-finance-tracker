@@ -206,8 +206,8 @@ class AdminTest extends TestCase
 
     public function test_admin_cannot_impersonate_other_admin(): void
     {
-        $admin       = User::factory()->admin()->create();
-        $otherAdmin  = User::factory()->admin()->create();
+        $admin      = User::factory()->admin()->create();
+        $otherAdmin = User::factory()->admin()->create();
 
         $this->actingAs($admin)
             ->post(route('admin.impersonate', $otherAdmin))

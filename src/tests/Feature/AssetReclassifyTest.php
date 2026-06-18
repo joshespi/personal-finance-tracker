@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\UserAssetClassification;
 use Tests\TestCase;
 
 class AssetReclassifyTest extends TestCase
@@ -76,7 +77,7 @@ class AssetReclassifyTest extends TestCase
 
         $this->assertEquals(
             1,
-            \App\Models\UserAssetClassification::where('user_id', $user->id)->where('asset_id', $asset->id)->count()
+            UserAssetClassification::where('user_id', $user->id)->where('asset_id', $asset->id)->count()
         );
         $this->assertDatabaseHas('user_asset_classifications', [
             'user_id'    => $user->id,

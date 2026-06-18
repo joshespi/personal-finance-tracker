@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
+use App\Models\Envelope;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -22,12 +23,27 @@ class CashTransactionFactory extends Factory
         ];
     }
 
-    public function deposit(): static    { return $this->state(['type' => 'deposit']); }
-    public function withdrawal(): static { return $this->state(['type' => 'withdrawal']); }
-    public function cleared(): static    { return $this->state(['cleared' => true]); }
-    public function pending(): static    { return $this->state(['cleared' => false]); }
+    public function deposit(): static
+    {
+        return $this->state(['type' => 'deposit']);
+    }
 
-    public function spend(\App\Models\Envelope $envelope): static
+    public function withdrawal(): static
+    {
+        return $this->state(['type' => 'withdrawal']);
+    }
+
+    public function cleared(): static
+    {
+        return $this->state(['cleared' => true]);
+    }
+
+    public function pending(): static
+    {
+        return $this->state(['cleared' => false]);
+    }
+
+    public function spend(Envelope $envelope): static
     {
         return $this->state(['type' => 'withdrawal', 'envelope_id' => $envelope->id]);
     }

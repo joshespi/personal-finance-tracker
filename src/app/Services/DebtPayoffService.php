@@ -6,7 +6,8 @@ use App\Models\User;
 
 class DebtPayoffService
 {
-    private const MAX_MONTHS      = 600;
+    private const MAX_MONTHS = 600;
+
     private const DEFAULT_MIN_PCT = 0.02; // 2% of balance when min_payment not set
 
     public function compute(User $user): array
@@ -22,12 +23,12 @@ class DebtPayoffService
         }
 
         $debtData = $debts->map(function ($l) {
-            $balance       = $l->currentBalance();
-            $apr           = (float) ($l->interest_rate ?? 0);
-            $monthlyRate   = $apr / 100 / 12;
+            $balance         = $l->currentBalance();
+            $apr             = (float) ($l->interest_rate ?? 0);
+            $monthlyRate     = $apr / 100 / 12;
             $monthlyInterest = round($balance * $monthlyRate, 2);
-            $minPaymentSet = $l->minimum_payment !== null;
-            $minPayment    = $minPaymentSet
+            $minPaymentSet   = $l->minimum_payment !== null;
+            $minPayment      = $minPaymentSet
                 ? (float) $l->minimum_payment
                 : round(max(25.0, $balance * self::DEFAULT_MIN_PCT), 2);
             $negAmort = $monthlyInterest > 0 && $minPayment < $monthlyInterest;
@@ -62,7 +63,7 @@ class DebtPayoffService
             ];
         })->values()->all();
 
-        $totalBalance        = array_sum(array_column($debtData, 'balance'));
+        $totalBalance         = array_sum(array_column($debtData, 'balance'));
         $totalMonthlyInterest = round(
             array_sum(array_column($debtData, 'monthly_interest'))
             + array_sum(array_column($mortgageData, 'monthly_interest')),
@@ -76,16 +77,16 @@ class DebtPayoffService
         $avalanche = empty($debtData) ? $this->emptySimulation() : $this->simulate($debtData, $avalancheOrder, 0.0);
 
         return [
-            'has_data'                   => true,
-            'total_balance'              => $totalBalance,
-            'total_monthly_interest'     => $totalMonthlyInterest,
-            'yearly_interest'            => round($totalMonthlyInterest * 12, 2),
-            'debts'                      => $debtData,
-            'mortgages'                  => $mortgageData,
-            'snowball'                   => $snowball,
-            'avalanche'                  => $avalanche,
-            'months_saved'               => max(0, $snowball['months'] - $avalanche['months']),
-            'interest_saved'             => round(max(0.0, $snowball['total_interest'] - $avalanche['total_interest']), 2),
+            'has_data'                    => true,
+            'total_balance'               => $totalBalance,
+            'total_monthly_interest'      => $totalMonthlyInterest,
+            'yearly_interest'             => round($totalMonthlyInterest * 12, 2),
+            'debts'                       => $debtData,
+            'mortgages'                   => $mortgageData,
+            'snowball'                    => $snowball,
+            'avalanche'                   => $avalanche,
+            'months_saved'                => max(0, $snowball['months'] - $avalanche['months']),
+            'interest_saved'              => round(max(0.0, $snowball['total_interest'] - $avalanche['total_interest']), 2),
             'negative_amortization_count' => count(array_filter($debtData, fn ($d) => $d['negative_amortization'])),
         ];
     }
@@ -97,7 +98,7 @@ class DebtPayoffService
             $balances[$d['id']] = $d['balance'];
         }
 
-        $totalBudget  = $extraPayment + array_sum(array_column($debtData, 'min_payment'));
+        $totalBudget   = $extraPayment + array_sum(array_column($debtData, 'min_payment'));
         $totalInterest = 0.0;
         $payoffMonths  = [];
         $timeline      = [];
@@ -105,27 +106,36 @@ class DebtPayoffService
         for ($month = 1; $month <= self::MAX_MONTHS; $month++) {
             foreach ($debtData as $d) {
                 $id = $d['id'];
-                if ($balances[$id] <= 0) continue;
-                $interest       = $balances[$id] * $d['monthly_rate'];
+                if ($balances[$id] <= 0) {
+                    continue;
+                }
+                $interest = $balances[$id] * $d['monthly_rate'];
                 $balances[$id] += $interest;
-                $totalInterest  += $interest;
+                $totalInterest += $interest;
             }
 
             $currentPriorityId = null;
             foreach ($priorityIds as $pid) {
-                if ($balances[$pid] > 0) { $currentPriorityId = $pid; break; }
+                if ($balances[$pid] > 0) {
+                    $currentPriorityId = $pid;
+                    break;
+                }
             }
 
             $allocated = 0.0;
             foreach ($debtData as $d) {
                 $id = $d['id'];
-                if ($id === $currentPriorityId || $balances[$id] <= 0) continue;
-                $payment        = min($d['min_payment'], $balances[$id]);
+                if ($id === $currentPriorityId || $balances[$id] <= 0) {
+                    continue;
+                }
+                $payment = min($d['min_payment'], $balances[$id]);
                 $balances[$id] -= $payment;
-                $allocated      += $payment;
+                $allocated += $payment;
                 if ($balances[$id] <= 0.01) {
                     $balances[$id] = 0;
-                    if (! isset($payoffMonths[$id])) $payoffMonths[$id] = $month;
+                    if (! isset($payoffMonths[$id])) {
+                        $payoffMonths[$id] = $month;
+                    }
                 }
             }
 
@@ -134,14 +144,18 @@ class DebtPayoffService
                 $balances[$currentPriorityId] -= $payment;
                 if ($balances[$currentPriorityId] <= 0.01) {
                     $balances[$currentPriorityId] = 0;
-                    if (! isset($payoffMonths[$currentPriorityId])) $payoffMonths[$currentPriorityId] = $month;
+                    if (! isset($payoffMonths[$currentPriorityId])) {
+                        $payoffMonths[$currentPriorityId] = $month;
+                    }
                 }
             }
 
             $totalRemaining = round(max(0.0, array_sum($balances)), 2);
             $timeline[]     = $totalRemaining;
 
-            if ($totalRemaining <= 0.01) break;
+            if ($totalRemaining <= 0.01) {
+                break;
+            }
         }
 
         $months = empty($payoffMonths) ? self::MAX_MONTHS : max($payoffMonths);

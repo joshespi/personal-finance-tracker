@@ -52,7 +52,7 @@ class EnvelopeController extends Controller
         $totalFundedMonth = $envelopes->sum('funded_this_month');
 
         $grouped = $envelopes->groupBy(fn ($e) => $e->category());
-        $groups = collect(Envelope::CATEGORY_ORDER)
+        $groups  = collect(Envelope::CATEGORY_ORDER)
             ->mapWithKeys(fn ($key) => $grouped->has($key)
                 ? [$key => $grouped[$key]->sortByDesc(fn ($e) => (float) ($e->monthly_target ?? $e->current_balance))->values()]
                 : []);
@@ -63,9 +63,9 @@ class EnvelopeController extends Controller
             'available' => round($g->sum('current_balance'), 2),
         ]);
 
-        $prevMonthEnd              = $month->copy()->subMonth()->endOfMonth();
-        $envelopeIds               = $envelopes->pluck('id');
-        $leftOverFromLastMonth     = round(
+        $prevMonthEnd          = $month->copy()->subMonth()->endOfMonth();
+        $envelopeIds           = $envelopes->pluck('id');
+        $leftOverFromLastMonth = round(
             (float) EnvelopeTransaction::whereIn('envelope_id', $envelopeIds)
                 ->where('type', 'fund')
                 ->where('occurred_at', '<=', $prevMonthEnd)
@@ -112,7 +112,7 @@ class EnvelopeController extends Controller
         $this->authorize('view', $envelope);
 
         $envelope->load([
-            'transactions'     => fn ($q) => $q->where('type', 'fund')->orderByDesc('occurred_at')->orderByDesc('id'),
+            'transactions'      => fn ($q) => $q->where('type', 'fund')->orderByDesc('occurred_at')->orderByDesc('id'),
             'spendTransactions' => fn ($q) => $q->with('cashAccount:id,name')->orderByDesc('occurred_at')->orderByDesc('id'),
         ]);
         $envelope->current_balance  = $envelope->balance();

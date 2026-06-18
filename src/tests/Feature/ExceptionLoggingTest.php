@@ -29,6 +29,4 @@ class ExceptionLoggingTest extends TestCase
                 .json_encode($captured)
         );
     }
-
-
 }

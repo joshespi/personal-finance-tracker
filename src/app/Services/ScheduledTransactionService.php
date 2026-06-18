@@ -101,7 +101,7 @@ class ScheduledTransactionService
             $s->cashAccount->transactions()->create([
                 'type'        => 'withdrawal',
                 'amount'      => $s->amount,
-                'description' => 'Funded envelope: ' . $s->envelope->name,
+                'description' => 'Funded envelope: '.$s->envelope->name,
                 'occurred_at' => $date,
                 'cleared'     => $cleared,
             ]);
@@ -154,13 +154,13 @@ class ScheduledTransactionService
         ]);
 
         if ($s->liability) {
-            $liability   = $s->liability;
-            $balance     = $liability->currentBalance();
-            $rate        = (float) ($liability->interest_rate ?? 0);
-            $piPayment   = (float) ($liability->minimum_payment ?? 0);
-            $interest    = $rate > 0 ? round($balance * $rate / 100 / 12, 2) : 0.0;
-            $principal   = max(0.0, round($piPayment - $interest, 2));
-            $newBalance  = round(max(0.0, $balance - $principal), 2);
+            $liability  = $s->liability;
+            $balance    = $liability->currentBalance();
+            $rate       = (float) ($liability->interest_rate ?? 0);
+            $piPayment  = (float) ($liability->minimum_payment ?? 0);
+            $interest   = $rate > 0 ? round($balance * $rate / 100 / 12, 2) : 0.0;
+            $principal  = max(0.0, round($piPayment - $interest, 2));
+            $newBalance = round(max(0.0, $balance - $principal), 2);
 
             LiabilityBalance::create([
                 'liability_id' => $liability->id,

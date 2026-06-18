@@ -21,9 +21,9 @@ class AssetTypeTest extends TestCase
 
     public function test_labels_are_human_readable(): void
     {
-        $this->assertSame('Stock',       AssetType::Stock->label());
-        $this->assertSame('Crypto',      AssetType::Crypto->label());
+        $this->assertSame('Stock', AssetType::Stock->label());
+        $this->assertSame('Crypto', AssetType::Crypto->label());
         $this->assertSame('Real Estate', AssetType::RealEstate->label());
-        $this->assertSame('Bond',        AssetType::Bond->label());
+        $this->assertSame('Bond', AssetType::Bond->label());
     }
 }

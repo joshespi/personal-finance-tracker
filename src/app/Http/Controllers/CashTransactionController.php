@@ -25,7 +25,7 @@ class CashTransactionController extends Controller
                 'nullable', 'integer',
                 Rule::exists('income_categories', 'id')->where('user_id', $request->user()->id),
             ],
-            'cleared'            => ['nullable', 'boolean'],
+            'cleared' => ['nullable', 'boolean'],
         ]);
 
         $validated['cleared'] = $request->boolean('cleared');

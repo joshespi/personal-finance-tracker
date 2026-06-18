@@ -14,6 +14,7 @@ class ShareDemoMode
     {
         $demo = app(DemoMode::class);
         View::share('demo', $demo);
+
         return $next($request);
     }
 }

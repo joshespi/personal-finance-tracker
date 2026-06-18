@@ -79,6 +79,7 @@ class ManualAsset extends Model
             if ($price !== null && $this->anchor_synthetic_shares !== null) {
                 return round((float) $this->anchor_synthetic_shares * (float) $price, 2);
             }
+
             return (float) ($this->anchor_value ?? 0.0);
         }
 

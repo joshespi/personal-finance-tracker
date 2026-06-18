@@ -19,9 +19,9 @@ class TransactionImportController extends Controller
     {
         $headers = "date,symbol,asset_type,type,quantity,price_per_unit,fees,currency,notes\n";
         $example = "2024-01-15,BTC,crypto,buy,0.5,40000,10,USD,initial purchase\n"
-                 . "2024-03-20,AAPL,stock,buy,10,180.50,1.99,USD,\n";
+                 ."2024-03-20,AAPL,stock,buy,10,180.50,1.99,USD,\n";
 
-        return response($headers . $example, 200, [
+        return response($headers.$example, 200, [
             'Content-Type'        => 'text/csv',
             'Content-Disposition' => 'attachment; filename="transactions-template.csv"',
         ]);
@@ -35,17 +35,17 @@ class TransactionImportController extends Controller
             'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
         ]);
 
-        $path    = $request->file('csv_file')->getRealPath();
-        $handle  = fopen($path, 'r');
-        $header  = fgetcsv($handle); // skip header row
+        $path   = $request->file('csv_file')->getRealPath();
+        $handle = fopen($path, 'r');
+        $header = fgetcsv($handle); // skip header row
 
         if (! $header || count($header) < 8) {
             return back()->withErrors(['csv_file' => 'Invalid CSV format. Please use the provided template.']);
         }
 
-        $rows     = [];
-        $lineNum  = 1;
-        $errors   = [];
+        $rows    = [];
+        $lineNum = 1;
+        $errors  = [];
 
         while (($row = fgetcsv($handle)) !== false) {
             $lineNum++;
@@ -80,6 +80,7 @@ class TransactionImportController extends Controller
                 foreach ($v->errors()->all() as $msg) {
                     $errors[] = "Row {$lineNum}: {$msg}";
                 }
+
                 continue;
             }
 

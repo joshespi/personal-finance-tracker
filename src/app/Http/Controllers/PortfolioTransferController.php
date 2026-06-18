@@ -48,9 +48,9 @@ class PortfolioTransferController extends Controller
         $receivedQty = $feeInAsset ? max(0, $qtySent - $fees) : $qtySent;
 
         // carry the original cost basis from source portfolio into the destination lot
-        $fromPortfolio = $request->user()->portfolios()->findOrFail($validated['from_portfolio_id']);
-        $gainService   = new RealizedGainService();
-        $openLots      = $gainService->openLotsForAsset($fromPortfolio, $asset->id, $validated['transacted_at']);
+        $fromPortfolio   = $request->user()->portfolios()->findOrFail($validated['from_portfolio_id']);
+        $gainService     = new RealizedGainService;
+        $openLots        = $gainService->openLotsForAsset($fromPortfolio, $asset->id, $validated['transacted_at']);
         $transferInPrice = $gainService->transferInCostPerUnit($openLots, $qtySent, $receivedQty)
             ?? (float) $validated['price_per_unit'];
 

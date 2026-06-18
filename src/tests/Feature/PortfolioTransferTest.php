@@ -6,7 +6,6 @@ use App\Models\Asset;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Services\RealizedGainService;
 use Tests\TestCase;
 
 class PortfolioTransferTest extends TestCase
@@ -207,7 +206,7 @@ class PortfolioTransferTest extends TestCase
         $user      = User::factory()->create();
         $portfolio = Portfolio::factory()->for($user)->create();
 
-        $asset = \App\Models\Asset::factory()->crypto()->create(['symbol' => 'BTC']);
+        $asset = Asset::factory()->crypto()->create(['symbol' => 'BTC']);
 
         // Buy 1.0 BTC first
         Transaction::factory()->for($portfolio)->for($asset)->create([

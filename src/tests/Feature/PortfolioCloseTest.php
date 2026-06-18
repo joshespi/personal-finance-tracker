@@ -58,8 +58,8 @@ class PortfolioCloseTest extends TestCase
 
     public function test_dashboard_excludes_closed_portfolio(): void
     {
-        $user   = User::factory()->create();
-        $asset  = Asset::factory()->stock()->create();
+        $user  = User::factory()->create();
+        $asset = Asset::factory()->stock()->create();
 
         $active = Portfolio::factory()->for($user)->create(['name' => 'Active Brokerage']);
         Transaction::factory()->for($active)->for($asset)->buy()->create(['quantity' => 1, 'price_per_unit' => 100]);

@@ -11,9 +11,11 @@ use Illuminate\Support\Facades\Log;
 class FetchBenchmarkPrices extends Command
 {
     protected $signature = 'benchmarks:fetch {--from= : Start date (Y-m-d), defaults to 10 years ago} {--to= : End date (Y-m-d), defaults to today}';
+
     protected $description = 'Fetch historical benchmark prices (SPY, BTC) from Finnhub and CoinGecko';
 
     private const STOCK_BENCHMARKS = ['SPY'];
+
     private const CRYPTO_BENCHMARKS = ['BTC'];
 
     public function handle(): int
@@ -39,6 +41,7 @@ class FetchBenchmarkPrices extends Command
         }
 
         $this->info('Done.');
+
         return self::SUCCESS;
     }
 
@@ -46,6 +49,7 @@ class FetchBenchmarkPrices extends Command
     {
         if (! $apiKey) {
             $this->warn("FINNHUB_API_KEY not set — skipping {$ticker}");
+
             return;
         }
 
@@ -60,8 +64,9 @@ class FetchBenchmarkPrices extends Command
         ]);
 
         if (! $response->successful() || ($response->json('s') ?? 'no_data') === 'no_data') {
-            $this->error("Failed to fetch {$ticker}: " . $response->status());
+            $this->error("Failed to fetch {$ticker}: ".$response->status());
             Log::error("Benchmark fetch failed for {$ticker}", ['status' => $response->status()]);
+
             return;
         }
 
@@ -87,8 +92,8 @@ class FetchBenchmarkPrices extends Command
         $this->line("Fetching {$ticker} (CoinGecko)...");
 
         $coingeckoId = match (strtoupper($ticker)) {
-            'BTC'  => 'bitcoin',
-            'ETH'  => 'ethereum',
+            'BTC'   => 'bitcoin',
+            'ETH'   => 'ethereum',
             default => strtolower($ticker),
         };
 
@@ -102,7 +107,8 @@ class FetchBenchmarkPrices extends Command
         ]);
 
         if (! $response->successful()) {
-            $this->error("Failed to fetch {$ticker}: " . $response->status());
+            $this->error("Failed to fetch {$ticker}: ".$response->status());
+
             return;
         }
 

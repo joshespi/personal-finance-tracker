@@ -84,8 +84,8 @@ class PortfolioTest extends TestCase
 
     public function test_show_requires_ownership(): void
     {
-        $owner = User::factory()->create();
-        $other = User::factory()->create();
+        $owner     = User::factory()->create();
+        $other     = User::factory()->create();
         $portfolio = Portfolio::factory()->for($owner)->create();
 
         $this->actingAs($other)
@@ -111,8 +111,8 @@ class PortfolioTest extends TestCase
 
     public function test_cannot_update_other_users_portfolio(): void
     {
-        $owner = User::factory()->create();
-        $other = User::factory()->create();
+        $owner     = User::factory()->create();
+        $other     = User::factory()->create();
         $portfolio = Portfolio::factory()->for($owner)->create();
 
         $this->actingAs($other)
@@ -137,8 +137,8 @@ class PortfolioTest extends TestCase
 
     public function test_cannot_delete_other_users_portfolio(): void
     {
-        $owner = User::factory()->create();
-        $other = User::factory()->create();
+        $owner     = User::factory()->create();
+        $other     = User::factory()->create();
         $portfolio = Portfolio::factory()->for($owner)->create();
 
         $this->actingAs($other)

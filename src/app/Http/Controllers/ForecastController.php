@@ -19,7 +19,7 @@ class ForecastController extends Controller
         $monthlySavings = (float) $request->input('monthly_savings', $defaultMonthlySavings);
         $annualReturn   = (float) $request->input('annual_return', 7.0);
         $inflationRate  = (float) $request->input('inflation_rate', 2.5);
-        $years          = (int)   $request->input('years', 30);
+        $years          = (int) $request->input('years', 30);
         $fireTarget     = $request->filled('fire_target') ? max(0, (float) $request->input('fire_target')) : null;
 
         $annualReturn  = max(0, min(30, $annualReturn));
@@ -59,7 +59,7 @@ class ForecastController extends Controller
             ->sum('cash_transactions.amount');
 
         $envelopeIds = $user->envelopes()->pluck('id');
-        $spend3m = $envelopeIds->isNotEmpty()
+        $spend3m     = $envelopeIds->isNotEmpty()
             ? (float) CashTransaction::whereIn('envelope_id', $envelopeIds)
                 ->where('type', 'withdrawal')
                 ->whereBetween('occurred_at', [$threeMonthsAgo, $lastMonthEnd])
@@ -83,7 +83,7 @@ class ForecastController extends Controller
 
         $standardThresholds = [500_000, 1_000_000, 2_000_000, 5_000_000];
         $allThresholds      = $standardThresholds;
-        if ($fireTarget !== null && !in_array((int) $fireTarget, $standardThresholds)) {
+        if ($fireTarget !== null && ! in_array((int) $fireTarget, $standardThresholds)) {
             $allThresholds[] = $fireTarget;
         }
 

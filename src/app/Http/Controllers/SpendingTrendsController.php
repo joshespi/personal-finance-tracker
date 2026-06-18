@@ -27,9 +27,8 @@ class SpendingTrendsController extends Controller
 
         $byEnvelopeMonth = [];
         foreach ($spendRows as $row) {
-            $key = $row->occurred_at->format('Y-m');
-            $byEnvelopeMonth[$row->envelope_id][$key] =
-                ($byEnvelopeMonth[$row->envelope_id][$key] ?? 0) + (float) $row->amount;
+            $key                                      = $row->occurred_at->format('Y-m');
+            $byEnvelopeMonth[$row->envelope_id][$key] = ($byEnvelopeMonth[$row->envelope_id][$key] ?? 0) + (float) $row->amount;
         }
 
         $monthLabels = $monthStarts->map(fn ($m) => $m->format('M Y'));

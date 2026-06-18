@@ -10,16 +10,16 @@ return new class extends Migration
     {
         // envelopes: emergency fund flags (2026_05_09_000001)
         Schema::table('envelopes', function (Blueprint $table) {
-            if (!Schema::hasColumn('envelopes', 'is_mandatory')) {
+            if (! Schema::hasColumn('envelopes', 'is_mandatory')) {
                 $table->boolean('is_mandatory')->default(false);
             }
-            if (!Schema::hasColumn('envelopes', 'is_emergency_fund')) {
+            if (! Schema::hasColumn('envelopes', 'is_emergency_fund')) {
                 $table->boolean('is_emergency_fund')->default(false);
             }
         });
 
         // income_entries table (2026_05_09_000002)
-        if (!Schema::hasTable('income_entries')) {
+        if (! Schema::hasTable('income_entries')) {
             Schema::create('income_entries', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -32,7 +32,7 @@ return new class extends Migration
         }
 
         // portfolios: tax-advantaged flag (2026_05_10_025355)
-        if (!Schema::hasColumn('portfolios', 'is_tax_advantaged')) {
+        if (! Schema::hasColumn('portfolios', 'is_tax_advantaged')) {
             Schema::table('portfolios', function (Blueprint $table) {
                 $table->boolean('is_tax_advantaged')->default(false);
             });
@@ -40,16 +40,16 @@ return new class extends Migration
 
         // envelopes: savings goal fields (2026_05_10_100000)
         Schema::table('envelopes', function (Blueprint $table) {
-            if (!Schema::hasColumn('envelopes', 'goal_amount')) {
+            if (! Schema::hasColumn('envelopes', 'goal_amount')) {
                 $table->decimal('goal_amount', 12, 2)->nullable();
             }
-            if (!Schema::hasColumn('envelopes', 'goal_date')) {
+            if (! Schema::hasColumn('envelopes', 'goal_date')) {
                 $table->date('goal_date')->nullable();
             }
         });
 
         // scheduled_transactions table (2026_05_06_000001)
-        if (!Schema::hasTable('scheduled_transactions')) {
+        if (! Schema::hasTable('scheduled_transactions')) {
             Schema::create('scheduled_transactions', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();

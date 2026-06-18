@@ -16,7 +16,7 @@ class AllTransactionsController extends Controller
             ->with(['asset', 'portfolio', 'linkedFrom.portfolio', 'linkedTo.portfolio']);
 
         if ($search = $request->input('search')) {
-            $query->whereHas('asset', fn ($q) => $q->where('symbol', 'like', strtoupper($search) . '%'));
+            $query->whereHas('asset', fn ($q) => $q->where('symbol', 'like', strtoupper($search).'%'));
         }
 
         if ($portfolioId = $request->integer('portfolio_id', 0)) {
@@ -43,12 +43,12 @@ class AllTransactionsController extends Controller
 
         if ($sortCol === 'symbol') {
             $query->join('assets', 'assets.id', '=', 'transactions.asset_id')
-                  ->orderBy('assets.symbol', $sortDir)
-                  ->select('transactions.*');
+                ->orderBy('assets.symbol', $sortDir)
+                ->select('transactions.*');
         } elseif ($sortCol === 'portfolio') {
             $query->join('portfolios', 'portfolios.id', '=', 'transactions.portfolio_id')
-                  ->orderBy('portfolios.name', $sortDir)
-                  ->select('transactions.*');
+                ->orderBy('portfolios.name', $sortDir)
+                ->select('transactions.*');
         } else {
             $query->orderBy($sortCol, $sortDir);
         }

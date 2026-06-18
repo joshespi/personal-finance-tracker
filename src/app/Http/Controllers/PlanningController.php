@@ -49,7 +49,7 @@ class PlanningController extends Controller
                     $alloc     = min($remaining, $gap);
                     $buckets[] = [
                         'label'  => $budget['emergency_envelope']?->name ?? 'Emergency Fund',
-                        'reason' => $budget['target_months'] . '-month target: $' . number_format($budget['emergency_target'], 2),
+                        'reason' => $budget['target_months'].'-month target: $'.number_format($budget['emergency_target'], 2),
                         'amount' => round($alloc, 2),
                         'gap'    => round($gap, 2),
                         'type'   => 'emergency',
@@ -66,14 +66,16 @@ class PlanningController extends Controller
                     ->sortByDesc(fn ($l) => (float) ($l->interest_rate ?? 0));
 
                 foreach ($liabilities as $l) {
-                    if ($remaining <= 0.01) break;
+                    if ($remaining <= 0.01) {
+                        break;
+                    }
                     $balance   = $l->currentBalance();
                     $apr       = (float) ($l->interest_rate ?? 0);
                     $alloc     = min($remaining, $balance);
                     $buckets[] = [
                         'label'  => $l->name,
                         'reason' => $apr > 0
-                            ? number_format($apr, 2) . '% APR · $' . number_format(round($balance * $apr / 100 / 12, 2), 2) . '/mo interest'
+                            ? number_format($apr, 2).'% APR · $'.number_format(round($balance * $apr / 100 / 12, 2), 2).'/mo interest'
                             : 'No APR recorded',
                         'amount' => round($alloc, 2),
                         'gap'    => round($balance, 2),
@@ -95,14 +97,18 @@ class PlanningController extends Controller
                     ]);
 
                 foreach ($envelopes as $env) {
-                    if ($remaining <= 0.01) break;
+                    if ($remaining <= 0.01) {
+                        break;
+                    }
                     $gap = round(max(0.0, (float) $env->goal_amount - $env->balance()), 2);
-                    if ($gap <= 0.01) continue;
+                    if ($gap <= 0.01) {
+                        continue;
+                    }
                     $alloc     = min($remaining, $gap);
                     $buckets[] = [
                         'label'  => $env->name,
-                        'reason' => 'Goal $' . number_format((float) $env->goal_amount, 2)
-                            . ($env->goal_date ? ' by ' . $env->goal_date->format('M Y') : ''),
+                        'reason' => 'Goal $'.number_format((float) $env->goal_amount, 2)
+                            .($env->goal_date ? ' by '.$env->goal_date->format('M Y') : ''),
                         'amount' => round($alloc, 2),
                         'gap'    => $gap,
                         'type'   => 'savings',
@@ -121,7 +127,7 @@ class PlanningController extends Controller
     {
         $currentYear = now()->year;
         $request->validate([
-            'birth_year'      => ['nullable', 'integer', 'min:1930', 'max:' . ($currentYear - 18)],
+            'birth_year'      => ['nullable', 'integer', 'min:1930', 'max:'.($currentYear - 18)],
             'retirement_age'  => ['nullable', 'integer', 'min:40', 'max:90'],
             'current_value'   => ['nullable', 'numeric', 'min:0'],
             'monthly_contrib' => ['nullable', 'numeric', 'min:0'],
@@ -133,24 +139,23 @@ class PlanningController extends Controller
 
         $portfolioIds = $user->portfolios()->pluck('id');
         if ($portfolioIds->isNotEmpty()) {
-            $latestDates  = PortfolioSnapshot::whereIn('portfolio_id', $portfolioIds)
+            $latestDates = PortfolioSnapshot::whereIn('portfolio_id', $portfolioIds)
                 ->selectRaw('portfolio_id, MAX(recorded_on) as max_date')
                 ->groupBy('portfolio_id');
-            $defaultValue = round((float) PortfolioSnapshot::joinSub($latestDates, 'latest', fn ($j) =>
-                $j->on('portfolio_snapshots.portfolio_id', '=', 'latest.portfolio_id')
-                  ->on('portfolio_snapshots.recorded_on', '=', 'latest.max_date')
+            $defaultValue = round((float) PortfolioSnapshot::joinSub($latestDates, 'latest', fn ($j) => $j->on('portfolio_snapshots.portfolio_id', '=', 'latest.portfolio_id')
+                ->on('portfolio_snapshots.recorded_on', '=', 'latest.max_date')
             )->selectRaw('SUM(portfolio_snapshots.market_value + portfolio_snapshots.manual_value) as total')
-             ->value('total'), 2);
+                ->value('total'), 2);
         } else {
             $defaultValue = 0.0;
         }
 
-        $sixMonthsAgo  = now()->subMonths(6)->startOfMonth();
-        $lastMonthEnd  = now()->subMonth()->endOfMonth();
-        $income6m      = (float) $user->cashDeposits()
+        $sixMonthsAgo = now()->subMonths(6)->startOfMonth();
+        $lastMonthEnd = now()->subMonth()->endOfMonth();
+        $income6m     = (float) $user->cashDeposits()
             ->whereBetween('cash_transactions.occurred_at', [$sixMonthsAgo, $lastMonthEnd])
             ->sum('cash_transactions.amount');
-        $annualIncome  = round($income6m / 6 * 12, 2);
+        $annualIncome = round($income6m / 6 * 12, 2);
 
         $birthYear      = $request->filled('birth_year') ? (int) $request->input('birth_year') : null;
         $age            = $birthYear !== null ? ($currentYear - $birthYear) : null;
@@ -188,10 +193,12 @@ class PlanningController extends Controller
 
             $benchmarks = [];
             if ($annualIncome > 0) {
-                foreach ([[30,1],[35,2],[40,3],[45,4],[50,6],[55,7],[60,8],[67,10]] as [$benchAge, $mult]) {
-                    if ($benchAge < $age) continue;
-                    $months = ($benchAge - $age) * 12;
-                    $proj   = $this->futureValue($currentValue, $monthlyContrib, $r, $months);
+                foreach ([[30, 1], [35, 2], [40, 3], [45, 4], [50, 6], [55, 7], [60, 8], [67, 10]] as [$benchAge, $mult]) {
+                    if ($benchAge < $age) {
+                        continue;
+                    }
+                    $months       = ($benchAge - $age) * 12;
+                    $proj         = $this->futureValue($currentValue, $monthlyContrib, $r, $months);
                     $benchmarks[] = [
                         'age'       => $benchAge,
                         'multiple'  => $mult,
@@ -203,28 +210,28 @@ class PlanningController extends Controller
             }
 
             $result = [
-                'years_left'      => $retirementAge - $age,
-                'projected_fv'    => round($projectedFv, 2),
-                'target'          => $target,
-                'gap'             => $gap,
+                'years_left'       => $retirementAge - $age,
+                'projected_fv'     => round($projectedFv, 2),
+                'target'           => $target,
+                'gap'              => $gap,
                 'required_contrib' => $requiredContrib,
-                'benchmarks'      => $benchmarks,
-                'on_track'        => $target !== null ? ($projectedFv >= $target) : null,
+                'benchmarks'       => $benchmarks,
+                'on_track'         => $target !== null ? ($projectedFv >= $target) : null,
             ];
         }
 
         return view('planning', [
-            'tab'             => 'retirement',
-            'birthYear'       => $birthYear,
-            'age'             => $age,
-            'retirementAge'   => $retirementAge,
-            'currentValue'    => $currentValue,
-            'defaultValue'    => $defaultValue,
-            'monthlyContrib'  => $monthlyContrib,
-            'annualReturn'    => $annualReturn,
-            'annualExpenses'  => $annualExpenses,
-            'annualIncome'    => $annualIncome,
-            'result'          => $result,
+            'tab'            => 'retirement',
+            'birthYear'      => $birthYear,
+            'age'            => $age,
+            'retirementAge'  => $retirementAge,
+            'currentValue'   => $currentValue,
+            'defaultValue'   => $defaultValue,
+            'monthlyContrib' => $monthlyContrib,
+            'annualReturn'   => $annualReturn,
+            'annualExpenses' => $annualExpenses,
+            'annualIncome'   => $annualIncome,
+            'result'         => $result,
         ]);
     }
 
@@ -232,8 +239,10 @@ class PlanningController extends Controller
     {
         if ($r > 0) {
             $gf = pow(1 + $r, $months);
+
             return $pv * $gf + $pmt * ($gf - 1) / $r;
         }
+
         return $pv + $pmt * $months;
     }
 

@@ -26,6 +26,13 @@ class TransactionFactory extends Factory
         ];
     }
 
-    public function buy(): static  { return $this->state(['type' => 'buy']); }
-    public function sell(): static { return $this->state(['type' => 'sell']); }
+    public function buy(): static
+    {
+        return $this->state(['type' => 'buy']);
+    }
+
+    public function sell(): static
+    {
+        return $this->state(['type' => 'sell']);
+    }
 }

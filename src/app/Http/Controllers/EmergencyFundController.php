@@ -21,7 +21,7 @@ class EmergencyFundController extends Controller
         $emergencyEnvelope  = $envelopes->firstWhere('is_emergency_fund', true);
         $mandatoryEnvelopes = $envelopes->filter(fn ($e) => $e->is_mandatory)->values();
 
-        $monthlyBaseline = 0;
+        $monthlyBaseline  = 0;
         $monthlyBreakdown = collect();
 
         if ($mandatoryEnvelopes->isNotEmpty()) {

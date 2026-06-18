@@ -9,6 +9,7 @@ use App\Models\LiabilityBalance;
 use App\Models\ManualAsset;
 use App\Models\ManualValuation;
 use App\Models\Portfolio;
+use App\Models\User;
 use Tests\TestCase;
 
 class ManualAssetTest extends TestCase
@@ -252,7 +253,7 @@ class ManualAssetTest extends TestCase
     {
         $portfolio = Portfolio::factory()->create();
         $asset     = ManualAsset::factory()->for($portfolio)->create();
-        $other     = \App\Models\User::factory()->create();
+        $other     = User::factory()->create();
 
         $this->actingAs($other)
             ->post(route('manual-assets.valuations.store', $asset), [
@@ -277,9 +278,9 @@ class ManualAssetTest extends TestCase
 
     public function test_owner_can_delete_valuation(): void
     {
-        $portfolio  = Portfolio::factory()->create();
-        $asset      = ManualAsset::factory()->for($portfolio)->create();
-        $valuation  = ManualValuation::factory()->for($asset)->create();
+        $portfolio = Portfolio::factory()->create();
+        $asset     = ManualAsset::factory()->for($portfolio)->create();
+        $valuation = ManualValuation::factory()->for($asset)->create();
 
         $this->actingAs($portfolio->user)
             ->delete(route('valuations.destroy', $valuation))
@@ -293,7 +294,7 @@ class ManualAssetTest extends TestCase
         $portfolio = Portfolio::factory()->create();
         $asset     = ManualAsset::factory()->for($portfolio)->create();
         $valuation = ManualValuation::factory()->for($asset)->create();
-        $other     = \App\Models\User::factory()->create();
+        $other     = User::factory()->create();
 
         $this->actingAs($other)
             ->delete(route('valuations.destroy', $valuation))

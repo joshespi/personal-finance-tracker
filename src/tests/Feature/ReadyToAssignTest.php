@@ -106,7 +106,7 @@ class ReadyToAssignTest extends TestCase
 
         $tx = EnvelopeTransaction::where('envelope_id', $envelope->id)->latest('id')->first();
         $this->assertEquals($pastMonth, $tx->occurred_at->format('Y-m'));
-        $this->assertEquals($pastMonth . '-01', $tx->occurred_at->format('Y-m-d'));
+        $this->assertEquals($pastMonth.'-01', $tx->occurred_at->format('Y-m-d'));
     }
 
     public function test_assign_one_current_month_param_still_dates_today(): void

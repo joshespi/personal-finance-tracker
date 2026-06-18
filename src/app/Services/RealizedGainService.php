@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Portfolio;
 use App\Models\Transaction;
+use Carbon\Carbon;
 
 class RealizedGainService
 {
@@ -24,8 +25,8 @@ class RealizedGainService
             $assetId = $t->asset_id;
 
             if (in_array($t->type, Transaction::INFLOW_TYPES)) {
-                $usdFee      = $t->fee_in_asset ? 0.0 : (float) $t->fees;
-                $costPerUnit = (float) $t->price_per_unit + ($usdFee / max(1, (float) $t->quantity));
+                $usdFee               = $t->fee_in_asset ? 0.0 : (float) $t->fees;
+                $costPerUnit          = (float) $t->price_per_unit + ($usdFee / max(1, (float) $t->quantity));
                 $openLots[$assetId][] = [
                     'qty'           => (float) $t->quantity,
                     'cost_per_unit' => $costPerUnit,
@@ -37,9 +38,9 @@ class RealizedGainService
                 $remainingToSell = $t->fee_in_asset
                     ? (float) $t->quantity + (float) $t->fees
                     : (float) $t->quantity;
-                $sellPrice       = (float) $t->price_per_unit;
-                $sellDate        = $t->transacted_at;
-                $isSale          = $t->type === 'sell';
+                $sellPrice = (float) $t->price_per_unit;
+                $sellDate  = $t->transacted_at;
+                $isSale    = $t->type === 'sell';
 
                 while ($remainingToSell > 0.000001 && ! empty($openLots[$assetId])) {
                     $lot = &$openLots[$assetId][0];
@@ -49,16 +50,16 @@ class RealizedGainService
                     // transfers move cost basis to the destination portfolio — not a taxable event
                     if ($isSale) {
                         $lots->push([
-                            'asset'          => $t->asset,
-                            'quantity'       => $matched,
-                            'buy_price'      => $lot['cost_per_unit'],
-                            'sell_price'     => $sellPrice,
-                            'cost_basis'     => round($matched * $lot['cost_per_unit'], 2),
-                            'proceeds'       => round($matched * $sellPrice, 2),
-                            'gain'           => round($matched * ($sellPrice - $lot['cost_per_unit']), 2),
-                            'buy_date'       => $lot['date'],
-                            'sell_date'      => $sellDate,
-                            'holding_days'   => (int) $lot['date']->diffInDays($sellDate),
+                            'asset'        => $t->asset,
+                            'quantity'     => $matched,
+                            'buy_price'    => $lot['cost_per_unit'],
+                            'sell_price'   => $sellPrice,
+                            'cost_basis'   => round($matched * $lot['cost_per_unit'], 2),
+                            'proceeds'     => round($matched * $sellPrice, 2),
+                            'gain'         => round($matched * ($sellPrice - $lot['cost_per_unit']), 2),
+                            'buy_date'     => $lot['date'],
+                            'sell_date'    => $sellDate,
+                            'holding_days' => (int) $lot['date']->diffInDays($sellDate),
                         ]);
                     }
 
@@ -83,11 +84,11 @@ class RealizedGainService
         $byAsset = $lots
             ->groupBy(fn ($l) => $l['asset']->symbol)
             ->map(fn ($group) => [
-                'asset'       => $group->first()['asset'],
-                'total_gain'  => round($group->sum('gain'), 2),
-                'total_cost'  => round($group->sum('cost_basis'), 2),
+                'asset'          => $group->first()['asset'],
+                'total_gain'     => round($group->sum('gain'), 2),
+                'total_cost'     => round($group->sum('cost_basis'), 2),
                 'total_proceeds' => round($group->sum('proceeds'), 2),
-                'lots'        => $group->values(),
+                'lots'           => $group->values(),
             ])
             ->sortByDesc(fn ($g) => abs($g['total_gain']))
             ->values();
@@ -113,7 +114,7 @@ class RealizedGainService
 
         foreach ($txns as $t) {
             if (in_array($t->type, Transaction::INFLOW_TYPES)) {
-                $usdFee      = $t->fee_in_asset ? 0.0 : (float) $t->fees;
+                $usdFee     = $t->fee_in_asset ? 0.0 : (float) $t->fees;
                 $openLots[] = [
                     'qty'           => (float) $t->quantity,
                     'cost_per_unit' => (float) $t->price_per_unit + ($usdFee / max(1, (float) $t->quantity)),
@@ -124,9 +125,9 @@ class RealizedGainService
                     : (float) $t->quantity;
 
                 while ($remaining > 0.000001 && ! empty($openLots)) {
-                    $matched          = min($openLots[0]['qty'], $remaining);
+                    $matched = min($openLots[0]['qty'], $remaining);
                     $openLots[0]['qty'] -= $matched;
-                    $remaining        -= $matched;
+                    $remaining -= $matched;
                     if ($openLots[0]['qty'] < 0.000001) {
                         array_shift($openLots);
                     }
@@ -155,7 +156,7 @@ class RealizedGainService
             if ($remaining <= 0.000001) {
                 break;
             }
-            $matched    = min($lot['qty'], $remaining);
+            $matched = min($lot['qty'], $remaining);
             $totalCost += $matched * $lot['cost_per_unit'];
             $remaining -= $matched;
         }
@@ -196,9 +197,9 @@ class RealizedGainService
 
         $cashflows = [];
         foreach ($txns as $t) {
-            $date      = $t->transacted_at->toDateString();
-            $amount    = (float) $t->quantity * (float) $t->price_per_unit + (float) $t->fees;
-            $sign      = in_array($t->type, ['buy', 'transfer_in']) ? 1 : -1;
+            $date             = $t->transacted_at->toDateString();
+            $amount           = (float) $t->quantity * (float) $t->price_per_unit + (float) $t->fees;
+            $sign             = in_array($t->type, ['buy', 'transfer_in']) ? 1 : -1;
             $cashflows[$date] = ($cashflows[$date] ?? 0) + $sign * $amount;
         }
 
@@ -215,10 +216,11 @@ class RealizedGainService
                 $prevValue = $value;
                 $firstDate = $date;
                 $lastDate  = $date;
+
                 continue;
             }
 
-            $cf = $cashflows[$date] ?? 0;
+            $cf          = $cashflows[$date] ?? 0;
             $denominator = $prevValue + $cf;
 
             if ($denominator > 0) {
@@ -231,7 +233,7 @@ class RealizedGainService
 
         $totalPct = round(($twr - 1) * 100, 2);
 
-        $days          = \Carbon\Carbon::parse($firstDate)->diffInDays(\Carbon\Carbon::parse($lastDate));
+        $days          = Carbon::parse($firstDate)->diffInDays(Carbon::parse($lastDate));
         $annualizedPct = $days > 0
             ? round((pow($twr, 365 / $days) - 1) * 100, 2)
             : null;

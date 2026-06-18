@@ -90,9 +90,9 @@ class Portfolio extends Model
                 foreach ($txns->sortBy('transacted_at') as $t) {
                     $qty = (float) $t->quantity;
                     if (in_array($t->type, Transaction::INFLOW_TYPES)) {
-                        $usdFee     = $t->fee_in_asset ? 0.0 : (float) $t->fees;
+                        $usdFee = $t->fee_in_asset ? 0.0 : (float) $t->fees;
                         $totalCost += $qty * (float) $t->price_per_unit + $usdFee;
-                        $totalQty  += $qty;
+                        $totalQty += $qty;
                     } elseif (in_array($t->type, Transaction::OUTFLOW_TYPES)) {
                         $deduct = $t->fee_in_asset ? $qty + (float) $t->fees : $qty;
                         if ($totalQty > 0) {

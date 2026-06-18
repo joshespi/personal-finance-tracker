@@ -10,13 +10,13 @@ use Illuminate\View\View;
 class CashAccountController extends Controller
 {
     public const ACCOUNT_TYPES = [
-        'checking'      => 'Checking',
-        'savings'       => 'Savings',
-        'credit_card'   => 'Credit Card',
-        'cash'          => 'Cash',
-        'money_market'  => 'Money Market',
-        'cd'            => 'CD',
-        'other'         => 'Other',
+        'checking'     => 'Checking',
+        'savings'      => 'Savings',
+        'credit_card'  => 'Credit Card',
+        'cash'         => 'Cash',
+        'money_market' => 'Money Market',
+        'cd'           => 'CD',
+        'other'        => 'Other',
     ];
 
     public function index(Request $request): View
@@ -60,7 +60,7 @@ class CashAccountController extends Controller
     {
         $this->authorize('view', $cashAccount);
 
-        $balances = $cashAccount->balances();
+        $balances                     = $cashAccount->balances();
         $cashAccount->current_balance = $balances['working'];
         $cashAccount->cleared_balance = $balances['cleared'];
 
@@ -137,7 +137,7 @@ class CashAccountController extends Controller
     {
         return $request->validate([
             'name'          => ['required', 'string', 'max:200'],
-            'account_type'  => ['required', 'in:' . implode(',', array_keys(self::ACCOUNT_TYPES))],
+            'account_type'  => ['required', 'in:'.implode(',', array_keys(self::ACCOUNT_TYPES))],
             'currency'      => ['required', 'string', 'size:3'],
             'notes'         => ['nullable', 'string', 'max:1000'],
             'interest_rate' => ['nullable', 'numeric', 'min:0', 'max:999.99'],

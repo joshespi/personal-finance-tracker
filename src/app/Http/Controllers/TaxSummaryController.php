@@ -10,16 +10,17 @@ class TaxSummaryController extends Controller
 {
     public function __invoke(Request $request): View
     {
-        $user      = $request->user();
-        $service   = new RealizedGainService();
+        $user       = $request->user();
+        $service    = new RealizedGainService;
         $portfolios = $user->portfolios()->where('is_tax_advantaged', false)->with('transactions.asset')->get();
 
         $allLots = collect();
 
         foreach ($portfolios as $portfolio) {
-            $result   = $service->compute($portfolio);
-            $allLots  = $allLots->concat($result['lots']->map(function ($lot) use ($portfolio) {
+            $result  = $service->compute($portfolio);
+            $allLots = $allLots->concat($result['lots']->map(function ($lot) use ($portfolio) {
                 $lot['portfolio'] = $portfolio;
+
                 return $lot;
             }));
         }
@@ -31,12 +32,12 @@ class TaxSummaryController extends Controller
                 $long  = $lots->filter(fn ($l) => $l['holding_days'] >= 365);
 
                 return [
-                    'year'         => $year,
-                    'short_gain'   => round($short->sum('gain'), 2),
-                    'long_gain'    => round($long->sum('gain'), 2),
-                    'total_gain'   => round($lots->sum('gain'), 2),
-                    'short_lots'   => $short->sortByDesc('sell_date')->values(),
-                    'long_lots'    => $long->sortByDesc('sell_date')->values(),
+                    'year'       => $year,
+                    'short_gain' => round($short->sum('gain'), 2),
+                    'long_gain'  => round($long->sum('gain'), 2),
+                    'total_gain' => round($lots->sum('gain'), 2),
+                    'short_lots' => $short->sortByDesc('sell_date')->values(),
+                    'long_lots'  => $long->sortByDesc('sell_date')->values(),
                 ];
             })
             ->sortKeysDesc()

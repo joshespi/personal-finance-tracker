@@ -149,7 +149,7 @@ class DashboardTest extends TestCase
         $ethRow = $allHoldings->first(fn ($h) => $h['asset']->symbol === 'ETH');
 
         $this->assertEquals(round(50000 / 56000 * 100, 2), $btcRow['pct']);
-        $this->assertEquals(round(6000  / 56000 * 100, 2), $ethRow['pct']);
+        $this->assertEquals(round(6000 / 56000 * 100, 2), $ethRow['pct']);
         $this->assertEqualsWithDelta(100.0, $btcRow['pct'] + $ethRow['pct'], 0.1);
     }
 
@@ -221,9 +221,9 @@ class DashboardTest extends TestCase
 
     public function test_portfolios_sorted_by_total_value_descending(): void
     {
-        $user   = User::factory()->create();
-        $small  = Portfolio::factory()->for($user)->create(['name' => 'Small']);
-        $large  = Portfolio::factory()->for($user)->create(['name' => 'Large']);
+        $user  = User::factory()->create();
+        $small = Portfolio::factory()->for($user)->create(['name' => 'Small']);
+        $large = Portfolio::factory()->for($user)->create(['name' => 'Large']);
 
         $btc = $this->makePricedAsset('BTC', 50000.0);
         $eth = $this->makePricedAsset('ETH', 100.0);
@@ -241,8 +241,8 @@ class DashboardTest extends TestCase
     public function test_dashboard_sorted_by_value_descending(): void
     {
         $portfolio = Portfolio::factory()->create();
-        $btc       = $this->makePricedAsset('BTC',  50000.0);
-        $eth       = $this->makePricedAsset('ETH',  3000.0);
+        $btc       = $this->makePricedAsset('BTC', 50000.0);
+        $eth       = $this->makePricedAsset('ETH', 3000.0);
         $doge      = $this->makePricedAsset('DOGE', 0.1);
 
         Transaction::factory()->for($portfolio)->for($doge)->buy()->create(['quantity' => 100, 'price_per_unit' => 0.08]);

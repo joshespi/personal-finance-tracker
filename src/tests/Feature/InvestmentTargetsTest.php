@@ -79,7 +79,7 @@ class InvestmentTargetsTest extends TestCase
 
     public function test_dashboard_shows_rebalancing_when_targets_and_holdings_exist(): void
     {
-        $user      = User::factory()->create([
+        $user = User::factory()->create([
             'target_stock_pct'       => 60,
             'target_crypto_pct'      => 20,
             'target_real_estate_pct' => 10,

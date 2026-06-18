@@ -23,6 +23,7 @@ class FixTransferCostBasis extends Command
 
         if ($transfers->isEmpty()) {
             $this->info('No transfer_in rows found.');
+
             return 0;
         }
 
@@ -35,14 +36,15 @@ class FixTransferCostBasis extends Command
             if (! $transferOut) {
                 $this->warn("transfer_in #{$transferIn->id}: no linked transfer_out — skipping");
                 $skipped++;
+
                 continue;
             }
 
-            $fromPortfolio  = $transferOut->portfolio;
-            $assetId        = $transferIn->asset_id;
-            $date           = $transferIn->transacted_at->toDateString();
-            $qtySent        = (float) $transferOut->quantity;
-            $qtyReceived    = (float) $transferIn->quantity;
+            $fromPortfolio = $transferOut->portfolio;
+            $assetId       = $transferIn->asset_id;
+            $date          = $transferIn->transacted_at->toDateString();
+            $qtySent       = (float) $transferOut->quantity;
+            $qtyReceived   = (float) $transferIn->quantity;
 
             // replay FIFO on source portfolio excluding the transfer_out itself
             $openLots = $svc->openLotsForAsset($fromPortfolio, $assetId, $date, $transferOut->id);
@@ -52,6 +54,7 @@ class FixTransferCostBasis extends Command
             if ($correctPrice === null) {
                 $this->warn("transfer_in #{$transferIn->id} ({$date}): source lots don't cover qty sent — skipping");
                 $skipped++;
+
                 continue;
             }
 
@@ -60,11 +63,12 @@ class FixTransferCostBasis extends Command
 
             if (abs($old - $new) < 0.000001) {
                 $this->line("transfer_in #{$transferIn->id}: already correct ({$old}) — no change");
+
                 continue;
             }
 
             $this->line(
-                ($dryRun ? '[dry-run] ' : '') .
+                ($dryRun ? '[dry-run] ' : '').
                 "transfer_in #{$transferIn->id} ({$date}): {$old} → {$new}"
             );
 

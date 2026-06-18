@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 class SnapshotPortfolios extends Command
 {
     protected $signature = 'portfolios:snapshot';
+
     protected $description = 'Record a daily value snapshot for every portfolio';
 
     public function handle(): int
@@ -19,6 +20,7 @@ class SnapshotPortfolios extends Command
 
         if ($portfolios->isEmpty()) {
             $this->info('No portfolios found.');
+
             return self::SUCCESS;
         }
 
@@ -44,7 +46,7 @@ class SnapshotPortfolios extends Command
             }
         });
 
-        $this->info('Snapshots recorded for ' . $portfolios->count() . ' portfolio(s).');
+        $this->info('Snapshots recorded for '.$portfolios->count().' portfolio(s).');
 
         return self::SUCCESS;
     }

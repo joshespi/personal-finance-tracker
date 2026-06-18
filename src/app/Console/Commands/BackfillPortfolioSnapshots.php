@@ -34,6 +34,7 @@ class BackfillPortfolioSnapshots extends Command
         $portfolios = $this->resolvePortfolios();
         if ($portfolios->isEmpty()) {
             $this->warn('No portfolios found.');
+
             return self::SUCCESS;
         }
 
@@ -48,6 +49,7 @@ class BackfillPortfolioSnapshots extends Command
 
         if ($from->gt($to)) {
             $this->warn('No date range to backfill (from > to).');
+
             return self::SUCCESS;
         }
 
@@ -144,8 +146,10 @@ class BackfillPortfolioSnapshots extends Command
         $ids = $this->option('portfolio');
         if ($ids) {
             $idList = array_map('intval', explode(',', $ids));
+
             return Portfolio::whereIn('id', $idList)->get();
         }
+
         return Portfolio::all();
     }
 
@@ -171,6 +175,7 @@ class BackfillPortfolioSnapshots extends Command
         if ($this->option('to')) {
             return Carbon::parse($this->option('to'))->startOfDay();
         }
+
         return now()->subDay()->startOfDay();
     }
 
@@ -194,6 +199,7 @@ class BackfillPortfolioSnapshots extends Command
     {
         if (! $apiKey) {
             $this->warn("  {$asset->symbol}: FINNHUB_API_KEY not set, skipping");
+
             return;
         }
 
@@ -211,6 +217,7 @@ class BackfillPortfolioSnapshots extends Command
         if (! $response->successful() || ($response->json('s') ?? 'no_data') === 'no_data') {
             $this->warn("  {$asset->symbol}: no data (HTTP {$response->status()})");
             Log::warning("Backfill: no Finnhub candles for {$asset->symbol}");
+
             return;
         }
 
@@ -219,7 +226,7 @@ class BackfillPortfolioSnapshots extends Command
         $count      = 0;
 
         foreach ($timestamps as $i => $ts) {
-            $recordedAt = Carbon::createFromTimestamp($ts)->toDateString() . ' 12:00:00';
+            $recordedAt = Carbon::createFromTimestamp($ts)->toDateString().' 12:00:00';
             AssetPrice::updateOrCreate(
                 ['asset_id' => $asset->id, 'recorded_at' => $recordedAt],
                 ['price' => $closes[$i], 'currency' => 'USD']
@@ -247,6 +254,7 @@ class BackfillPortfolioSnapshots extends Command
         if (! $response->successful()) {
             $this->warn("  {$asset->symbol}: no data (HTTP {$response->status()})");
             Log::warning("Backfill: no CoinGecko data for {$asset->symbol}");
+
             return;
         }
 
@@ -259,7 +267,7 @@ class BackfillPortfolioSnapshots extends Command
                 continue;
             }
             AssetPrice::updateOrCreate(
-                ['asset_id' => $asset->id, 'recorded_at' => $date . ' 12:00:00'],
+                ['asset_id' => $asset->id, 'recorded_at' => $date.' 12:00:00'],
                 ['price' => $price, 'currency' => 'USD']
             );
             $count++;
@@ -285,9 +293,9 @@ class BackfillPortfolioSnapshots extends Command
             foreach ($txns->sortBy('transacted_at') as $t) {
                 $qty = (float) $t->quantity;
                 if (in_array($t->type, Transaction::INFLOW_TYPES)) {
-                    $usdFee     = $t->fee_in_asset ? 0.0 : (float) $t->fees;
+                    $usdFee = $t->fee_in_asset ? 0.0 : (float) $t->fees;
                     $totalCost += $qty * (float) $t->price_per_unit + $usdFee;
-                    $totalQty  += $qty;
+                    $totalQty += $qty;
                 } elseif (in_array($t->type, Transaction::OUTFLOW_TYPES)) {
                     $deduct = $t->fee_in_asset ? $qty + (float) $t->fees : $qty;
                     if ($totalQty > 0) {
@@ -301,7 +309,7 @@ class BackfillPortfolioSnapshots extends Command
             $totalCost = max(0.0, $totalCost);
             $costBasis += $totalCost;
 
-            $price        = $this->closestPrice($pricesByAssetAndDate->get($assetId, collect()), $date);
+            $price = $this->closestPrice($pricesByAssetAndDate->get($assetId, collect()), $date);
             $marketValue += $price !== null ? round($totalQty * $price, 2) : $totalCost;
         }
 

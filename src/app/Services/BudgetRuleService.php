@@ -10,8 +10,11 @@ use Carbon\Carbon;
 class BudgetRuleService
 {
     public const MANDATORY_TARGET = 50.0;
+
     public const DISCRETIONARY_TARGET = 30.0;
+
     public const SAVINGS_TARGET = 20.0;
+
     public const WINDOW_MONTHS = 6;
 
     public function compute(User $user): array
@@ -74,7 +77,7 @@ class BudgetRuleService
         $emergencyFunded  = $emergencyTarget > 0 && $emergencyBalance >= $emergencyTarget;
 
         $hasData = $monthlyIncome > 0;
-        $drift = [
+        $drift   = [
             'mandatory_over' => $hasData && $ratios['mandatory'] !== null && $ratios['mandatory'] > self::MANDATORY_TARGET,
             'savings_under'  => $hasData && $ratios['savings'] !== null && $ratios['savings'] < self::SAVINGS_TARGET,
         ];
@@ -91,18 +94,17 @@ class BudgetRuleService
                 'discretionary' => self::DISCRETIONARY_TARGET,
                 'savings'       => self::SAVINGS_TARGET,
             ],
-            'drift'                 => $drift,
-            'phase'                 => $emergencyFunded ? 'funded' : 'building',
-            'emergency_envelope'    => $emergencyEnvelope,
-            'emergency_balance'     => $emergencyBalance,
-            'emergency_target'      => $emergencyTarget,
-            'emergency_funded'      => $emergencyFunded,
-            'target_months'         => $targetMonths,
-            'window_start'          => $windowStart->copy(),
-            'window_end'            => $windowEnd->copy(),
-            'window_months'         => self::WINDOW_MONTHS,
-            'other_savings'         => $otherSavings,
+            'drift'              => $drift,
+            'phase'              => $emergencyFunded ? 'funded' : 'building',
+            'emergency_envelope' => $emergencyEnvelope,
+            'emergency_balance'  => $emergencyBalance,
+            'emergency_target'   => $emergencyTarget,
+            'emergency_funded'   => $emergencyFunded,
+            'target_months'      => $targetMonths,
+            'window_start'       => $windowStart->copy(),
+            'window_end'         => $windowEnd->copy(),
+            'window_months'      => self::WINDOW_MONTHS,
+            'other_savings'      => $otherSavings,
         ];
     }
-
 }

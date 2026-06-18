@@ -5,13 +5,14 @@ namespace Tests\Feature;
 use App\Models\Asset;
 use App\Models\Portfolio;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class TransactionImportTest extends TestCase
 {
     private function makeCsv(string $rows, string $header = "date,symbol,asset_type,type,quantity,price_per_unit,fees,currency,notes\n"): string
     {
-        return $header . $rows;
+        return $header.$rows;
     }
 
     private function csvFile(string $content): array
@@ -19,7 +20,7 @@ class TransactionImportTest extends TestCase
         $tmp = tempnam(sys_get_temp_dir(), 'import_test_');
         file_put_contents($tmp, $content);
 
-        return ['csv_file' => new \Illuminate\Http\UploadedFile($tmp, 'import.csv', 'text/csv', null, true)];
+        return ['csv_file' => new UploadedFile($tmp, 'import.csv', 'text/csv', null, true)];
     }
 
     public function test_template_requires_auth(): void
@@ -67,7 +68,7 @@ class TransactionImportTest extends TestCase
 
         $csv = $this->makeCsv(
             "2024-01-15,BTC,crypto,buy,0.5,40000,10,USD,initial purchase\n"
-            . "2024-03-20,AAPL,stock,buy,10,180.50,1.99,USD,\n"
+            ."2024-03-20,AAPL,stock,buy,10,180.50,1.99,USD,\n"
         );
 
         $this->actingAs($portfolio->user)
@@ -175,8 +176,8 @@ class TransactionImportTest extends TestCase
 
         $csv = $this->makeCsv(
             "2024-01-15,BTC,crypto,buy,0.5,40000,0,USD,\n"
-            . "\n"
-            . "\n"
+            ."\n"
+            ."\n"
         );
 
         $this->actingAs($portfolio->user)
@@ -192,7 +193,7 @@ class TransactionImportTest extends TestCase
         $types = ['buy', 'sell', 'dividend', 'staking_reward', 'transfer_in', 'transfer_out'];
         $rows  = '';
         foreach ($types as $i => $type) {
-            $rows .= "2024-0" . ($i + 1) . "-15,BTC,crypto,{$type},0.1,40000,0,USD,\n";
+            $rows .= '2024-0'.($i + 1)."-15,BTC,crypto,{$type},0.1,40000,0,USD,\n";
         }
 
         $csv = $this->makeCsv($rows);
@@ -200,6 +201,6 @@ class TransactionImportTest extends TestCase
         $this->actingAs($portfolio->user)
             ->post(route('portfolios.transactions.import', $portfolio), $this->csvFile($csv))
             ->assertRedirect()
-            ->assertSessionHas('success', count($types) . ' transaction(s) imported successfully.');
+            ->assertSessionHas('success', count($types).' transaction(s) imported successfully.');
     }
 }

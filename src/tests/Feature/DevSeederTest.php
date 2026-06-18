@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Asset;
 use App\Models\CashAccount;
+use App\Models\CashTransaction;
 use App\Models\Envelope;
+use App\Models\EnvelopeTransaction;
 use App\Models\IncomeEntry;
 use App\Models\Liability;
 use App\Models\ManualAsset;
@@ -22,7 +24,7 @@ class DevSeederTest extends TestCase
     {
         $this->seed(DevSeeder::class);
 
-        $demo = User::where('email', 'demo@example.com')->first();
+        $demo  = User::where('email', 'demo@example.com')->first();
         $admin = User::where('email', 'admin@example.com')->first();
 
         $this->assertNotNull($demo, 'demo user missing');
@@ -59,18 +61,18 @@ class DevSeederTest extends TestCase
     {
         $this->seed(DevSeeder::class);
         $first = [
-            'users'    => User::count(),
-            'tx'       => Transaction::count(),
-            'cash_tx'  => \App\Models\CashTransaction::count(),
-            'env_tx'   => \App\Models\EnvelopeTransaction::count(),
+            'users'   => User::count(),
+            'tx'      => Transaction::count(),
+            'cash_tx' => CashTransaction::count(),
+            'env_tx'  => EnvelopeTransaction::count(),
         ];
 
         $this->seed(DevSeeder::class);
         $second = [
-            'users'    => User::count(),
-            'tx'       => Transaction::count(),
-            'cash_tx'  => \App\Models\CashTransaction::count(),
-            'env_tx'   => \App\Models\EnvelopeTransaction::count(),
+            'users'   => User::count(),
+            'tx'      => Transaction::count(),
+            'cash_tx' => CashTransaction::count(),
+            'env_tx'  => EnvelopeTransaction::count(),
         ];
 
         $this->assertSame($first, $second, 'Seeder should not duplicate rows on re-run');

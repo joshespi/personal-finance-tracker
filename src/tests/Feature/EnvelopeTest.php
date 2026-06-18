@@ -301,7 +301,7 @@ class EnvelopeTest extends TestCase
 
     public function test_index_past_month_shows_assign_input(): void
     {
-        $envelope = Envelope::factory()->create();
+        $envelope  = Envelope::factory()->create();
         $pastMonth = now()->subMonths(2)->format('Y-m');
 
         $this->actingAs($envelope->user)
@@ -312,7 +312,7 @@ class EnvelopeTest extends TestCase
 
     public function test_index_future_month_hides_assign_input(): void
     {
-        $envelope = Envelope::factory()->create();
+        $envelope    = Envelope::factory()->create();
         $futureMonth = now()->addMonths(2)->format('Y-m');
 
         $this->actingAs($envelope->user)

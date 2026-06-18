@@ -118,10 +118,9 @@ class RealEstateAssetTypeTest extends TestCase
 
         $response->assertOk();
         $allocation = $response->viewData('allocation');
-        $reIdx    = array_search('Real Estate', $allocation['labels']);
-        $otherIdx = array_search('Other Assets', $allocation['labels']);
+        $reIdx      = array_search('Real Estate', $allocation['labels']);
+        $otherIdx   = array_search('Other Assets', $allocation['labels']);
         $this->assertSame(0.0, $allocation['values'][$reIdx]);
         $this->assertSame(25000.0, $allocation['values'][$otherIdx]);
     }
-
 }

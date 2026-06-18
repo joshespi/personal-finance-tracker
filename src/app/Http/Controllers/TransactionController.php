@@ -25,7 +25,7 @@ class TransactionController extends Controller
 
     private function typeRule(): string
     {
-        return 'in:' . implode(',', array_keys(self::TYPES));
+        return 'in:'.implode(',', array_keys(self::TYPES));
     }
 
     public function index(Request $request, Portfolio $portfolio): View
@@ -39,7 +39,7 @@ class TransactionController extends Controller
         ]);
 
         if ($search = $request->input('search')) {
-            $query->whereHas('asset', fn ($q) => $q->where('symbol', 'like', strtoupper($search) . '%'));
+            $query->whereHas('asset', fn ($q) => $q->where('symbol', 'like', strtoupper($search).'%'));
         }
 
         if ($type = $request->input('type')) {
@@ -62,8 +62,8 @@ class TransactionController extends Controller
 
         if ($sortCol === 'symbol') {
             $query->join('assets', 'assets.id', '=', 'transactions.asset_id')
-                  ->orderBy('assets.symbol', $sortDir)
-                  ->select('transactions.*');
+                ->orderBy('assets.symbol', $sortDir)
+                ->select('transactions.*');
         } else {
             $query->orderBy($sortCol, $sortDir);
         }
@@ -157,9 +157,9 @@ class TransactionController extends Controller
             'notes'          => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $isTransfer  = in_array($validated['type'], ['transfer_in', 'transfer_out']);
-        $feeInAsset  = $isTransfer && ($validated['fee_in_asset'] ?? false);
-        $fees        = (float) ($validated['fees'] ?? 0);
+        $isTransfer = in_array($validated['type'], ['transfer_in', 'transfer_out']);
+        $feeInAsset = $isTransfer && ($validated['fee_in_asset'] ?? false);
+        $fees       = (float) ($validated['fees'] ?? 0);
 
         // quantity field on transfer_out edit shows gross (sent + fee); strip fee back out for storage
         // since holdings logic adds fees back when deducting from position
@@ -189,7 +189,7 @@ class TransactionController extends Controller
         $this->authorize('delete', $transaction);
 
         $portfolioId = $transaction->portfolio_id;
-        $symbol = $transaction->asset->symbol ?? 'unknown';
+        $symbol      = $transaction->asset->symbol ?? 'unknown';
 
         ActivityLog::record('transaction.deleted', null, ['symbol' => $symbol]);
 

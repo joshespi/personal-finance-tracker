@@ -38,8 +38,8 @@ class EnvelopeTransactionController extends Controller
                     'type'        => 'withdrawal',
                     'amount'      => $validated['amount'],
                     'occurred_at' => $validated['occurred_at'],
-                    'description' => 'Funded envelope: ' . $envelopeName
-                        . ($userDesc ? ' — ' . $userDesc : ''),
+                    'description' => 'Funded envelope: '.$envelopeName
+                        .($userDesc ? ' — '.$userDesc : ''),
                 ]);
             }
 

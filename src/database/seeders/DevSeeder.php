@@ -263,8 +263,8 @@ class DevSeeder extends Seeder
         // 150 days, one transaction per day → ~3 pages at 50/page.
         for ($i = 0; $i < 150; $i++) {
             [$name, $base] = $merchants[$i % count($merchants)];
-            $amount = round($base + ($i % 7) * 1.13, 2); // small deterministic variation
-            $date   = CarbonImmutable::now()->subDays($i)->setTime(12, 0)->toDateTimeString();
+            $amount        = round($base + ($i % 7) * 1.13, 2); // small deterministic variation
+            $date          = CarbonImmutable::now()->subDays($i)->setTime(12, 0)->toDateTimeString();
 
             CashTransaction::firstOrCreate(
                 ['cash_account_id' => $account->id, 'occurred_at' => $date, 'description' => $name],
@@ -309,7 +309,7 @@ class DevSeeder extends Seeder
                 if ($row['spend'] > 0 && $checking) {
                     CashTransaction::firstOrCreate(
                         ['cash_account_id' => $checking->id, 'envelope_id' => $env->id, 'occurred_at' => $date->addDays(15)->startOfDay()->toDateTimeString()],
-                        ['type' => 'withdrawal', 'amount' => $row['spend'], 'description' => $row['name'] . ' spend'],
+                        ['type' => 'withdrawal', 'amount' => $row['spend'], 'description' => $row['name'].' spend'],
                     );
                 }
             }

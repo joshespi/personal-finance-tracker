@@ -16,7 +16,7 @@ class ScheduledTransactionsSummary extends Mailable
     public readonly string $intro;
 
     public function __construct(
-        public readonly User       $user,
+        public readonly User $user,
         public readonly Collection $fired,
     ) {
         $count       = $fired->count();
@@ -29,6 +29,7 @@ class ScheduledTransactionsSummary extends Mailable
     {
         $count = $this->fired->count();
         $noun  = $count === 1 ? 'scheduled transaction' : 'scheduled transactions';
+
         return new Envelope(subject: "{$count} {$noun} recorded");
     }
 

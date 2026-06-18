@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Enums\AssetType;
 use App\Models\AssetPrice;
-use App\Services\AssetService;
 use App\Models\ManualAsset;
 use App\Models\Portfolio;
+use App\Services\AssetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -65,7 +65,7 @@ class ManualAssetController extends Controller
 
         $manualAsset->load([
             'portfolio',
-            'valuations'            => fn ($q) => $q->orderByDesc('valued_at'),
+            'valuations' => fn ($q) => $q->orderByDesc('valued_at'),
             'latestValuation',
             'proxyAsset.latestPrice',
             'liabilities.latestBalance',
@@ -122,17 +122,17 @@ class ManualAssetController extends Controller
     private function validatePayload(Request $request): array
     {
         return $request->validate([
-            'name'             => ['required', 'string', 'max:200'],
-            'description'      => ['nullable', 'string', 'max:1000'],
-            'asset_class'      => ['required', 'in:' . implode(',', array_keys(ManualAsset::ASSET_CLASSES))],
-            'cost_basis'       => ['nullable', 'numeric', 'min:0'],
-            'currency'         => ['required', 'string', 'size:3'],
+            'name'                => ['required', 'string', 'max:200'],
+            'description'         => ['nullable', 'string', 'max:1000'],
+            'asset_class'         => ['required', 'in:'.implode(',', array_keys(ManualAsset::ASSET_CLASSES))],
+            'cost_basis'          => ['nullable', 'numeric', 'min:0'],
+            'currency'            => ['required', 'string', 'size:3'],
             'include_in_chart'    => ['boolean'],
             'include_in_invested' => ['boolean'],
-            'tracking_method'  => ['nullable', 'in:static,proxy_ticker'],
-            'proxy_symbol'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'string', 'max:20'],
-            'anchor_value'     => ['required_if:tracking_method,proxy_ticker', 'nullable', 'numeric', 'gt:0'],
-            'anchor_date'      => ['required_if:tracking_method,proxy_ticker', 'nullable', 'date'],
+            'tracking_method'     => ['nullable', 'in:static,proxy_ticker'],
+            'proxy_symbol'        => ['required_if:tracking_method,proxy_ticker', 'nullable', 'string', 'max:20'],
+            'anchor_value'        => ['required_if:tracking_method,proxy_ticker', 'nullable', 'numeric', 'gt:0'],
+            'anchor_date'         => ['required_if:tracking_method,proxy_ticker', 'nullable', 'date'],
         ]);
     }
 
@@ -151,7 +151,7 @@ class ManualAssetController extends Controller
         $proxyAsset = AssetService::findOrCreateBySymbol($symbol, AssetType::Stock);
 
         $proxyPrice = AssetPrice::where('asset_id', $proxyAsset->id)
-            ->where('recorded_at', '<=', $validated['anchor_date'] . ' 23:59:59')
+            ->where('recorded_at', '<=', $validated['anchor_date'].' 23:59:59')
             ->orderByDesc('recorded_at')
             ->value('price');
 

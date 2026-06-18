@@ -111,7 +111,7 @@ class LiabilityController extends Controller
 
         $validated = $request->validate([
             'name'                    => ['required', 'string', 'max:200'],
-            'liability_type'          => ['required', 'in:' . implode(',', array_keys(self::LIABILITY_TYPES))],
+            'liability_type'          => ['required', 'in:'.implode(',', array_keys(self::LIABILITY_TYPES))],
             'manual_asset_id'         => ['nullable', 'integer', 'exists:manual_assets,id'],
             'interest_rate'           => ['nullable', 'numeric', 'gte:0', 'lte:100'],
             'minimum_payment'         => ['nullable', 'numeric', 'gte:0'],
@@ -142,6 +142,7 @@ class LiabilityController extends Controller
     {
         if (! $liability->payment_day) {
             $liability->linkedSchedule()->delete();
+
             return;
         }
 
@@ -155,15 +156,15 @@ class LiabilityController extends Controller
         ScheduledTransaction::updateOrCreate(
             ['liability_id' => $liability->id],
             [
-                'user_id'          => $liability->user_id,
-                'type'             => 'mortgage_payment',
-                'description'      => $liability->name . ' payment',
-                'amount'           => $liability->totalMonthlyPayment(),
-                'recurrence'       => 'monthly',
-                'next_due_at'      => $due->toDateString(),
-                'envelope_id'      => $liability->payment_envelope_id,
-                'cash_account_id'  => $liability->payment_cash_account_id,
-                'is_active'        => true,
+                'user_id'         => $liability->user_id,
+                'type'            => 'mortgage_payment',
+                'description'     => $liability->name.' payment',
+                'amount'          => $liability->totalMonthlyPayment(),
+                'recurrence'      => 'monthly',
+                'next_due_at'     => $due->toDateString(),
+                'envelope_id'     => $liability->payment_envelope_id,
+                'cash_account_id' => $liability->payment_cash_account_id,
+                'is_active'       => true,
             ]
         );
     }

@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\CashAccount;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class YnabImportTest extends TestCase
@@ -155,15 +154,15 @@ class YnabImportTest extends TestCase
 
     private function ynabCsv(array $rows): UploadedFile
     {
-        $header  = '"Account","Flag","Date","Payee","Category Group/Category","Category Group","Category","Memo","Outflow","Inflow","Cleared"';
-        $lines   = [$header];
+        $header = '"Account","Flag","Date","Payee","Category Group/Category","Category Group","Category","Memo","Outflow","Inflow","Cleared"';
+        $lines  = [$header];
 
         foreach ($rows as [$account, $date, $payee, $category, $memo, $outflow, $inflow]) {
             $lines[] = "\"{$account}\",\"\",\"{$date}\",\"{$payee}\",\"\",\"\",\"{$category}\",\"{$memo}\",\"{$outflow}\",\"{$inflow}\",\"Cleared\"";
         }
 
-        $content = implode("\n", $lines) . "\n";
-        $tmp     = tempnam(sys_get_temp_dir(), 'ynab_test_') . '.csv';
+        $content = implode("\n", $lines)."\n";
+        $tmp     = tempnam(sys_get_temp_dir(), 'ynab_test_').'.csv';
         file_put_contents($tmp, $content);
 
         return new UploadedFile($tmp, 'ynab-export.csv', 'text/csv', null, true);

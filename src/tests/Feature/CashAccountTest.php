@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\TransactionList;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Liability;
 use App\Models\LiabilityBalance;
 use App\Models\Portfolio;
 use App\Models\User;
-use App\Livewire\TransactionList;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -193,7 +193,7 @@ class CashAccountTest extends TestCase
     public function test_livewire_toggle_cleared_flips_status(): void
     {
         $account = CashAccount::factory()->create();
-        $tx = CashTransaction::factory()->for($account, 'cashAccount')->deposit()->pending()->create(['amount' => 75]);
+        $tx      = CashTransaction::factory()->for($account, 'cashAccount')->deposit()->pending()->create(['amount' => 75]);
 
         Livewire::actingAs($account->user)
             ->test(TransactionList::class, ['account' => $account])
@@ -377,8 +377,8 @@ class CashAccountTest extends TestCase
 
         // Livewire renders server-side; transaction data is present in initial HTML.
         $response->assertSee('45.32')
-                 ->assertSee('Whole Foods')
-                 ->assertSee('wire:model', false);
+            ->assertSee('Whole Foods')
+            ->assertSee('wire:model', false);
     }
 
     public function test_dashboard_includes_cash_in_net_worth(): void

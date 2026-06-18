@@ -17,20 +17,33 @@ class TransactionList extends Component
     public CashAccount $account;
 
     public string $newType = 'deposit';
+
     public string $newAmount = '';
+
     public string $newDescription = '';
+
     public string $newOccurredAt = '';
+
     public ?int $newEnvelopeId = null;
+
     public ?int $newIncomeCategoryId = null;
+
     public bool $newCleared = false;
 
     public ?int $editingId = null;
+
     public string $editType = 'deposit';
+
     public string $editAmount = '';
+
     public string $editDescription = '';
+
     public string $editOccurredAt = '';
+
     public ?int $editEnvelopeId = null;
+
     public ?int $editIncomeCategoryId = null;
+
     public bool $editCleared = false;
 
     public string $filter = '';
@@ -41,7 +54,7 @@ class TransactionList extends Component
     public function mount(CashAccount $account): void
     {
         abort_unless($account->user_id === auth()->id(), 403);
-        $this->account = $account;
+        $this->account       = $account;
         $this->newOccurredAt = now()->format('Y-m-d');
     }
 
@@ -58,14 +71,14 @@ class TransactionList extends Component
     private function filteredQuery()
     {
         $query = $this->account->transactions();
-        $f = strtolower(trim($this->filter));
+        $f     = strtolower(trim($this->filter));
 
         if ($f !== '') {
             $asNum = is_numeric($f) ? (float) $f : null;
             if ($asNum !== null && $asNum > 0) {
                 $query->whereRaw('ABS(amount - ?) < 0.005', [$asNum]);
             } else {
-                $query->whereRaw('LOWER(description) LIKE ?', ['%' . $f . '%']);
+                $query->whereRaw('LOWER(description) LIKE ?', ['%'.$f.'%']);
             }
         }
 
@@ -116,7 +129,7 @@ class TransactionList extends Component
                 'nullable', 'integer',
                 Rule::exists('income_categories', 'id')->where('user_id', auth()->id()),
             ],
-            'newCleared'          => ['boolean'],
+            'newCleared' => ['boolean'],
         ]);
 
         $envelopeId = null;
@@ -146,14 +159,14 @@ class TransactionList extends Component
         $t = $this->account->transactions()->find($id);
         abort_unless($t, 404);
 
-        $this->editingId = $id;
-        $this->editType = $t->type;
-        $this->editAmount = (string) $t->amount;
-        $this->editDescription = $t->description ?? '';
-        $this->editOccurredAt = $t->occurred_at->format('Y-m-d');
-        $this->editEnvelopeId = $t->envelope_id;
+        $this->editingId            = $id;
+        $this->editType             = $t->type;
+        $this->editAmount           = (string) $t->amount;
+        $this->editDescription      = $t->description ?? '';
+        $this->editOccurredAt       = $t->occurred_at->format('Y-m-d');
+        $this->editEnvelopeId       = $t->envelope_id;
         $this->editIncomeCategoryId = $t->income_category_id;
-        $this->editCleared = (bool) $t->cleared;
+        $this->editCleared          = (bool) $t->cleared;
 
         $this->resetErrorBag();
     }
@@ -174,7 +187,7 @@ class TransactionList extends Component
                 'nullable', 'integer',
                 Rule::exists('income_categories', 'id')->where('user_id', auth()->id()),
             ],
-            'editCleared'          => ['boolean'],
+            'editCleared' => ['boolean'],
         ]);
 
         $envelopeId = null;
