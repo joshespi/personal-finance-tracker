@@ -57,7 +57,7 @@ class BudgetRuleService
                 ->whereBetween('occurred_at', [$windowStart, $windowEnd])
                 ->sum('amount');
             $spent = (float) CashTransaction::whereIn('envelope_id', $savingsIds)
-                ->where('type', 'withdrawal')
+                ->withdrawals()
                 ->whereBetween('occurred_at', [$windowStart, $windowEnd])
                 ->sum('amount');
             $monthlySavings = round(($funded - $spent) / self::WINDOW_MONTHS, 2);

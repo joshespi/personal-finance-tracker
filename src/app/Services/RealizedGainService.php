@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\TransactionType;
 use App\Models\Portfolio;
-use App\Models\Transaction;
 use Carbon\Carbon;
 
 class RealizedGainService
@@ -15,7 +15,7 @@ class RealizedGainService
         }
 
         $txns = $portfolio->transactions
-            ->filter(fn ($t) => in_array($t->type, Transaction::POSITION_TYPES))
+            ->filter(fn ($t) => $t->type->affectsPosition())
             ->sortBy('transacted_at');
 
         $lots     = collect();
@@ -24,7 +24,7 @@ class RealizedGainService
         foreach ($txns as $t) {
             $assetId = $t->asset_id;
 
-            if (in_array($t->type, Transaction::INFLOW_TYPES)) {
+            if ($t->type->isInflow()) {
                 $usdFee               = $t->fee_in_asset ? 0.0 : (float) $t->fees;
                 $costPerUnit          = (float) $t->price_per_unit + ($usdFee / max(1, (float) $t->quantity));
                 $openLots[$assetId][] = [
@@ -33,14 +33,14 @@ class RealizedGainService
                     'date'          => $t->transacted_at,
                     'asset'         => $t->asset,
                 ];
-            } elseif (in_array($t->type, Transaction::OUTFLOW_TYPES)) {
+            } elseif ($t->type->isOutflow()) {
                 // fee_in_asset on a transfer_out means fee units also left the wallet
                 $remainingToSell = $t->fee_in_asset
                     ? (float) $t->quantity + (float) $t->fees
                     : (float) $t->quantity;
                 $sellPrice = (float) $t->price_per_unit;
                 $sellDate  = $t->transacted_at;
-                $isSale    = $t->type === 'sell';
+                $isSale    = $t->type === TransactionType::Sell;
 
                 while ($remainingToSell > 0.000001 && ! empty($openLots[$assetId])) {
                     $lot = &$openLots[$assetId][0];
@@ -104,7 +104,7 @@ class RealizedGainService
     {
         $txns = $portfolio->transactions()
             ->where('asset_id', $assetId)
-            ->whereIn('type', Transaction::POSITION_TYPES)
+            ->whereIn('type', TransactionType::positionValues())
             ->where('transacted_at', '<=', $date)
             ->when($excludeId, fn ($q, $id) => $q->where('id', '!=', $id))
             ->orderBy('transacted_at')
@@ -113,13 +113,13 @@ class RealizedGainService
         $openLots = [];
 
         foreach ($txns as $t) {
-            if (in_array($t->type, Transaction::INFLOW_TYPES)) {
+            if ($t->type->isInflow()) {
                 $usdFee     = $t->fee_in_asset ? 0.0 : (float) $t->fees;
                 $openLots[] = [
                     'qty'           => (float) $t->quantity,
                     'cost_per_unit' => (float) $t->price_per_unit + ($usdFee / max(1, (float) $t->quantity)),
                 ];
-            } elseif (in_array($t->type, Transaction::OUTFLOW_TYPES)) {
+            } elseif ($t->type->isOutflow()) {
                 $remaining = $t->fee_in_asset
                     ? (float) $t->quantity + (float) $t->fees
                     : (float) $t->quantity;
@@ -180,17 +180,15 @@ class RealizedGainService
             return ['total_pct' => null, 'annualized_pct' => null, 'first_date' => null];
         }
 
-        $twrTypes = array_merge(Transaction::INFLOW_TYPES, Transaction::OUTFLOW_TYPES);
-        $twrTypes = array_diff($twrTypes, ['staking_reward']);
-
+        // TWR cashflows exclude staking rewards (no cash changed hands).
         if ($portfolio->relationLoaded('transactions')) {
             $txns = $portfolio->transactions
-                ->filter(fn ($t) => in_array($t->type, $twrTypes))
+                ->filter(fn ($t) => $t->type->isCashflow())
                 ->sortBy('transacted_at')
                 ->values();
         } else {
             $txns = $portfolio->transactions()
-                ->whereIn('type', $twrTypes)
+                ->whereIn('type', TransactionType::cashflowValues())
                 ->orderBy('transacted_at')
                 ->get(['type', 'quantity', 'price_per_unit', 'fees', 'transacted_at']);
         }
@@ -199,7 +197,7 @@ class RealizedGainService
         foreach ($txns as $t) {
             $date             = $t->transacted_at->toDateString();
             $amount           = (float) $t->quantity * (float) $t->price_per_unit + (float) $t->fees;
-            $sign             = in_array($t->type, ['buy', 'transfer_in']) ? 1 : -1;
+            $sign             = $t->type->isInflow() ? 1 : -1;
             $cashflows[$date] = ($cashflows[$date] ?? 0) + $sign * $amount;
         }
 

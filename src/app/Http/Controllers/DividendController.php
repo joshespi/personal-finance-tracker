@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TransactionType;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,7 +14,7 @@ class DividendController extends Controller
         $portfolioIds = $request->user()->portfolios()->pluck('id');
 
         $allDividends = Transaction::whereIn('portfolio_id', $portfolioIds)
-            ->where('type', 'dividend')
+            ->where('type', TransactionType::Dividend->value)
             ->with('asset')
             ->orderBy('transacted_at')
             ->get();

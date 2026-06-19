@@ -47,7 +47,7 @@ class Envelope extends Model
 
     public function spendTransactions(): HasMany
     {
-        return $this->hasMany(CashTransaction::class)->where('cash_transactions.type', 'withdrawal');
+        return $this->hasMany(CashTransaction::class)->withdrawals();
     }
 
     public function balance(): float

@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Concerns\BucketsByMonth;
 use App\Models\CashTransaction;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
 class SpendingTrendsService
 {
+    use BucketsByMonth;
+
     /**
      * Per-envelope monthly spend over a clamped 3–12 month lookback, shaped for the
      * trends chart. Consumed by the standalone SpendingTrendsController and the trends
@@ -19,16 +22,13 @@ class SpendingTrendsService
     {
         $lookback = min(12, max(3, (int) ($months ?? 6)));
 
-        $monthStarts = collect();
-        for ($i = $lookback - 1; $i >= 0; $i--) {
-            $monthStarts->push(now()->startOfMonth()->subMonths($i));
-        }
+        $monthStarts = $this->monthSeries(now(), $lookback);
 
         $envelopes   = $user->envelopes()->orderBy('sort_order')->get();
         $envelopeIds = $envelopes->pluck('id');
 
         $spendRows = CashTransaction::whereIn('envelope_id', $envelopeIds)
-            ->where('type', 'withdrawal')
+            ->withdrawals()
             ->whereBetween('occurred_at', [$monthStarts->first(), $monthStarts->last()->endOfMonth()])
             ->get(['envelope_id', 'occurred_at', 'amount']);
 

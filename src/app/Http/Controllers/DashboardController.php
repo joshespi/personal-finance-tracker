@@ -13,6 +13,11 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    /** Synthetic allocation bucket for manual asset classes / asset types outside AssetType. */
+    private const OTHER_BUCKET = 'other';
+
+    private const OTHER_COLOR = '#10b981';
+
     public function __invoke(Request $request, BudgetRuleService $budgetRule): View
     {
         $user       = $request->user();
@@ -168,11 +173,11 @@ class DashboardController extends Controller
 
     private function manualAssetBuckets(Collection $portfolios): array
     {
-        $buckets = ['stock' => 0.0, 'crypto' => 0.0, 'real_estate' => 0.0, 'bond' => 0.0, 'other' => 0.0];
+        $buckets = $this->emptyBuckets();
 
         foreach ($portfolios as $p) {
             foreach ($p->manualAssets->where('include_in_chart', true) as $ma) {
-                $key = array_key_exists($ma->asset_class, $buckets) ? $ma->asset_class : 'other';
+                $key = AssetType::tryFrom($ma->asset_class)?->allocationKey() ?? self::OTHER_BUCKET;
                 $buckets[$key] += $ma->currentValue();
             }
         }
@@ -180,44 +185,57 @@ class DashboardController extends Controller
         return $buckets;
     }
 
-    private function buildAllocation(Collection $allHoldings, array $manualBuckets): array
+    /** Zeroed allocation buckets: one per AssetType plus the synthetic 'other'. */
+    private function emptyBuckets(): array
     {
-        $stockValue      = 0.0;
-        $cryptoValue     = 0.0;
-        $realEstateValue = 0.0;
-        $bondValue       = 0.0;
+        return array_fill_keys([...AssetType::values(), self::OTHER_BUCKET], 0.0);
+    }
+
+    /**
+     * Roll holdings + manual-asset buckets up into allocation classes (one per
+     * AssetType plus 'other'). Holdings whose asset_type isn't a known enum value
+     * fall into 'other'. Feeds both the allocation pie and the rebalancing table.
+     *
+     * @return array<string, float>
+     */
+    private function rollupByClass(Collection $allHoldings, array $manualBuckets): array
+    {
+        $buckets = $this->emptyBuckets();
 
         foreach ($allHoldings as $h) {
-            $val = $h['effective_value'];
-            match (AssetType::tryFrom($h['asset']->asset_type)?->allocationKey() ?? 'stock') {
-                'crypto'      => $cryptoValue += $val,
-                'real_estate' => $realEstateValue += $val,
-                'bond'        => $bondValue += $val,
-                default       => $stockValue += $val,
-            };
+            $key = AssetType::tryFrom($h['asset']->asset_type)?->allocationKey() ?? self::OTHER_BUCKET;
+            $buckets[$key] += (float) $h['effective_value'];
         }
 
-        $stockValue += $manualBuckets['stock'];
-        $cryptoValue += $manualBuckets['crypto'];
-        $realEstateValue += $manualBuckets['real_estate'];
-        $bondValue += $manualBuckets['bond'];
-        $otherManualValue = $manualBuckets['other'];
+        foreach ($manualBuckets as $class => $val) {
+            $buckets[array_key_exists($class, $buckets) ? $class : self::OTHER_BUCKET] += $val;
+        }
 
-        $total = $stockValue + $cryptoValue + $realEstateValue + $bondValue + $otherManualValue;
+        return $buckets;
+    }
 
-        $entries = collect([
-            ['label' => 'Stocks',       'color' => '#6366f1', 'value' => round($stockValue, 2)],
-            ['label' => 'Crypto',       'color' => '#f97316', 'value' => round($cryptoValue, 2)],
-            ['label' => 'Real Estate',  'color' => '#b45309', 'value' => round($realEstateValue, 2)],
-            ['label' => 'Bonds',        'color' => '#eab308', 'value' => round($bondValue, 2)],
-            ['label' => 'Other Assets', 'color' => '#10b981', 'value' => round($otherManualValue, 2)],
-        ])->sortByDesc('value');
+    private function buildAllocation(Collection $allHoldings, array $manualBuckets): array
+    {
+        $buckets = $this->rollupByClass($allHoldings, $manualBuckets);
+
+        $entries = collect(AssetType::cases())
+            ->map(fn (AssetType $type) => [
+                'label' => $type->allocationLabel(),
+                'color' => $type->allocationColor(),
+                'value' => round($buckets[$type->value], 2),
+            ])
+            ->push([
+                'label' => 'Other Assets',
+                'color' => self::OTHER_COLOR,
+                'value' => round($buckets[self::OTHER_BUCKET], 2),
+            ])
+            ->sortByDesc('value');
 
         return [
             'labels' => $entries->pluck('label')->values()->all(),
             'colors' => $entries->pluck('color')->values()->all(),
             'values' => $entries->pluck('value')->values()->all(),
-            'total'  => round($total, 2),
+            'total'  => round(array_sum($buckets), 2),
         ];
     }
 
@@ -234,24 +252,12 @@ class DashboardController extends Controller
             return [];
         }
 
-        $current = ['stock' => 0.0, 'crypto' => 0.0, 'real_estate' => 0.0, 'bond' => 0.0, 'other' => 0.0];
-
-        foreach ($allHoldings as $h) {
-            $val  = (float) $h['effective_value'];
-            $type = AssetType::tryFrom($h['asset']->asset_type)?->allocationKey() ?? 'other';
-            $current[$type] += $val;
-        }
-
-        foreach ($manualBuckets as $type => $val) {
-            $current[array_key_exists($type, $current) ? $type : 'other'] += $val;
-        }
+        $current = $this->rollupByClass($allHoldings, $manualBuckets);
 
         $total = array_sum($current);
         if ($total <= 0) {
             return [];
         }
-
-        $labels = ['stock' => 'Stocks', 'crypto' => 'Crypto', 'real_estate' => 'Real Estate', 'bond' => 'Bonds'];
 
         $rows = [];
         foreach ($targets as $type => $targetPct) {
@@ -266,7 +272,7 @@ class DashboardController extends Controller
             $currentPct = round($currentVal / $total * 100, 1);
             $diff       = round($targetVal - $currentVal, 2);
             $rows[]     = [
-                'label'       => $labels[$type],
+                'label'       => AssetType::from($type)->allocationLabel(),
                 'current_pct' => $currentPct,
                 'target_pct'  => $targetPct,
                 'current_val' => $currentVal,

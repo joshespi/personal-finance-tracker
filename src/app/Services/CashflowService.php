@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Concerns\BucketsByMonth;
 use App\Models\CashTransaction;
 use App\Models\User;
 use Carbon\Carbon;
@@ -9,6 +10,8 @@ use Illuminate\Support\Collection;
 
 class CashflowService
 {
+    use BucketsByMonth;
+
     /**
      * Shared monthly cashflow figures: per-envelope spend rows, income rows, totals,
      * and a 6-month income/spend history. Consumed by both the standalone
@@ -65,40 +68,24 @@ class CashflowService
         $historyStart = $month->copy()->subMonths(5)->startOfMonth();
         $historyEnd   = $month->copy()->subMonth()->endOfMonth();
 
-        $incomeByMonth = [$currentYm => $income];
-        $spentByMonth  = [$currentYm => $totalSpent];
-
         $historyIncome = $user->cashDeposits()
             ->whereBetween('cash_transactions.occurred_at', [$historyStart, $historyEnd])
             ->select('cash_transactions.occurred_at', 'cash_transactions.amount')
             ->get();
 
         $historySpent = CashTransaction::whereIn('envelope_id', $envelopeIds)
-            ->where('type', 'withdrawal')
+            ->withdrawals()
             ->whereBetween('occurred_at', [$historyStart, $historyEnd])
             ->get(['occurred_at', 'amount']);
 
-        foreach ($historyIncome as $row) {
-            $ym                 = $row->occurred_at->format('Y-m');
-            $incomeByMonth[$ym] = ($incomeByMonth[$ym] ?? 0) + (float) $row->amount;
-        }
+        // history range excludes the current month, so seeding $currentYm never collides
+        $incomeByMonth = [$currentYm => $income] + $this->sumByMonth($historyIncome);
+        $spentByMonth  = [$currentYm => $totalSpent] + $this->sumByMonth($historySpent);
 
-        foreach ($historySpent as $row) {
-            $ym                = $row->occurred_at->format('Y-m');
-            $spentByMonth[$ym] = ($spentByMonth[$ym] ?? 0) + (float) $row->amount;
-        }
-
-        $history = collect();
-        for ($i = 5; $i >= 0; $i--) {
-            $m  = $month->copy()->subMonths($i);
-            $ym = $m->format('Y-m');
-            $history->push([
-                'month'  => $m->format('M Y'),
-                'income' => round($incomeByMonth[$ym] ?? 0, 2),
-                'spent'  => round($spentByMonth[$ym] ?? 0, 2),
-            ]);
-        }
-
-        return $history;
+        return $this->monthSeries($month, 6)->map(fn ($m) => [
+            'month'  => $m->format('M Y'),
+            'income' => round($incomeByMonth[$m->format('Y-m')] ?? 0, 2),
+            'spent'  => round($spentByMonth[$m->format('Y-m')] ?? 0, 2),
+        ])->values();
     }
 }

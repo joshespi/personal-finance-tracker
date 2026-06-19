@@ -61,7 +61,7 @@ class ForecastController extends Controller
         $envelopeIds = $user->envelopes()->pluck('id');
         $spend3m     = $envelopeIds->isNotEmpty()
             ? (float) CashTransaction::whereIn('envelope_id', $envelopeIds)
-                ->where('type', 'withdrawal')
+                ->withdrawals()
                 ->whereBetween('occurred_at', [$threeMonthsAgo, $lastMonthEnd])
                 ->sum('amount')
             : 0.0;

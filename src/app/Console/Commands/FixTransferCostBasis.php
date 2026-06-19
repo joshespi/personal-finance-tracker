@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\TransactionType;
 use App\Models\Transaction;
 use App\Services\RealizedGainService;
 use Illuminate\Console\Command;
@@ -16,7 +17,7 @@ class FixTransferCostBasis extends Command
     {
         $dryRun = $this->option('dry-run');
 
-        $transfers = Transaction::where('type', 'transfer_in')
+        $transfers = Transaction::where('type', TransactionType::TransferIn->value)
             ->whereNotNull('linked_transfer_id')
             ->with(['linkedFrom.portfolio'])
             ->get();

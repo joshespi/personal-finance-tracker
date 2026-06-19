@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Concerns\BucketsByMonth;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\User;
@@ -9,6 +10,8 @@ use Illuminate\Support\Collection;
 
 class EmergencyFundService
 {
+    use BucketsByMonth;
+
     /**
      * Emergency-fund readiness: the 6-month mandatory-spend baseline (with per-envelope
      * breakdown), 3- and 6-month targets, current savings, and progress bars. Consumed by
@@ -32,13 +35,10 @@ class EmergencyFundService
         $monthlyBreakdown = collect();
 
         if ($mandatoryEnvelopes->isNotEmpty()) {
-            $monthKeys = array_map(
-                fn ($i) => $monthNow->copy()->subMonths($i)->format('Y-m'),
-                range(0, 5)
-            );
+            $monthKeys = $this->monthSeries($monthNow, 6)->map->format('Y-m')->all();
 
             $spendRows = CashTransaction::whereIn('envelope_id', $mandatoryEnvelopes->pluck('id'))
-                ->where('type', 'withdrawal')
+                ->withdrawals()
                 ->whereBetween('occurred_at', [$monthNow->copy()->subMonths(5), $monthNow->copy()->endOfMonth()])
                 ->get(['envelope_id', 'occurred_at', 'amount']);
 

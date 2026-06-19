@@ -92,7 +92,7 @@
                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Type</label>
                     <select name="type" class="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md text-sm h-9 px-3 focus:ring-0 focus:border-gray-400 dark:focus:border-gray-500">
                         <option value="">All</option>
-                        @foreach (\App\Http\Controllers\TransactionController::TYPES as $key => $label)
+                        @foreach (\App\Enums\TransactionType::options() as $key => $label)
                             <option value="{{ $key }}" @selected(request('type') === $key)>{{ $label }}</option>
                         @endforeach
                     </select>
@@ -161,18 +161,14 @@
                                         <td class="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ $t->transacted_at->format('M j, Y') }}</td>
                                         <td class="px-4 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $t->asset->symbol }}</td>
                                         <td class="px-4 py-3">
-                                            <span @class([
-                                                'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-                                                'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300' => in_array($t->type, ['buy', 'transfer_in', 'staking_reward', 'dividend']),
-                                                'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300'         => in_array($t->type, ['sell', 'transfer_out']),
-                                            ])>
-                                                {{ ucwords(str_replace('_', ' ', $t->type)) }}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $t->type->badgeClasses() }}">
+                                                {{ $t->type->label() }}
                                             </span>
-                                            @if ($t->type === 'transfer_in' && $t->linkedFrom)
+                                            @if ($t->type === \App\Enums\TransactionType::TransferIn && $t->linkedFrom)
                                                 <span class="block text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                                                     ← {{ $t->linkedFrom->portfolio->name }}
                                                 </span>
-                                            @elseif ($t->type === 'transfer_out' && $t->linkedTo)
+                                            @elseif ($t->type === \App\Enums\TransactionType::TransferOut && $t->linkedTo)
                                                 <span class="block text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                                                     → {{ $t->linkedTo->portfolio->name }}
                                                 </span>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AssetType;
+use App\Enums\TransactionType;
 use App\Models\ActivityLog;
 use App\Models\Portfolio;
 use App\Models\Transaction;
@@ -14,20 +15,6 @@ use Illuminate\View\View;
 
 class TransactionController extends Controller
 {
-    public const TYPES = [
-        'buy'            => 'Buy',
-        'sell'           => 'Sell',
-        'dividend'       => 'Dividend',
-        'staking_reward' => 'Staking Reward',
-        'transfer_in'    => 'Transfer In',
-        'transfer_out'   => 'Transfer Out',
-    ];
-
-    private function typeRule(): string
-    {
-        return 'in:'.implode(',', array_keys(self::TYPES));
-    }
-
     public function index(Request $request, Portfolio $portfolio): View
     {
         $this->authorize('view', $portfolio);
@@ -82,7 +69,7 @@ class TransactionController extends Controller
                 ->with('error', 'This portfolio is closed. Reopen it to add transactions.');
         }
 
-        return view('transactions.create', ['portfolio' => $portfolio, 'types' => self::TYPES]);
+        return view('transactions.create', ['portfolio' => $portfolio, 'types' => TransactionType::options()]);
     }
 
     public function store(Request $request, Portfolio $portfolio): RedirectResponse
@@ -97,7 +84,7 @@ class TransactionController extends Controller
         $validated = $request->validate([
             'symbol'         => ['required', 'string', 'max:20'],
             'asset_type'     => ['required', Rule::enum(AssetType::class)],
-            'type'           => ['required', $this->typeRule()],
+            'type'           => ['required', Rule::enum(TransactionType::class)],
             'quantity'       => ['required', 'numeric', 'gt:0'],
             'price_per_unit' => ['required', 'numeric', 'gte:0'],
             'fees'           => ['nullable', 'numeric', 'gte:0'],
@@ -137,7 +124,7 @@ class TransactionController extends Controller
         return view('transactions.edit', [
             'transaction' => $transaction,
             'portfolio'   => $transaction->portfolio,
-            'types'       => self::TYPES,
+            'types'       => TransactionType::options(),
             'assetTypes'  => AssetType::cases(),
         ]);
     }
@@ -147,7 +134,7 @@ class TransactionController extends Controller
         $this->authorize('update', $transaction);
 
         $validated = $request->validate([
-            'type'           => ['required', $this->typeRule()],
+            'type'           => ['required', Rule::enum(TransactionType::class)],
             'quantity'       => ['required', 'numeric', 'gt:0'],
             'price_per_unit' => ['required', 'numeric', 'gte:0'],
             'fees'           => ['nullable', 'numeric', 'gte:0'],
@@ -157,14 +144,14 @@ class TransactionController extends Controller
             'notes'          => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $isTransfer = in_array($validated['type'], ['transfer_in', 'transfer_out']);
-        $feeInAsset = $isTransfer && ($validated['fee_in_asset'] ?? false);
+        $type       = TransactionType::from($validated['type']);
+        $feeInAsset = $type->isTransfer() && ($validated['fee_in_asset'] ?? false);
         $fees       = (float) ($validated['fees'] ?? 0);
 
         // quantity field on transfer_out edit shows gross (sent + fee); strip fee back out for storage
         // since holdings logic adds fees back when deducting from position
         $quantity = (float) $validated['quantity'];
-        if ($feeInAsset && $validated['type'] === 'transfer_out') {
+        if ($feeInAsset && $type === TransactionType::TransferOut) {
             $quantity = max(0, $quantity - $fees);
         }
 

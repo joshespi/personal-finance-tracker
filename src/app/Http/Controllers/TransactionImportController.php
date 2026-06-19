@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AssetType;
+use App\Enums\TransactionType;
 use App\Models\Asset;
 use App\Models\Portfolio;
 use Illuminate\Http\RedirectResponse;
@@ -13,8 +14,6 @@ use Illuminate\Validation\Rule;
 
 class TransactionImportController extends Controller
 {
-    private const VALID_TYPES = ['buy', 'sell', 'dividend', 'staking_reward', 'transfer_in', 'transfer_out'];
-
     public function template(): Response
     {
         $headers = "date,symbol,asset_type,type,quantity,price_per_unit,fees,currency,notes\n";
@@ -69,7 +68,7 @@ class TransactionImportController extends Controller
                 'date'           => ['required', 'date_format:Y-m-d'],
                 'symbol'         => ['required', 'string', 'max:20'],
                 'asset_type'     => ['required', Rule::enum(AssetType::class)],
-                'type'           => ['required', Rule::in(self::VALID_TYPES)],
+                'type'           => ['required', Rule::enum(TransactionType::class)],
                 'quantity'       => ['required', 'numeric', 'gt:0'],
                 'price_per_unit' => ['required', 'numeric', 'gte:0'],
                 'fees'           => ['numeric', 'gte:0'],

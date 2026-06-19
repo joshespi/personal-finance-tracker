@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AssetType;
+use App\Enums\TransactionType;
 use App\Models\Transaction;
 use App\Services\AssetService;
 use App\Services\RealizedGainService;
@@ -66,13 +67,13 @@ class PortfolioTransferController extends Controller
 
         $transferOut = Transaction::create(array_merge($common, [
             'portfolio_id' => $validated['from_portfolio_id'],
-            'type'         => 'transfer_out',
+            'type'         => TransactionType::TransferOut,
             'quantity'     => $qtySent,
         ]));
 
         Transaction::create(array_merge($common, [
             'portfolio_id'       => $validated['to_portfolio_id'],
-            'type'               => 'transfer_in',
+            'type'               => TransactionType::TransferIn,
             'quantity'           => $receivedQty,
             'price_per_unit'     => $transferInPrice,
             'fee_in_asset'       => false,

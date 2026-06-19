@@ -18,6 +18,12 @@ class CashTransaction extends Model
         'cleared'     => 'boolean',
     ];
 
+    /** Spend rows (qualified so it's safe inside relation/withSum subqueries too). */
+    public function scopeWithdrawals($query)
+    {
+        return $query->where('cash_transactions.type', 'withdrawal');
+    }
+
     public function cashAccount(): BelongsTo
     {
         return $this->belongsTo(CashAccount::class);

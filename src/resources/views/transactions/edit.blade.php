@@ -35,7 +35,7 @@
 
                 <form method="POST" action="{{ route('transactions.update', $transaction) }}" class="space-y-6"
                       x-data="{
-                          txType: '{{ old('type', $transaction->type) }}',
+                          txType: '{{ old('type', $transaction->type->value) }}',
                           fees: {{ old('fees', (float) $transaction->fees) }},
                           feeInAsset: {{ old('fee_in_asset', $transaction->fee_in_asset) ? 'true' : 'false' }},
                           get isTransfer() { return this.txType === 'transfer_in' || this.txType === 'transfer_out'; }
@@ -48,7 +48,7 @@
                         <select id="type" name="type" x-model="txType"
                                 class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                             @foreach ($types as $value => $label)
-                                <option value="{{ $value }}" @selected(old('type', $transaction->type) === $value)>{{ $label }}</option>
+                                <option value="{{ $value }}" @selected(old('type', $transaction->type->value) === $value)>{{ $label }}</option>
                             @endforeach
                         </select>
                         <x-input-error :messages="$errors->get('type')" class="mt-2" />
@@ -58,7 +58,7 @@
                         <div>
                             <x-input-label for="quantity" value="Quantity" />
                             <x-text-input id="quantity" name="quantity" type="number" class="mt-1 block w-full"
-                                          :value="old('quantity', $transaction->fee_in_asset && $transaction->type === 'transfer_out' ? (float)$transaction->quantity + (float)$transaction->fees : $transaction->quantity)" required min="0.00000001" step="any" />
+                                          :value="old('quantity', $transaction->fee_in_asset && $transaction->type === \App\Enums\TransactionType::TransferOut ? (float)$transaction->quantity + (float)$transaction->fees : $transaction->quantity)" required min="0.00000001" step="any" />
                             <x-input-error :messages="$errors->get('quantity')" class="mt-2" />
                         </div>
                         <div>

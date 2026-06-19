@@ -71,7 +71,7 @@ class EnvelopeController extends Controller
                 ->where('occurred_at', '<=', $prevMonthEnd)
                 ->sum('amount')
             - (float) CashTransaction::whereIn('envelope_id', $envelopeIds)
-                ->where('type', 'withdrawal')
+                ->withdrawals()
                 ->where('occurred_at', '<=', $prevMonthEnd)
                 ->sum('amount'),
             2

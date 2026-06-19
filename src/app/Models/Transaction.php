@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TransactionType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,12 +12,6 @@ class Transaction extends Model
 {
     use HasFactory;
 
-    public const INFLOW_TYPES = ['buy', 'transfer_in', 'staking_reward'];
-
-    public const OUTFLOW_TYPES = ['sell', 'transfer_out'];
-
-    public const POSITION_TYPES = ['buy', 'sell', 'transfer_in', 'transfer_out', 'staking_reward'];
-
     protected $fillable = [
         'portfolio_id', 'asset_id', 'type', 'quantity',
         'price_per_unit', 'fees', 'fee_in_asset', 'currency', 'notes', 'transacted_at',
@@ -24,6 +19,7 @@ class Transaction extends Model
     ];
 
     protected $casts = [
+        'type'           => TransactionType::class,
         'transacted_at'  => 'datetime',
         'quantity'       => 'decimal:8',
         'price_per_unit' => 'decimal:8',

@@ -32,4 +32,26 @@ enum AssetType: string
         // future type that should roll up into an existing bucket.
         return $this->value;
     }
+
+    /** Plural display label for the allocation pie / rebalancing table. */
+    public function allocationLabel(): string
+    {
+        return match ($this) {
+            self::Stock      => 'Stocks',
+            self::Crypto     => 'Crypto',
+            self::RealEstate => 'Real Estate',
+            self::Bond       => 'Bonds',
+        };
+    }
+
+    /** Chart color for this allocation bucket. */
+    public function allocationColor(): string
+    {
+        return match ($this) {
+            self::Stock      => '#6366f1',
+            self::Crypto     => '#f97316',
+            self::RealEstate => '#b45309',
+            self::Bond       => '#eab308',
+        };
+    }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TransactionType;
 use App\Models\ActivityLog;
 use App\Models\Portfolio;
 use App\Services\BenchmarkService;
@@ -61,7 +62,7 @@ class PortfolioController extends Controller
         $request->user()->applyAssetClassifications($holdings->pluck('asset'));
 
         $incomeByAsset = $portfolio->transactions
-            ->filter(fn ($t) => $t->type === 'dividend')
+            ->filter(fn ($t) => $t->type === TransactionType::Dividend)
             ->groupBy('asset_id')
             ->map(fn ($txns) => [
                 'asset'        => $txns->first()->asset,
