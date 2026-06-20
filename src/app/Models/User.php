@@ -161,4 +161,24 @@ class User extends Authenticatable implements MustVerifyEmail
 
         return $this->totalDebtCache;
     }
+
+    /** Sum of (market_value + manual_value) across each portfolio's most recent snapshot. */
+    public function latestPortfolioValue(): float
+    {
+        $portfolioIds = $this->portfolios()->pluck('id');
+
+        if ($portfolioIds->isEmpty()) {
+            return 0.0;
+        }
+
+        $latestDates = PortfolioSnapshot::whereIn('portfolio_id', $portfolioIds)
+            ->selectRaw('portfolio_id, MAX(recorded_on) as max_date')
+            ->groupBy('portfolio_id');
+
+        return (float) PortfolioSnapshot::joinSub($latestDates, 'latest', fn ($j) => $j
+            ->on('portfolio_snapshots.portfolio_id', '=', 'latest.portfolio_id')
+            ->on('portfolio_snapshots.recorded_on', '=', 'latest.max_date')
+        )->selectRaw('SUM(portfolio_snapshots.market_value + portfolio_snapshots.manual_value) as total')
+            ->value('total');
+    }
 }

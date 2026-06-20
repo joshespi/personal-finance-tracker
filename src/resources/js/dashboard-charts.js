@@ -5,7 +5,7 @@ import {
     PieController, ArcElement,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import { filterByRange, resampleByRange, activateBtn, fmtK, fmtFull, makeTimeScales, makeLegendOpts, pointFromRow, buildNorm, benchTickerColors, DEMO_MASK } from './chart-utils';
+import { resampleByRange, fmtFull, makeValueCostChart, makeBenchmarkChart, DEMO_MASK } from './chart-utils';
 
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
 
@@ -31,14 +31,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     syncManualToggle();
-    if (manualBtn) {
-        manualBtn.addEventListener('click', () => {
-            showManual = !showManual;
-            localStorage.setItem('dashShowManual', showManual);
-            syncManualToggle();
-            updateDashChart(dashRange);
-        });
-    }
 
     const demoMode = window.__demoMode ?? false;
 
@@ -68,83 +60,36 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    let dashRange = '1Y';
-    const dashChartEl = document.getElementById('dashChart');
-    if (dashChartEl) {
-        const dashChart = new Chart(dashChartEl, {
-            type: 'line',
-            data: {
-                datasets: [
-                    { label: 'Portfolio Value', data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', fill: true,  tension: 0.3, borderWidth: 2, pointRadius: 0 },
-                    { label: 'Cost Basis',      data: [], borderColor: '#94a3b8', borderDash: [5, 5],                        fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 },
-                ],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                scales: makeTimeScales(gridColor, labelColor, fmtK),
-                plugins: {
-                    legend: makeLegendOpts(labelColor),
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtFull(ctx.parsed.y)}` } },
-                },
-            },
+    const dashData = () => (showManual ? allDataFull : allDataMkt);
+
+    const dashChart = makeValueCostChart({
+        el: document.getElementById('dashChart'),
+        gridColor, labelColor,
+        valueLabel: 'Portfolio Value',
+        data: dashData,
+        btnsSel: '#dash-range-btns',
+        transform: resampleByRange,
+        onUpdate: updateTiles,
+        autoTimeUnit: true,
+    });
+
+    if (manualBtn && dashChart) {
+        manualBtn.addEventListener('click', () => {
+            showManual = !showManual;
+            localStorage.setItem('dashShowManual', showManual);
+            syncManualToggle();
+            dashChart.refresh();
         });
-
-        // Let Chart.js auto-pick the time unit so resampled long-range data
-        // doesn't try to render a daily tick axis.
-        dashChart.options.scales.x.time.unit = false;
-
-        function updateDashChart(range) {
-            const filtered = filterByRange(showManual ? allDataFull : allDataMkt, range);
-            const points   = resampleByRange(filtered);
-            dashChart.data.datasets[0].data = points.map(r => pointFromRow(r, 'value'));
-            dashChart.data.datasets[1].data = points.map(r => pointFromRow(r, 'cost'));
-            dashChart.update();
-            activateBtn('#dash-range-btns', range);
-            updateTiles(filtered, range);
-        }
-
-        document.querySelectorAll('#dash-range-btns button[data-range]').forEach(b =>
-            b.addEventListener('click', () => { dashRange = b.dataset.range; updateDashChart(dashRange); })
-        );
-        updateDashChart(dashRange);
     }
 
-    const benchEl = document.getElementById('benchmarkChart');
-    if (benchEl && Object.keys(benchRaw).length > 0) {
-        let benchRange = '1Y';
-
-        const benchChart = new Chart(benchEl, {
-            type: 'line',
-            data: { datasets: [] },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                scales: makeTimeScales(gridColor, labelColor, v => v.toFixed(1) + '%'),
-                plugins: {
-                    legend: makeLegendOpts(labelColor),
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%` } },
-                },
-            },
-        });
-
-        function updateBenchChart(range) {
-            const datasets = [{ label: 'My Portfolio', data: buildNorm(showManual ? allDataFull : allDataMkt, 'value', range), borderColor: '#6366f1', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 }];
-            Object.keys(benchRaw).forEach(t => datasets.push({
-                label: t, data: buildNorm(benchRaw[t] || [], 'price', range), borderColor: benchTickerColors[t] || '#9ca3af', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0,
-            }));
-            benchChart.data.datasets = datasets;
-            benchChart.update();
-            activateBtn('#bench-range-btns', range);
-        }
-
-        document.querySelectorAll('#bench-range-btns button[data-range]').forEach(b =>
-            b.addEventListener('click', () => { benchRange = b.dataset.range; updateBenchChart(benchRange); })
-        );
-        updateBenchChart(benchRange);
-    }
+    makeBenchmarkChart({
+        el: document.getElementById('benchmarkChart'),
+        gridColor, labelColor,
+        selfLabel: 'My Portfolio',
+        selfData: dashData,
+        benchRaw,
+        btnsSel: '#bench-range-btns',
+    });
 
     const donutEl = document.getElementById('allocationDonut');
     if (donutEl && allocData.total > 0) {

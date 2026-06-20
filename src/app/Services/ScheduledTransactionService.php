@@ -156,9 +156,8 @@ class ScheduledTransactionService
         if ($s->liability) {
             $liability  = $s->liability;
             $balance    = $liability->currentBalance();
-            $rate       = (float) ($liability->interest_rate ?? 0);
             $piPayment  = (float) ($liability->minimum_payment ?? 0);
-            $interest   = $rate > 0 ? round($balance * $rate / 100 / 12, 2) : 0.0;
+            $interest   = round($liability->monthlyInterest(), 2);
             $principal  = max(0.0, round($piPayment - $interest, 2));
             $newBalance = round(max(0.0, $balance - $principal), 2);
 

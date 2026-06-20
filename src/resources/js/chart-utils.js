@@ -1,3 +1,5 @@
+import { Chart } from 'chart.js';
+
 export const DEMO_MASK = '••••';
 
 export function cutoffDate(range) {
@@ -93,6 +95,104 @@ export function buildNorm(data, key, range) {
     const base = f[0][key];
     if (!base) return [];
     return f.map(r => ({ x: new Date(r.date).getTime(), y: parseFloat(((r[key] / base - 1) * 100).toFixed(2)) }));
+}
+
+// Shared value/cost line chart (portfolio "Market Value" vs "Cost Basis").
+// `data` may be an array or a () => array thunk (the dashboard switches source by
+// a manual-assets toggle). `transform` post-processes the range-filtered rows
+// (the dashboard resamples long spans); `onUpdate(filtered, range)` is a hook for
+// side effects like the dashboard summary tiles. Returns { chart, refresh } so
+// callers can re-render the current range without re-reading the active range.
+export function makeValueCostChart({
+    el, gridColor, labelColor, valueLabel, data, btnsSel,
+    range = '1Y', transform = rows => rows, onUpdate, autoTimeUnit = false,
+}) {
+    if (!el) return null;
+
+    const chart = new Chart(el, {
+        type: 'line',
+        data: {
+            datasets: [
+                { label: valueLabel,   data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', fill: true,  tension: 0.3, borderWidth: 2, pointRadius: 0 },
+                { label: 'Cost Basis', data: [], borderColor: '#94a3b8', borderDash: [5, 5],                        fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: makeTimeScales(gridColor, labelColor, fmtK),
+            plugins: {
+                legend: makeLegendOpts(labelColor),
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtFull(ctx.parsed.y)}` } },
+            },
+        },
+    });
+
+    // Let Chart.js auto-pick the time unit so resampled long-range data doesn't
+    // try to render a daily tick axis.
+    if (autoTimeUnit) chart.options.scales.x.time.unit = false;
+
+    let current = range;
+    function update(r) {
+        current = r;
+        const filtered = filterByRange(typeof data === 'function' ? data() : data, r);
+        const points   = transform(filtered);
+        chart.data.datasets[0].data = points.map(row => pointFromRow(row, 'value'));
+        chart.data.datasets[1].data = points.map(row => pointFromRow(row, 'cost'));
+        chart.update();
+        activateBtn(btnsSel, r);
+        if (onUpdate) onUpdate(filtered, r);
+    }
+
+    document.querySelectorAll(btnsSel + ' button[data-range]').forEach(b =>
+        b.addEventListener('click', () => update(b.dataset.range))
+    );
+    update(current);
+
+    return { chart, refresh: () => update(current) };
+}
+
+// Shared benchmark normalized-comparison chart: a "self" series (the portfolio,
+// normalized off its `value`) plus one normalized series per benchmark ticker
+// (off `price`). `selfData` may be an array or a () => array thunk.
+export function makeBenchmarkChart({
+    el, gridColor, labelColor, selfLabel, selfData, benchRaw, btnsSel, range = '1Y',
+}) {
+    if (!el || Object.keys(benchRaw).length === 0) return null;
+
+    const chart = new Chart(el, {
+        type: 'line',
+        data: { datasets: [] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: makeTimeScales(gridColor, labelColor, v => v.toFixed(1) + '%'),
+            plugins: {
+                legend: makeLegendOpts(labelColor),
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%` } },
+            },
+        },
+    });
+
+    function update(r) {
+        const self = typeof selfData === 'function' ? selfData() : selfData;
+        const datasets = [{ label: selfLabel, data: buildNorm(self, 'value', r), borderColor: '#6366f1', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 }];
+        Object.keys(benchRaw).forEach(t => datasets.push({
+            label: t, data: buildNorm(benchRaw[t] || [], 'price', r), borderColor: benchTickerColors[t] || '#9ca3af', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0,
+        }));
+        chart.data.datasets = datasets;
+        chart.update();
+        activateBtn(btnsSel, r);
+    }
+
+    document.querySelectorAll(btnsSel + ' button[data-range]').forEach(b =>
+        b.addEventListener('click', () => update(b.dataset.range))
+    );
+    update(range);
+
+    return chart;
 }
 
 export const benchTickerColors = { SPY: '#10b981', BTC: '#f59e0b' };

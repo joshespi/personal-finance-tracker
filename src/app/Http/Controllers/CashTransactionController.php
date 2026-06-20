@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
+use App\Models\IncomeCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class CashTransactionController extends Controller
 {
@@ -23,7 +23,7 @@ class CashTransactionController extends Controller
             'envelope_id'        => ['nullable', 'integer', 'exists:envelopes,id'],
             'income_category_id' => [
                 'nullable', 'integer',
-                Rule::exists('income_categories', 'id')->where('user_id', $request->user()->id),
+                IncomeCategory::ownershipRule($request->user()->id),
             ],
             'cleared' => ['nullable', 'boolean'],
         ]);

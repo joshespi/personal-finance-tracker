@@ -35,16 +35,7 @@ class PortfolioController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name'              => ['required', 'string', 'max:100'],
-            'description'       => ['nullable', 'string', 'max:1000'],
-            'currency'          => ['required', 'string', 'size:3'],
-            'is_tax_advantaged' => ['boolean'],
-        ]);
-
-        $validated['is_tax_advantaged'] = $request->boolean('is_tax_advantaged');
-
-        $portfolio = $request->user()->portfolios()->create($validated);
+        $portfolio = $request->user()->portfolios()->create($this->validatePayload($request));
 
         ActivityLog::record('portfolio.created', $portfolio, ['name' => $portfolio->name]);
 
@@ -102,19 +93,7 @@ class PortfolioController extends Controller
     {
         $this->authorize('update', $portfolio);
 
-        $validated = $request->validate([
-            'name'              => ['required', 'string', 'max:100'],
-            'description'       => ['nullable', 'string', 'max:1000'],
-            'currency'          => ['required', 'string', 'size:3'],
-            'is_tax_advantaged' => ['boolean'],
-        ]);
-
-        $portfolio->update([
-            'name'              => $validated['name'],
-            'description'       => $validated['description'] ?? null,
-            'currency'          => $validated['currency'],
-            'is_tax_advantaged' => $request->boolean('is_tax_advantaged'),
-        ]);
+        $portfolio->update($this->validatePayload($request));
 
         ActivityLog::record('portfolio.updated', $portfolio, ['name' => $portfolio->name]);
 
@@ -168,6 +147,21 @@ class PortfolioController extends Controller
         $portfolio->manualAssets()->whereNotIn('id', $enabled)->update(['include_in_chart' => false]);
 
         return redirect()->route('portfolios.show', $portfolio);
+    }
+
+    private function validatePayload(Request $request): array
+    {
+        $validated = $request->validate([
+            'name'              => ['required', 'string', 'max:100'],
+            'description'       => ['nullable', 'string', 'max:1000'],
+            'currency'          => ['required', 'string', 'size:3'],
+            'is_tax_advantaged' => ['boolean'],
+        ]);
+
+        $validated['description']       = $validated['description'] ?? null;
+        $validated['is_tax_advantaged'] = $request->boolean('is_tax_advantaged');
+
+        return $validated;
     }
 
     private function buildAllocation(Collection $holdings, Portfolio $portfolio): array

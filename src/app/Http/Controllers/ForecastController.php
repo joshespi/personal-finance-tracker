@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\CashTransaction;
-use App\Models\PortfolioSnapshot;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -39,17 +38,7 @@ class ForecastController extends Controller
 
     private function computeDefaults($user): array
     {
-        $portfolioIds = $user->portfolios()->pluck('id');
-
-        $snapshotValue = $portfolioIds->isNotEmpty()
-            ? PortfolioSnapshot::whereIn('portfolio_id', $portfolioIds)
-                ->orderByDesc('recorded_on')
-                ->get()
-                ->groupBy('portfolio_id')
-                ->sum(fn ($snaps) => (float) $snaps->first()->market_value + (float) $snaps->first()->manual_value)
-            : 0.0;
-
-        $defaultStartNw = round($snapshotValue + $user->totalCash() - $user->totalDebt(), 2);
+        $defaultStartNw = round($user->latestPortfolioValue() + $user->totalCash() - $user->totalDebt(), 2);
 
         $threeMonthsAgo = now()->subMonths(3)->startOfMonth();
         $lastMonthEnd   = now()->subMonth()->endOfMonth();

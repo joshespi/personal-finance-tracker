@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
+use App\Models\Portfolio;
+use App\Models\PortfolioSnapshot;
 use App\Models\User;
 use Tests\TestCase;
 
@@ -94,6 +96,24 @@ class ForecastTest extends TestCase
 
         // Default monthly_savings field should be pre-filled with 200
         $response->assertSee('value="200"', false);
+    }
+
+    public function test_forecast_prefills_starting_nw_from_latest_snapshots(): void
+    {
+        $user = User::factory()->create();
+        $a    = Portfolio::factory()->for($user)->create();
+        $b    = Portfolio::factory()->for($user)->create();
+
+        // Each portfolio's latest snapshot (by recorded_on) should win.
+        PortfolioSnapshot::create(['portfolio_id' => $a->id, 'recorded_on' => '2024-01-01', 'cost_basis' => 0, 'market_value' => 100, 'manual_value' => 0]);
+        PortfolioSnapshot::create(['portfolio_id' => $a->id, 'recorded_on' => '2024-06-01', 'cost_basis' => 0, 'market_value' => 600, 'manual_value' => 150]);
+        PortfolioSnapshot::create(['portfolio_id' => $b->id, 'recorded_on' => '2024-05-01', 'cost_basis' => 0, 'market_value' => 250, 'manual_value' => 0]);
+
+        // Latest values: A = 600 + 150 = 750, B = 250 → starting_nw = 1000 (no cash/debt).
+        $this->actingAs($user)
+            ->get(route('forecast'))
+            ->assertOk()
+            ->assertSee('value="1000"', false);
     }
 
     public function test_milestone_hit_at_year_zero_when_already_above_threshold(): void

@@ -5,8 +5,8 @@ namespace App\Livewire;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
+use App\Models\IncomeCategory;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -127,7 +127,7 @@ class TransactionList extends Component
             'newEnvelopeId'       => ['nullable', 'integer', 'exists:envelopes,id'],
             'newIncomeCategoryId' => [
                 'nullable', 'integer',
-                Rule::exists('income_categories', 'id')->where('user_id', auth()->id()),
+                IncomeCategory::ownershipRule(auth()->id()),
             ],
             'newCleared' => ['boolean'],
         ]);
@@ -185,7 +185,7 @@ class TransactionList extends Component
             'editEnvelopeId'       => ['nullable', 'integer', 'exists:envelopes,id'],
             'editIncomeCategoryId' => [
                 'nullable', 'integer',
-                Rule::exists('income_categories', 'id')->where('user_id', auth()->id()),
+                IncomeCategory::ownershipRule(auth()->id()),
             ],
             'editCleared' => ['boolean'],
         ]);

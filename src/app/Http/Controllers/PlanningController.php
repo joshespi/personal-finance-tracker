@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PortfolioSnapshot;
 use App\Services\AllocatorService;
 use App\Services\DebtPayoffService;
 use App\Services\EmergencyFundService;
@@ -57,18 +56,7 @@ class PlanningController extends Controller
 
         $user = $request->user();
 
-        $portfolioIds = $user->portfolios()->pluck('id');
-        if ($portfolioIds->isNotEmpty()) {
-            $latestDates = PortfolioSnapshot::whereIn('portfolio_id', $portfolioIds)
-                ->selectRaw('portfolio_id, MAX(recorded_on) as max_date')
-                ->groupBy('portfolio_id');
-            $defaultValue = round((float) PortfolioSnapshot::joinSub($latestDates, 'latest', fn ($j) => $j->on('portfolio_snapshots.portfolio_id', '=', 'latest.portfolio_id')
-                ->on('portfolio_snapshots.recorded_on', '=', 'latest.max_date')
-            )->selectRaw('SUM(portfolio_snapshots.market_value + portfolio_snapshots.manual_value) as total')
-                ->value('total'), 2);
-        } else {
-            $defaultValue = 0.0;
-        }
+        $defaultValue = round($user->latestPortfolioValue(), 2);
 
         $sixMonthsAgo = now()->subMonths(6)->startOfMonth();
         $lastMonthEnd = now()->subMonth()->endOfMonth();

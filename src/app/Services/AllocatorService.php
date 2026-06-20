@@ -57,7 +57,7 @@ class AllocatorService
                     $buckets[] = [
                         'label'  => $l->name,
                         'reason' => $apr > 0
-                            ? number_format($apr, 2).'% APR · $'.number_format(round($balance * $apr / 100 / 12, 2), 2).'/mo interest'
+                            ? number_format($apr, 2).'% APR · $'.number_format(round($l->monthlyInterest(), 2), 2).'/mo interest'
                             : 'No APR recorded',
                         'amount' => round($alloc, 2),
                         'gap'    => round($balance, 2),

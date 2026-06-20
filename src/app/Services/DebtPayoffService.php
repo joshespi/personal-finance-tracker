@@ -50,7 +50,7 @@ class DebtPayoffService
         $mortgageData = $mortgages->map(function ($l) {
             $balance         = $l->currentBalance();
             $apr             = (float) ($l->interest_rate ?? 0);
-            $monthlyInterest = round($balance * ($apr / 100 / 12), 2);
+            $monthlyInterest = round($l->monthlyInterest(), 2);
 
             return [
                 'id'               => $l->id,

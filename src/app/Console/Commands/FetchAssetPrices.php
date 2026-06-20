@@ -70,8 +70,9 @@ class FetchAssetPrices extends Command
             return;
         }
 
-        $coinMap = collect($response->json())->keyBy(fn ($c) => strtoupper($c['symbol']));
-        $now     = now();
+        $coinMap     = collect($response->json())->keyBy(fn ($c) => strtoupper($c['symbol']));
+        $now         = now();
+        $newGeckoIds = [];
 
         foreach ($assets as $asset) {
             $coin = $coinMap->get(strtoupper($asset->symbol));
@@ -83,7 +84,7 @@ class FetchAssetPrices extends Command
             }
 
             if (! $asset->coingecko_id) {
-                $asset->update(['coingecko_id' => $coin['id']]);
+                $newGeckoIds[] = ['id' => $asset->id, 'coingecko_id' => $coin['id']];
             }
 
             AssetPrice::create([
@@ -94,6 +95,10 @@ class FetchAssetPrices extends Command
             ]);
 
             $this->line("  {$asset->symbol}: \${$coin['current_price']}");
+        }
+
+        if ($newGeckoIds !== []) {
+            Asset::upsert($newGeckoIds, ['id'], ['coingecko_id']);
         }
     }
 

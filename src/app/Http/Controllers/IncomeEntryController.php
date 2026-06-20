@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\IncomeCategory;
 use App\Models\IncomeEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class IncomeEntryController extends Controller
 {
@@ -17,7 +17,7 @@ class IncomeEntryController extends Controller
             'occurred_at'        => ['required', 'date'],
             'income_category_id' => [
                 'nullable', 'integer',
-                Rule::exists('income_categories', 'id')->where('user_id', $request->user()->id),
+                IncomeCategory::ownershipRule($request->user()->id),
             ],
         ]);
 
