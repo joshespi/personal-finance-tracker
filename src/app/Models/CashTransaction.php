@@ -24,6 +24,32 @@ class CashTransaction extends Model
         return $query->where('cash_transactions.type', 'withdrawal');
     }
 
+    /**
+     * Working/cleared/pending balances summed over an arbitrary set of cash transactions.
+     * Accepts any query or relation builder so a single account and a multi-account ledger
+     * share one definition of "working = deposits − withdrawals".
+     *
+     * @return array{working: float, cleared: float, uncleared: float}
+     */
+    public static function balanceTotals($query): array
+    {
+        // toBase() so the result is a plain row, not a CashTransaction model — otherwise the
+        // "cleared" alias would hit the model's boolean cast and collapse the sum to 0/1.
+        $row = $query->toBase()
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = 'deposit' THEN amount ELSE -amount END), 0) AS working")
+            ->selectRaw("COALESCE(SUM(CASE WHEN cleared = 1 THEN (CASE WHEN type = 'deposit' THEN amount ELSE -amount END) ELSE 0 END), 0) AS cleared")
+            ->first();
+
+        $working = (float) $row->working;
+        $cleared = (float) $row->cleared;
+
+        return [
+            'working'   => $working,
+            'cleared'   => $cleared,
+            'uncleared' => round($working - $cleared, 2),
+        ];
+    }
+
     public function cashAccount(): BelongsTo
     {
         return $this->belongsTo(CashAccount::class);

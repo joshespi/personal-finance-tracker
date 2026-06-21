@@ -22,7 +22,8 @@
                     // Single source of truth for the "Money" menu, rendered in both the
                     // desktop dropdown and the mobile nav below.
                     $moneyLinks = [
-                        ['route' => 'cash-accounts.index',          'label' => 'Spending Accounts',    'active' => 'cash-accounts.*'],
+                        ['route' => 'cash-accounts.index',          'label' => 'Spending Accounts',    'active' => 'cash-accounts.index'],
+                        ['route' => 'cash-accounts.all',            'label' => 'All Transactions',     'active' => 'cash-accounts.all'],
                         ['route' => 'envelopes.index',              'label' => 'Budget Envelopes',     'active' => 'envelopes.*'],
                         ['route' => 'income-categories.index',      'label' => 'Income Categories',    'active' => 'income-categories.*'],
                         ['route' => 'budget-rule',                  'label' => '50/30/20 Budget Rule', 'active' => 'budget-rule'],
@@ -39,7 +40,7 @@
                     // The trigger also lights up on routes that aren't direct menu entries.
                     $moneyPatterns = array_merge(
                         array_column($moneyLinks, 'active'),
-                        ['ready-to-assign', 'income-entries.*'],
+                        ['ready-to-assign', 'income-entries.*', 'cash-accounts.*'],
                     );
                     $moneyActive = request()->routeIs(...$moneyPatterns);
 

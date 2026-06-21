@@ -119,6 +119,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('liability-balances/{balance}', [LiabilityBalanceController::class, 'destroy'])
         ->name('liabilities.balances.destroy');
 
+    // Literal route registered before the resource so "all" isn't matched as {cashAccount}.
+    Route::get('cash-accounts/all', [CashAccountController::class, 'all'])->name('cash-accounts.all');
+
     Route::resource('cash-accounts', CashAccountController::class);
 
     Route::post('cash-accounts/{cashAccount}/reconcile', [CashAccountController::class, 'reconcile'])

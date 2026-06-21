@@ -40,6 +40,12 @@ class CashAccountController extends Controller
         ]);
     }
 
+    /** Consolidated ledger across every account, with upcoming scheduled transactions. */
+    public function all(): View
+    {
+        return view('cash-accounts.all');
+    }
+
     public function create(): View
     {
         return view('cash-accounts.create', [

@@ -5,10 +5,16 @@
                 <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Spending Accounts</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Checking, savings, credit cards, and other spending accounts.</p>
             </div>
-            <a href="{{ route('cash-accounts.create') }}"
-               class="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 dark:hover:bg-gray-600 transition">
-                + Add Account
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('cash-accounts.all') }}"
+                   class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                    All Transactions
+                </a>
+                <a href="{{ route('cash-accounts.create') }}"
+                   class="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 dark:hover:bg-gray-600 transition">
+                    + Add Account
+                </a>
+            </div>
         </div>
     </x-slot>
 
