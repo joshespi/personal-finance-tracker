@@ -224,6 +224,8 @@ class EnvelopeController extends Controller
         $validated['is_mandatory']      = $request->boolean('is_mandatory');
         $validated['is_emergency_fund'] = $request->boolean('is_emergency_fund');
         $validated['is_savings']        = $request->boolean('is_savings') || $validated['is_emergency_fund'];
+        // Necessities are always part of the EF target; the toggle adds non-mandatory ones.
+        $validated['include_in_emergency_fund'] = $request->boolean('include_in_emergency_fund') || $validated['is_mandatory'];
 
         return $validated;
     }

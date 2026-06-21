@@ -14,7 +14,7 @@ class Envelope extends Model
 
     public const CATEGORY_ORDER = ['Emergency Fund', 'Mandatory', 'Wealth Building', 'Spending'];
 
-    protected $fillable = ['user_id', 'name', 'monthly_target', 'goal_amount', 'goal_date', 'color', 'sort_order', 'notes', 'is_mandatory', 'is_emergency_fund', 'is_savings'];
+    protected $fillable = ['user_id', 'name', 'monthly_target', 'goal_amount', 'goal_date', 'color', 'sort_order', 'notes', 'is_mandatory', 'include_in_emergency_fund', 'is_emergency_fund', 'is_savings'];
 
     public function category(): string
     {
@@ -27,12 +27,13 @@ class Envelope extends Model
     }
 
     protected $casts = [
-        'monthly_target'    => 'decimal:8',
-        'goal_amount'       => 'decimal:2',
-        'goal_date'         => 'date',
-        'is_mandatory'      => 'boolean',
-        'is_emergency_fund' => 'boolean',
-        'is_savings'        => 'boolean',
+        'monthly_target'            => 'decimal:8',
+        'goal_amount'               => 'decimal:2',
+        'goal_date'                 => 'date',
+        'is_mandatory'              => 'boolean',
+        'include_in_emergency_fund' => 'boolean',
+        'is_emergency_fund'         => 'boolean',
+        'is_savings'                => 'boolean',
     ];
 
     public function user(): BelongsTo

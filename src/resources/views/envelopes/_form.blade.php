@@ -80,6 +80,13 @@
               title="Use this for retirement contributions and long-term investing — not sinking funds for purchases like a vacation or gadget. Those are deferred wants and belong in your 30% discretionary budget.">(long-term savings &amp; investing — counts toward your 20% Savings ⓘ)</span>
     </label>
     <label class="flex items-center gap-2.5 cursor-pointer">
+        <input type="checkbox" name="include_in_emergency_fund" value="1"
+               {{ old('include_in_emergency_fund', $e?->include_in_emergency_fund) ? 'checked' : '' }}
+               class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500">
+        <span class="text-sm text-gray-700 dark:text-gray-300">Include in emergency-fund target</span>
+        <span class="text-xs text-gray-400 dark:text-gray-500">(counts toward your EF goal without making it a 50% Need — e.g. groceries, fuel; Necessities are always included)</span>
+    </label>
+    <label class="flex items-center gap-2.5 cursor-pointer">
         <input type="checkbox" name="is_emergency_fund" value="1"
                {{ old('is_emergency_fund', $e?->is_emergency_fund) ? 'checked' : '' }}
                class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500">

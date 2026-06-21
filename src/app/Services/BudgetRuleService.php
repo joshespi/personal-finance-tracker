@@ -17,6 +17,8 @@ class BudgetRuleService
 
     public const WINDOW_MONTHS = 6;
 
+    public function __construct(private EmergencyFundService $emergencyFund) {}
+
     public function compute(User $user): array
     {
         $monthNow    = Carbon::now()->startOfMonth();
@@ -28,7 +30,6 @@ class BudgetRuleService
             ->get();
 
         $emergencyEnvelope = $envelopes->firstWhere('is_emergency_fund', true);
-        $mandatoryIds      = $envelopes->where('is_mandatory', true)->pluck('id');
         $savingsIds        = $envelopes->filter(fn ($e) => $e->is_savings || $e->is_emergency_fund)->pluck('id');
         $otherSavings      = $envelopes
             ->filter(fn ($e) => $e->is_savings && ! $e->is_emergency_fund)
@@ -40,15 +41,11 @@ class BudgetRuleService
             ->sum('cash_transactions.amount');
         $monthlyIncome = round($incomeTotal / self::WINDOW_MONTHS, 2);
 
-        // Mandatory is measured by what you assign to mandatory envelopes (funding),
-        // not by logged cash spend — consistent with how savings is measured below.
-        $monthlyMandatory = $mandatoryIds->isEmpty() ? 0.0 : round(
-            (float) EnvelopeTransaction::whereIn('envelope_id', $mandatoryIds)
-                ->where('type', 'fund')
-                ->whereBetween('occurred_at', [$windowStart, $windowEnd])
-                ->sum('amount') / self::WINDOW_MONTHS,
-            2
-        );
+        // Mandatory ("needs") is measured by what your bills actually cost, not by
+        // envelope funding — the same spend/scheduled baseline the Emergency Fund page
+        // uses, so the two pages always agree. (Savings below stays funding-based:
+        // it reflects money you deliberately set aside, which funding captures.)
+        $monthlyMandatory = $this->emergencyFund->monthlyBaseline($user);
 
         $monthlySavings = 0.0;
         if ($savingsIds->isNotEmpty()) {

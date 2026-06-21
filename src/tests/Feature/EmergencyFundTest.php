@@ -196,6 +196,40 @@ class EmergencyFundTest extends TestCase
             ->assertSee('2,679.12');     // 3-month target = 893.04 * 3
     }
 
+    public function test_non_mandatory_envelope_opted_in_counts_toward_baseline(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+        // Groceries: not a Necessity, but explicitly opted into the emergency-fund target.
+        $envelope = Envelope::factory()->for($user)->create([
+            'name'                      => 'Groceries',
+            'is_mandatory'              => false,
+            'include_in_emergency_fund' => true,
+        ]);
+        CashTransaction::factory()->for($account)->spend($envelope)->create([
+            'amount'      => 600,
+            'occurred_at' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('emergency-fund'))
+            ->assertOk()
+            ->assertSee('Groceries')
+            ->assertSee('100.00');  // 600 / 6 months
+    }
+
+    public function test_opt_in_flag_does_not_make_envelope_a_50_pct_need(): void
+    {
+        $user     = User::factory()->create();
+        $envelope = Envelope::factory()->for($user)->create([
+            'is_mandatory'              => false,
+            'include_in_emergency_fund' => true,
+        ]);
+
+        // Category stays out of "Mandatory" so the budget-rule classification is untouched.
+        $this->assertNotSame('Mandatory', $envelope->category());
+    }
+
     public function test_inactive_scheduled_spend_does_not_drive_baseline(): void
     {
         $user     = User::factory()->create();

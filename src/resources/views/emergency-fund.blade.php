@@ -12,7 +12,7 @@
             @if ($mandatoryEnvelopes->isEmpty() || $monthlyBaseline == 0)
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-sm text-gray-600 dark:text-gray-400 space-y-2">
                     <p class="font-semibold text-gray-800 dark:text-gray-200">No mandatory expenses configured.</p>
-                    <p>Mark envelopes as <strong>Mandatory expense</strong> in their edit form to build your target. Typical candidates: rent, utilities, groceries, insurance.</p>
+                    <p>Mark envelopes as a <strong>Necessity</strong>, or check <strong>Include in emergency-fund target</strong>, in their edit form to build your target. Typical candidates: rent, utilities, groceries, fuel, insurance.</p>
                     <a href="{{ route('envelopes.index') }}" class="inline-block mt-2 text-indigo-600 dark:text-indigo-400 hover:underline">Go to envelopes &rarr;</a>
                 </div>
             @else

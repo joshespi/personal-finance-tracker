@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\CashAccount;
+use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
 use App\Models\Liability;
@@ -40,10 +42,11 @@ class AllocatorTest extends TestCase
     {
         $user = User::factory()->create(['emergency_fund_target_months' => 3]);
 
-        // Mandatory envelope funded $600/mo over 6 months → target = 3 * $600 = $1800
+        // Mandatory envelope spend $600/mo over 6 months → target = 3 * $600 = $1800
+        $account      = CashAccount::factory()->for($user)->create();
         $mandatoryEnv = Envelope::factory()->for($user)->create(['is_mandatory' => true, 'is_emergency_fund' => false]);
         foreach (range(0, 5) as $i) {
-            EnvelopeTransaction::factory()->for($mandatoryEnv)->fund()->create([
+            CashTransaction::factory()->for($account)->spend($mandatoryEnv)->create([
                 'amount'      => 600,
                 'occurred_at' => now()->startOfMonth()->subMonths($i),
             ]);
@@ -64,9 +67,10 @@ class AllocatorTest extends TestCase
     {
         $user = User::factory()->create(['emergency_fund_target_months' => 3]);
 
+        $account      = CashAccount::factory()->for($user)->create();
         $mandatoryEnv = Envelope::factory()->for($user)->create(['is_mandatory' => true, 'is_emergency_fund' => false]);
         foreach (range(0, 5) as $i) {
-            EnvelopeTransaction::factory()->for($mandatoryEnv)->fund()->create([
+            CashTransaction::factory()->for($account)->spend($mandatoryEnv)->create([
                 'amount' => 500, 'occurred_at' => now()->startOfMonth()->subMonths($i),
             ]);
         }
