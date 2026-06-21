@@ -146,7 +146,7 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('income-categories', IncomeCategoryController::class)->except(['show']);
 
-    Route::resource('scheduled-transactions', ScheduledTransactionController::class);
+    Route::resource('scheduled-transactions', ScheduledTransactionController::class)->except(['index', 'show']);
     Route::patch('scheduled-transactions/{scheduledTransaction}/toggle', [ScheduledTransactionController::class, 'toggle'])
         ->name('scheduled-transactions.toggle');
     Route::post('scheduled-transactions/{scheduledTransaction}/enter-now', [ScheduledTransactionController::class, 'enterNow'])

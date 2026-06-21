@@ -11,19 +11,6 @@ use Illuminate\View\View;
 
 class ScheduledTransactionController extends Controller
 {
-    public function index(Request $request, ScheduledTransactionService $service): View
-    {
-        $count = $service->materializeForUser($request->user())->count();
-
-        $scheduled = $request->user()
-            ->scheduledTransactions()
-            ->with(['envelope', 'cashAccount'])
-            ->orderBy('next_due_at')
-            ->get();
-
-        return view('scheduled-transactions.index', compact('scheduled', 'count'));
-    }
-
     public function create(Request $request): View
     {
         $envelopes    = $request->user()->envelopes()->orderBy('sort_order')->get();
@@ -37,7 +24,7 @@ class ScheduledTransactionController extends Controller
         $data = $this->validated($request);
         $request->user()->scheduledTransactions()->create($data);
 
-        return redirect()->route('scheduled-transactions.index')
+        return redirect()->route('cash-accounts.all')
             ->with('success', 'Scheduled transaction created.');
     }
 
@@ -55,7 +42,7 @@ class ScheduledTransactionController extends Controller
         $this->authorize('update', $scheduledTransaction);
         $scheduledTransaction->update($this->validated($request));
 
-        return redirect()->route('scheduled-transactions.index')
+        return redirect()->route('cash-accounts.all')
             ->with('success', 'Scheduled transaction updated.');
     }
 
@@ -64,7 +51,7 @@ class ScheduledTransactionController extends Controller
         $this->authorize('delete', $scheduledTransaction);
         $scheduledTransaction->delete();
 
-        return redirect()->route('scheduled-transactions.index')
+        return redirect()->route('cash-accounts.all')
             ->with('success', 'Scheduled transaction deleted.');
     }
 
@@ -73,7 +60,7 @@ class ScheduledTransactionController extends Controller
         $this->authorize('update', $scheduledTransaction);
         $scheduledTransaction->update(['is_active' => ! $scheduledTransaction->is_active]);
 
-        return redirect()->route('scheduled-transactions.index');
+        return redirect()->route('cash-accounts.all');
     }
 
     /** Record the next occurrence now (it happened early) and advance the schedule. */

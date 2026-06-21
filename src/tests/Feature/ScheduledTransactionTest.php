@@ -12,16 +12,9 @@ use Tests\TestCase;
 
 class ScheduledTransactionTest extends TestCase
 {
-    // ── Auth ─────────────────────────────────────────────────────────────────
+    // ── Upcoming & Scheduled widget (on the all-transactions page) ─────────────
 
-    public function test_index_requires_auth(): void
-    {
-        $this->get(route('scheduled-transactions.index'))->assertRedirect(route('login'));
-    }
-
-    // ── Index ─────────────────────────────────────────────────────────────────
-
-    public function test_index_shows_user_scheduled_transactions(): void
+    public function test_all_transactions_shows_user_scheduled_transactions(): void
     {
         $user    = User::factory()->create();
         $account = CashAccount::factory()->for($user)->create(['name' => 'Checking']);
@@ -30,12 +23,12 @@ class ScheduledTransactionTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('scheduled-transactions.index'))
+            ->get(route('cash-accounts.all'))
             ->assertOk()
             ->assertSee('Monthly rent');
     }
 
-    public function test_index_does_not_show_other_users_scheduled_transactions(): void
+    public function test_all_transactions_does_not_show_other_users_scheduled_transactions(): void
     {
         $user    = User::factory()->create();
         $other   = User::factory()->create();
@@ -45,7 +38,7 @@ class ScheduledTransactionTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('scheduled-transactions.index'))
+            ->get(route('cash-accounts.all'))
             ->assertOk()
             ->assertDontSee('Other rent');
     }
@@ -64,7 +57,7 @@ class ScheduledTransactionTest extends TestCase
             'recurrence'      => 'biweekly',
             'next_due_at'     => today()->addMonth()->toDateString(),
             'cash_account_id' => $account->id,
-        ])->assertRedirect(route('scheduled-transactions.index'));
+        ])->assertRedirect(route('cash-accounts.all'));
 
         $this->assertDatabaseHas('scheduled_transactions', [
             'user_id'     => $user->id,
@@ -87,7 +80,7 @@ class ScheduledTransactionTest extends TestCase
             'next_due_at'     => today()->addMonth()->toDateString(),
             'envelope_id'     => $envelope->id,
             'cash_account_id' => $account->id,
-        ])->assertRedirect(route('scheduled-transactions.index'));
+        ])->assertRedirect(route('cash-accounts.all'));
 
         $this->assertDatabaseHas('scheduled_transactions', [
             'user_id'         => $user->id,
@@ -143,7 +136,7 @@ class ScheduledTransactionTest extends TestCase
             'recurrence'      => 'weekly',
             'next_due_at'     => today()->addMonths(2)->toDateString(),
             'cash_account_id' => $account->id,
-        ])->assertRedirect(route('scheduled-transactions.index'));
+        ])->assertRedirect(route('cash-accounts.all'));
 
         $this->assertDatabaseHas('scheduled_transactions', [
             'id'          => $scheduled->id,
@@ -177,7 +170,7 @@ class ScheduledTransactionTest extends TestCase
 
         $this->actingAs($user)
             ->delete(route('scheduled-transactions.destroy', $scheduled))
-            ->assertRedirect(route('scheduled-transactions.index'));
+            ->assertRedirect(route('cash-accounts.all'));
 
         $this->assertDatabaseMissing('scheduled_transactions', ['id' => $scheduled->id]);
     }
@@ -201,7 +194,7 @@ class ScheduledTransactionTest extends TestCase
 
         $this->actingAs($user)
             ->patch(route('scheduled-transactions.toggle', $scheduled))
-            ->assertRedirect(route('scheduled-transactions.index'));
+            ->assertRedirect(route('cash-accounts.all'));
 
         $this->assertDatabaseHas('scheduled_transactions', ['id' => $scheduled->id, 'is_active' => false]);
     }

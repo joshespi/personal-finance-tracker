@@ -127,7 +127,7 @@ class AllTransactions extends Component
         return auth()->user()->scheduledTransactions()
             ->where('is_active', true)
             ->with(['envelope:id,name,color', 'cashAccount:id,name'])
-            ->orderBy('next_due_at')
+            ->orderByDesc('next_due_at')
             ->get();
     }
 

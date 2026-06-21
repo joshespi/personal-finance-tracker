@@ -15,8 +15,8 @@ Hi {{ $user->name }},
 
 These entries have already been added to your accounts. Log in to review them.
 
-@component('mail::button', ['url' => route('scheduled-transactions.index')])
-View Scheduled Transactions
+@component('mail::button', ['url' => route('cash-accounts.all')])
+View Transactions
 @endcomponent
 
 Thanks,<br>

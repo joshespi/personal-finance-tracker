@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div>
             <p class="text-sm text-gray-500 dark:text-gray-400">
-                <a href="{{ route('scheduled-transactions.index') }}" class="hover:underline">Scheduled Transactions</a>
+                <a href="{{ route('cash-accounts.all') }}" class="hover:underline">All Transactions</a>
             </p>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight mt-0.5">New Scheduled Transaction</h2>
         </div>
@@ -16,7 +16,7 @@
                     @include('scheduled-transactions._form')
                     <div class="flex items-center gap-3 pt-2">
                         <x-primary-button>Create</x-primary-button>
-                        <a href="{{ route('scheduled-transactions.index') }}"
+                        <a href="{{ route('cash-accounts.all') }}"
                            class="text-sm text-gray-500 dark:text-gray-400 hover:underline">Cancel</a>
                     </div>
                 </form>

@@ -33,14 +33,13 @@
                         ['route' => 'planning',                     'label' => 'Planning',             'active' => 'planning'],
                         ['route' => 'cashflow',                     'label' => 'Cashflow',             'active' => 'cashflow'],
                         ['route' => 'spending-trends',              'label' => 'Spending Trends',      'active' => 'spending-trends'],
-                        ['route' => 'scheduled-transactions.index', 'label' => 'Scheduled',            'active' => 'scheduled-transactions.*'],
                         ['route' => 'debt-payoff',                  'label' => 'Debt Payoff',          'active' => 'debt-payoff'],
                         ['route' => 'liabilities.index',            'label' => 'Liabilities',          'active' => 'liabilities.*'],
                     ];
                     // The trigger also lights up on routes that aren't direct menu entries.
                     $moneyPatterns = array_merge(
                         array_column($moneyLinks, 'active'),
-                        ['ready-to-assign', 'income-entries.*', 'cash-accounts.*'],
+                        ['ready-to-assign', 'income-entries.*', 'cash-accounts.*', 'scheduled-transactions.*'],
                     );
                     $moneyActive = request()->routeIs(...$moneyPatterns);
 
