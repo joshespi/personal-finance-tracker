@@ -33,6 +33,21 @@ enum Recurrence: string
         };
     }
 
+    /**
+     * Average number of occurrences per month — multiply an entry's per-occurrence
+     * amount by this to normalize any cadence to a monthly figure.
+     */
+    public function monthlyFactor(): float
+    {
+        return match ($this) {
+            self::Monthly   => 1.0,
+            self::Weekly    => 52 / 12,
+            self::Biweekly  => 26 / 12,
+            self::Quarterly => 1 / 3,
+            self::Yearly    => 1 / 12,
+        };
+    }
+
     /** Advance a date by one period of this cadence. */
     public function advance(Carbon $date): Carbon
     {

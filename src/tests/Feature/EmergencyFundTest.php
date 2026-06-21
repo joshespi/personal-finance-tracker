@@ -6,6 +6,7 @@ use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
+use App\Models\ScheduledTransaction;
 use App\Models\User;
 use Tests\TestCase;
 
@@ -162,6 +163,57 @@ class EmergencyFundTest extends TestCase
             'occurred_at' => now()->toDateString(),
         ]);
 
+        $this->actingAs($user)
+            ->get(route('emergency-fund'))
+            ->assertOk()
+            ->assertSee('100.00');
+    }
+
+    public function test_scheduled_recurring_spend_drives_baseline_at_full_monthly_value(): void
+    {
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
+        $envelope = Envelope::factory()->for($user)->create(['name' => 'House', 'is_mandatory' => true]);
+
+        // Only one mortgage payment recorded → 6-month average would dilute it to $148.84.
+        CashTransaction::factory()->for($account)->spend($envelope)->create([
+            'amount'      => 893.04,
+            'occurred_at' => now()->toDateString(),
+        ]);
+
+        // ...but an active monthly scheduled spend says the real obligation is $893.04/mo.
+        ScheduledTransaction::factory()->for($user)->envelopeSpend()->create([
+            'envelope_id'     => $envelope->id,
+            'cash_account_id' => $account->id,
+            'amount'          => 893.04,
+            'recurrence'      => 'monthly',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('emergency-fund'))
+            ->assertOk()
+            ->assertSee('893.04')        // baseline uses full monthly value
+            ->assertSee('2,679.12');     // 3-month target = 893.04 * 3
+    }
+
+    public function test_inactive_scheduled_spend_does_not_drive_baseline(): void
+    {
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
+        $envelope = Envelope::factory()->for($user)->create(['is_mandatory' => true]);
+
+        CashTransaction::factory()->for($account)->spend($envelope)->create([
+            'amount'      => 600,
+            'occurred_at' => now()->toDateString(),
+        ]);
+        ScheduledTransaction::factory()->for($user)->envelopeSpend()->inactive()->create([
+            'envelope_id'     => $envelope->id,
+            'cash_account_id' => $account->id,
+            'amount'          => 5000,
+            'recurrence'      => 'monthly',
+        ]);
+
+        // Inactive schedule ignored → falls back to the $600/6 = $100 average.
         $this->actingAs($user)
             ->get(route('emergency-fund'))
             ->assertOk()

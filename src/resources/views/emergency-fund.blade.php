@@ -24,7 +24,7 @@
                         <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">
                             ${{ number_format($monthlyBaseline, 2) }}
                         </p>
-                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">avg last 6 months</p>
+                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">scheduled or recent monthly spend</p>
                     </div>
 
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
@@ -85,7 +85,7 @@
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
                     <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                         <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Mandatory Expenses</h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Average monthly spend over the last 6 months</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Scheduled monthly amount, or the recent 6-month average where higher</p>
                     </div>
                     <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($monthlyBreakdown as $row)

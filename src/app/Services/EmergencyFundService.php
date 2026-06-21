@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Concerns\BucketsByMonth;
+use App\Enums\Recurrence;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
+use App\Models\ScheduledTransaction;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
@@ -44,6 +46,17 @@ class EmergencyFundService
 
             $byEnvelope = $spendRows->groupBy('envelope_id');
 
+            // Active recurring spends tied to a mandatory envelope, normalized to a
+            // monthly amount. This lets a scheduled-but-not-yet-recorded obligation
+            // (e.g. a monthly mortgage with only one payment in the actuals) count at
+            // its full monthly value instead of being diluted across the 6-month window.
+            $scheduledByEnvelope = ScheduledTransaction::where('user_id', $user->id)
+                ->where('is_active', true)
+                ->whereIn('envelope_id', $mandatoryEnvelopes->pluck('id'))
+                ->whereIn('type', ['envelope_spend', 'mortgage_payment'])
+                ->get(['envelope_id', 'amount', 'recurrence'])
+                ->groupBy('envelope_id');
+
             foreach ($mandatoryEnvelopes as $env) {
                 $monthlyTotals = array_fill_keys($monthKeys, 0.0);
                 foreach ($byEnvelope->get($env->id, collect()) as $txn) {
@@ -52,9 +65,16 @@ class EmergencyFundService
                         $monthlyTotals[$key] += (float) $txn->amount;
                     }
                 }
-                $avg = round(array_sum($monthlyTotals) / 6, 2);
-                $monthlyBaseline += $avg;
-                $monthlyBreakdown->push(['envelope' => $env, 'avg' => $avg]);
+                $historicalAvg = array_sum($monthlyTotals) / 6;
+
+                $scheduledMonthly = $scheduledByEnvelope->get($env->id, collect())
+                    ->sum(fn ($s) => (float) $s->amount * ($s->recurrence ?? Recurrence::Monthly)->monthlyFactor());
+
+                // Take the larger of the two so a recurring obligation isn't double-counted
+                // with its own (partial) history, but ad-hoc spend still shows through.
+                $monthly = round(max($historicalAvg, $scheduledMonthly), 2);
+                $monthlyBaseline += $monthly;
+                $monthlyBreakdown->push(['envelope' => $env, 'avg' => $monthly]);
             }
 
             $monthlyBaseline = round($monthlyBaseline, 2);
