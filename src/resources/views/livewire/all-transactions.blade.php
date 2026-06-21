@@ -369,7 +369,7 @@
                                     <td class="px-6 py-3 text-right">
                                         <button wire:click.stop="deleteTransaction({{ $t->id }})"
                                                 wire:confirm="Delete this transaction?"
-                                                class="text-red-600 dark:text-red-400 hover:underline text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                                                class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:underline text-xs transition-colors">
                                             Delete
                                         </button>
                                     </td>
