@@ -213,12 +213,7 @@
                                         </td>
                                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $row['description'] ?? '—' }}</td>
                                         <td class="px-6 py-3 text-gray-400 dark:text-gray-500 text-xs">{{ $row['source'] ?? '—' }}</td>
-                                        <td class="px-6 py-3 text-right font-mono font-semibold text-red-600 dark:text-red-400">
-                                            @if ($row['type'] === 'spend'){{ number_format($row['amount'], 2) }}@else<span class="text-gray-300 dark:text-gray-600">—</span>@endif
-                                        </td>
-                                        <td class="px-6 py-3 text-right font-mono font-semibold text-green-600 dark:text-green-400">
-                                            @if ($row['type'] === 'fund'){{ number_format($row['amount'], 2) }}@else<span class="text-gray-300 dark:text-gray-600">—</span>@endif
-                                        </td>
+                                        <x-flow-cells :inflow="$row['type'] === 'fund'" :amount="number_format($row['amount'], 2)" />
                                         <td class="px-6 py-3 text-right">
                                             <form method="POST" action="{{ $row['delete_url'] }}" class="inline"
                                                   onsubmit="return confirm('Delete this transaction?')">

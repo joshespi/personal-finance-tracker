@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Recurrence;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,7 @@ class ScheduledTransaction extends Model
         'amount'      => 'decimal:4',
         'next_due_at' => 'date',
         'is_active'   => 'boolean',
+        'recurrence'  => Recurrence::class,
     ];
 
     public function user(): BelongsTo
@@ -61,10 +63,6 @@ class ScheduledTransaction extends Model
 
     public function recurrenceLabel(): string
     {
-        return match ($this->recurrence) {
-            'weekly'   => 'Weekly',
-            'biweekly' => 'Biweekly',
-            default    => 'Monthly',
-        };
+        return ($this->recurrence ?? Recurrence::Monthly)->label();
     }
 }

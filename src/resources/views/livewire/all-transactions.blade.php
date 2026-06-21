@@ -358,12 +358,7 @@
                                             <span class="text-gray-300 dark:text-gray-600">—</span>
                                         @endif
                                     </td>
-                                    <td class="px-6 py-3 text-right font-mono font-semibold text-red-600 dark:text-red-400">
-                                        @if ($t->type === 'withdrawal'){{ $demo->amt((float) $t->amount) }}@else<span class="text-gray-300 dark:text-gray-600">—</span>@endif
-                                    </td>
-                                    <td class="px-6 py-3 text-right font-mono font-semibold text-green-600 dark:text-green-400">
-                                        @if ($t->type === 'deposit'){{ $demo->amt((float) $t->amount) }}@else<span class="text-gray-300 dark:text-gray-600">—</span>@endif
-                                    </td>
+                                    <x-flow-cells :inflow="$t->type === 'deposit'" :amount="$demo->amt((float) $t->amount)" />
                                     <td class="px-6 py-3 text-right">
                                         <button wire:click.stop="deleteTransaction({{ $t->id }})"
                                                 wire:confirm="Delete this transaction?"

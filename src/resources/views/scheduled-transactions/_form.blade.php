@@ -44,9 +44,9 @@
             <x-input-label for="recurrence" value="Recurrence" />
             <select id="recurrence" name="recurrence"
                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                <option value="monthly" @selected(old('recurrence', $s?->recurrence) === 'monthly')>Monthly</option>
-                <option value="weekly" @selected(old('recurrence', $s?->recurrence) === 'weekly')>Weekly</option>
-                <option value="biweekly" @selected(old('recurrence', $s?->recurrence) === 'biweekly')>Biweekly (every 2 weeks)</option>
+                @foreach (\App\Enums\Recurrence::cases() as $r)
+                    <option value="{{ $r->value }}" @selected(old('recurrence', $s?->recurrence?->value) === $r->value)>{{ $r->formLabel() }}</option>
+                @endforeach
             </select>
             <x-input-error :messages="$errors->get('recurrence')" class="mt-2" />
         </div>

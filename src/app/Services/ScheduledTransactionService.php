@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\Recurrence;
 use App\Models\LiabilityBalance;
 use App\Models\ScheduledTransaction;
 use App\Models\User;
@@ -169,12 +170,8 @@ class ScheduledTransactionService
         }
     }
 
-    private function advance(Carbon $date, string $recurrence): Carbon
+    private function advance(Carbon $date, ?Recurrence $recurrence): Carbon
     {
-        return match ($recurrence) {
-            'weekly'   => $date->copy()->addWeek(),
-            'biweekly' => $date->copy()->addWeeks(2),
-            default    => $date->copy()->addMonth(),
-        };
+        return ($recurrence ?? Recurrence::Monthly)->advance($date);
     }
 }

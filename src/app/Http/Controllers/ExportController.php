@@ -208,7 +208,7 @@ class ExportController extends Controller
                 'description' => $s->description,
                 'amount'      => (float) $s->amount,
                 'type'        => $s->type,
-                'recurrence'  => $s->recurrence,
+                'recurrence'  => $s->recurrence?->value,
                 'next_due_at' => $s->next_due_at?->toDateString(),
                 'is_active'   => (bool) $s->is_active,
             ])->values(),

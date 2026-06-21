@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Recurrence;
 use App\Models\ScheduledTransaction;
 use App\Services\ScheduledTransactionService;
 use Illuminate\Http\RedirectResponse;
@@ -93,7 +94,7 @@ class ScheduledTransactionController extends Controller
             'description' => 'required|string|max:500',
             'amount'      => 'required|numeric|min:0.01',
             'type'        => 'required|in:envelope_fund,envelope_spend,cash_deposit,cash_withdrawal',
-            'recurrence'  => 'required|in:monthly,weekly,biweekly',
+            'recurrence'  => ['required', Rule::in(Recurrence::values())],
             'next_due_at' => 'required|date',
             'envelope_id' => in_array($type, ['envelope_fund', 'envelope_spend'])
                 ? ['required', $envelopeRule]

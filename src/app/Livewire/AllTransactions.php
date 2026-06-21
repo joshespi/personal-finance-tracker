@@ -128,9 +128,10 @@ class AllTransactions extends Component
             ->where('is_active', true)
             ->with(['envelope:id,name,color', 'cashAccount:id,name'])
             ->orderByDesc('next_due_at')
-            // Within the same day, list outgoing first and income below it, since
-            // income is the one that gets "entered" first to fund the day's spend.
-            ->orderByRaw("CASE WHEN type = 'cash_deposit' THEN 1 ELSE 0 END")
+            // Within the same day, list outgoing first and inflows below them, since
+            // inflows are the ones that get "entered" first to fund the day's spend.
+            // Keep this set in lockstep with ScheduledTransaction::isInflow().
+            ->orderByRaw("CASE WHEN type IN ('cash_deposit', 'envelope_fund') THEN 1 ELSE 0 END")
             ->get();
     }
 
