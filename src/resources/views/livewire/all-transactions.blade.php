@@ -205,6 +205,13 @@
                     @endforeach
                 </select>
 
+                <select wire:model.live="statusFilter"
+                        class="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">
+                    <option value="">All statuses</option>
+                    <option value="pending">Pending only</option>
+                    <option value="cleared">Cleared only</option>
+                </select>
+
                 <div class="flex items-center gap-2 sm:min-w-[18rem]">
                     <input type="search" wire:model.live.debounce.300ms="filter"
                            placeholder="Filter: 45.32 or whole foods"
@@ -220,7 +227,7 @@
 
         @if ($this->transactions->isEmpty())
             <div class="p-6 text-sm text-gray-500 dark:text-gray-400">
-                {{ ($filter || $accountFilter) ? 'No transactions match the current filter.' : 'No transactions yet.' }}
+                {{ ($filter || $accountFilter || $statusFilter) ? 'No transactions match the current filter.' : 'No transactions yet.' }}
             </div>
         @else
             <div class="overflow-x-auto">

@@ -60,6 +60,9 @@ class AllTransactions extends Component
     /** Narrow the ledger to a single account; 0/empty means all accounts. */
     public ?int $accountFilter = null;
 
+    /** Narrow by clearing status: '' = all, 'pending' = uncleared, 'cleared'. */
+    public string $statusFilter = '';
+
     /** Rows per page. */
     public const PER_PAGE = 50;
 
@@ -98,7 +101,9 @@ class AllTransactions extends Component
         // whereIn over the user's own account ids is the ownership guard; the account
         // filter, when set, narrows within that set (a non-owned id can't slip through).
         $query = CashTransaction::whereIn('cash_account_id', $this->accountIds())
-            ->when($this->accountFilter, fn ($q) => $q->where('cash_account_id', $this->accountFilter));
+            ->when($this->accountFilter, fn ($q) => $q->where('cash_account_id', $this->accountFilter))
+            ->when($this->statusFilter === 'pending', fn ($q) => $q->where('cleared', false))
+            ->when($this->statusFilter === 'cleared', fn ($q) => $q->where('cleared', true));
 
         $f = strtolower(trim($this->filter));
 
@@ -141,6 +146,11 @@ class AllTransactions extends Component
     }
 
     public function updatedAccountFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStatusFilter(): void
     {
         $this->resetPage();
     }
