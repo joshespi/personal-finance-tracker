@@ -53,6 +53,12 @@ class ScheduledTransaction extends Model
         };
     }
 
+    /** Whether this scheduled entry increases a balance (deposit/fund) vs. draws it down. */
+    public function isInflow(): bool
+    {
+        return in_array($this->type, ['cash_deposit', 'envelope_fund'], true);
+    }
+
     public function recurrenceLabel(): string
     {
         return match ($this->recurrence) {

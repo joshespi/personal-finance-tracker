@@ -56,7 +56,7 @@
                             </p>
                         </div>
                         <div class="text-right shrink-0">
-                            <p class="text-sm font-mono font-semibold text-gray-900 dark:text-gray-100">${{ $demo->amt((float)$s->amount) }}</p>
+                            <p class="text-sm font-mono font-semibold {{ $s->isInflow() ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">{{ $s->isInflow() ? '+' : '−' }}${{ $demo->amt((float)$s->amount) }}</p>
                             <p class="text-xs mt-0.5 {{ ($isDue || $isOverdue) ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-500 dark:text-gray-400' }}">
                                 @if ($isOverdue) Overdue · @elseif ($isDue) Due · @endif
                                 {{ $s->next_due_at->format('M j, Y') }}
