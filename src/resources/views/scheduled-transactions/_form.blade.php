@@ -55,7 +55,7 @@
         <div>
             <x-input-label for="next_due_at" value="Next due date" />
             <x-text-input id="next_due_at" name="next_due_at" type="date" class="mt-1 block w-full"
-                          :value="old('next_due_at', $s?->next_due_at?->format('Y-m-d'))" required />
+                          :value="old('next_due_at', $s?->next_due_at?->format('Y-m-d') ?? now()->format('Y-m-d'))" required />
             <x-input-error :messages="$errors->get('next_due_at')" class="mt-2" />
         </div>
     </div>

@@ -195,7 +195,8 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Description</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Account</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Amount</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Outflow</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Inflow</th>
                                     <th class="px-6 py-3"></th>
                                 </tr>
                             </thead>
@@ -212,8 +213,11 @@
                                         </td>
                                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $row['description'] ?? '—' }}</td>
                                         <td class="px-6 py-3 text-gray-400 dark:text-gray-500 text-xs">{{ $row['source'] ?? '—' }}</td>
-                                        <td class="px-6 py-3 text-right font-mono font-semibold {{ $row['type'] === 'fund' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
-                                            {{ $row['type'] === 'fund' ? '+' : '−' }}{{ number_format($row['amount'], 2) }}
+                                        <td class="px-6 py-3 text-right font-mono font-semibold text-red-600 dark:text-red-400">
+                                            @if ($row['type'] === 'spend'){{ number_format($row['amount'], 2) }}@else<span class="text-gray-300 dark:text-gray-600">—</span>@endif
+                                        </td>
+                                        <td class="px-6 py-3 text-right font-mono font-semibold text-green-600 dark:text-green-400">
+                                            @if ($row['type'] === 'fund'){{ number_format($row['amount'], 2) }}@else<span class="text-gray-300 dark:text-gray-600">—</span>@endif
                                         </td>
                                         <td class="px-6 py-3 text-right">
                                             <form method="POST" action="{{ $row['delete_url'] }}" class="inline"

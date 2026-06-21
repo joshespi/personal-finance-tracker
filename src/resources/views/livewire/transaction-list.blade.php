@@ -208,7 +208,8 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Description</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Envelope / Category</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Amount</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Outflow</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Inflow</th>
                             <th class="px-6 py-3"></th>
                         </tr>
                     </thead>
@@ -260,7 +261,7 @@
                                         <x-input-error :messages="$errors->get('editEnvelopeId')" class="mt-1" />
                                         <x-input-error :messages="$errors->get('editIncomeCategoryId')" class="mt-1" />
                                     </td>
-                                    <td class="px-4 py-2 text-right">
+                                    <td class="px-4 py-2 text-right" colspan="2">
                                         <input type="number" wire:model="editAmount" min="0" step="any"
                                                placeholder="0.00"
                                                class="block w-28 ml-auto border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md shadow-sm text-sm text-right font-mono focus:border-indigo-500 focus:ring-indigo-500" />
@@ -314,8 +315,11 @@
                                             <span class="text-gray-300 dark:text-gray-600">—</span>
                                         @endif
                                     </td>
-                                    <td class="px-6 py-3 text-right font-mono font-semibold {{ $t->type === 'deposit' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
-                                        {{ $t->type === 'deposit' ? '+' : '−' }}{{ $demo->amt((float) $t->amount) }}
+                                    <td class="px-6 py-3 text-right font-mono font-semibold text-red-600 dark:text-red-400">
+                                        @if ($t->type === 'withdrawal'){{ $demo->amt((float) $t->amount) }}@else<span class="text-gray-300 dark:text-gray-600">—</span>@endif
+                                    </td>
+                                    <td class="px-6 py-3 text-right font-mono font-semibold text-green-600 dark:text-green-400">
+                                        @if ($t->type === 'deposit'){{ $demo->amt((float) $t->amount) }}@else<span class="text-gray-300 dark:text-gray-600">—</span>@endif
                                     </td>
                                     <td class="px-6 py-3 text-right">
                                         <button wire:click.stop="deleteTransaction({{ $t->id }})"
