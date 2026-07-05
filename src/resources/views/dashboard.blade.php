@@ -8,7 +8,7 @@
 
             @php
                 $hasPortfolios = ! $summaries->isEmpty();
-                $hasMoneyData  = $totals['total_value'] > 0 || $totals['total_debt'] > 0;
+                $hasMoneyData  = $totals['total_value'] > 0 || $totals['total_debt'] > 0 || $totals['pension_value'] > 0 || $totals['pension_monthly_income'] > 0;
                 $monthlySpend  = $budgetRuleData['monthly_mandatory'] + $budgetRuleData['monthly_discretionary'];
             @endphp
 
@@ -115,6 +115,8 @@
                             // that never leaves a single orphan on the last row (avoid a remainder
                             // of 1). Prefer more columns; literal class strings keep Tailwind happy.
                             $tileCount = 5; // Cash, Total Assets, Total Debt, Net Worth, Ready to Assign
+                            if ($totals['pension_monthly_income'] > 0) $tileCount++;
+                            if ($totals['pension_value'] > 0) $tileCount++;
                             if ($totals['debt_to_asset'] !== null) $tileCount++;
                             if ($budgetRuleData['emergency_target'] > 0) $tileCount++;
                             if ($budgetRuleData['has_data']) {
@@ -148,6 +150,24 @@
                                     {{ $totals['total_debt'] > 0 ? '−' : '' }}${{ $demo->amt($totals['total_debt']) }}
                                 </p>
                             </x-stat-tile>
+                            @if ($totals['pension_monthly_income'] > 0)
+                                <x-stat-tile>
+                                    <x-slot:label><a href="{{ route('pensions.index') }}" class="hover:underline">Retirement Income</a></x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono text-indigo-600 dark:text-indigo-400">
+                                        ${{ $demo->amt($totals['pension_monthly_income']) }}<span class="text-sm text-gray-400 font-normal">/mo</span>
+                                    </p>
+                                    <p class="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">pension{{ $totals['pension_draw_age'] ? ' at '.$totals['pension_draw_age'] : '' }} · for life</p>
+                                </x-stat-tile>
+                            @endif
+                            @if ($totals['pension_value'] > 0)
+                                <x-stat-tile>
+                                    <x-slot:label><a href="{{ route('pensions.index') }}" class="hover:underline">Pension Value</a></x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                        +${{ $demo->amt($totals['pension_value']) }}
+                                    </p>
+                                    <p class="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">lump-sum PV · in net worth</p>
+                                </x-stat-tile>
+                            @endif
                             <x-stat-tile :highlight="true">
                                 <x-slot:label>Net Worth</x-slot:label>
                                 <p class="mt-1 text-2xl font-semibold font-mono {{ $totals['net_worth'] >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">

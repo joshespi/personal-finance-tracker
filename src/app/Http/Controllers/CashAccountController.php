@@ -23,8 +23,7 @@ class CashAccountController extends Controller
     {
         $accounts = $request->user()
             ->cashAccounts()
-            ->withSum(['transactions as deposits_total' => fn ($q) => $q->where('type', 'deposit')], 'amount')
-            ->withSum(['transactions as withdrawals_total' => fn ($q) => $q->where('type', 'withdrawal')], 'amount')
+            ->withCurrentBalance()
             ->orderBy('name')
             ->get()
             ->each(function ($a) {

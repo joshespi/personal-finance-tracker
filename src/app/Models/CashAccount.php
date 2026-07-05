@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +32,18 @@ class CashAccount extends Model
     public function scheduledTransactions(): HasMany
     {
         return $this->hasMany(ScheduledTransaction::class);
+    }
+
+    /**
+     * Eager-load `deposits_total` / `withdrawals_total` aggregates per account so a
+     * list of accounts can show balances in one query (no N+1). Callers derive
+     * `current_balance = deposits_total − withdrawals_total`.
+     */
+    public function scopeWithCurrentBalance(Builder $query): Builder
+    {
+        return $query
+            ->withSum(['transactions as deposits_total' => fn ($q) => $q->where('type', 'deposit')], 'amount')
+            ->withSum(['transactions as withdrawals_total' => fn ($q) => $q->where('type', 'withdrawal')], 'amount');
     }
 
     /** Working balance — every transaction, cleared or not. */

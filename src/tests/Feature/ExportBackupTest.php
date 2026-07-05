@@ -7,6 +7,7 @@ use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Liability;
 use App\Models\LiabilityBalance;
+use App\Models\Pension;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use App\Models\User;
@@ -41,6 +42,7 @@ class ExportBackupTest extends TestCase
         $this->assertArrayHasKey('portfolios', $data);
         $this->assertArrayHasKey('liabilities', $data);
         $this->assertArrayHasKey('cash_accounts', $data);
+        $this->assertArrayHasKey('pensions', $data);
         $this->assertArrayHasKey('envelopes', $data);
         $this->assertArrayHasKey('income_entries', $data);
         $this->assertArrayHasKey('scheduled_transactions', $data);
@@ -110,6 +112,27 @@ class ExportBackupTest extends TestCase
         $this->assertCount(1, $data['cash_accounts'][0]['transactions']);
         $this->assertSame('deposit', $data['cash_accounts'][0]['transactions'][0]['type']);
         $this->assertEquals(500.0, $data['cash_accounts'][0]['transactions'][0]['amount']);
+    }
+
+    public function test_backup_includes_pensions(): void
+    {
+        $user = User::factory()->create();
+        Pension::factory()->for($user)->create([
+            'name'                 => 'URS Pension',
+            'service_credit_years' => 16.588,
+            'multiplier_pct'       => 2.000,
+            'include_in_net_worth' => true,
+        ]);
+
+        $data = json_decode(
+            $this->actingAs($user)->get(route('export.backup'))->streamedContent(),
+            true
+        );
+
+        $this->assertCount(1, $data['pensions']);
+        $this->assertSame('URS Pension', $data['pensions'][0]['name']);
+        $this->assertEqualsWithDelta(16.588, $data['pensions'][0]['service_credit_years'], 0.001);
+        $this->assertTrue($data['pensions'][0]['include_in_net_worth']);
     }
 
     public function test_backup_cross_user_isolation(): void

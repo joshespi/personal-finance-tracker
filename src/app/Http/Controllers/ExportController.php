@@ -109,6 +109,8 @@ class ExportController extends Controller
 
         $cashAccounts = $user->cashAccounts()->with('transactions.incomeCategory:id,name')->get();
 
+        $pensions = $user->pensions()->orderBy('name')->get();
+
         $envelopes = $user->envelopes()->with('transactions')->get();
 
         $payload = [
@@ -174,6 +176,25 @@ class ExportController extends Controller
                     'income_category' => $t->incomeCategory?->name,
                     'cleared'         => (bool) $t->cleared,
                 ])->values(),
+            ])->values(),
+            'pensions' => $pensions->map(fn ($p) => [
+                'name'                     => $p->name,
+                'plan_label'               => $p->plan_label,
+                'membership_date'          => $p->membership_date?->toDateString(),
+                'service_credit_years'     => (float) $p->service_credit_years,
+                'service_cap_years'        => $p->service_cap_years !== null ? (float) $p->service_cap_years : null,
+                'multiplier_pct'           => (float) $p->multiplier_pct,
+                'final_average_salary'     => (float) $p->final_average_salary,
+                'salary_growth_pct'        => (float) $p->salary_growth_pct,
+                'cola_pct'                 => (float) $p->cola_pct,
+                'monthly_benefit_estimate' => $p->monthly_benefit_estimate !== null ? (float) $p->monthly_benefit_estimate : null,
+                'birth_year'               => $p->birth_year !== null ? (int) $p->birth_year : null,
+                'retirement_age'           => (int) $p->retirement_age,
+                'life_expectancy_age'      => (int) $p->life_expectancy_age,
+                'discount_rate_pct'        => (float) $p->discount_rate_pct,
+                'include_in_net_worth'     => (bool) $p->include_in_net_worth,
+                'notes'                    => $p->notes,
+                'currency'                 => $p->currency,
             ])->values(),
             'income_categories' => $user->incomeCategories()->orderBy('sort_order')->orderBy('name')->get()->map(fn ($c) => [
                 'name'       => $c->name,

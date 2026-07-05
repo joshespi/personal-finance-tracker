@@ -30,6 +30,7 @@ use App\Http\Controllers\LiabilityBalanceController;
 use App\Http\Controllers\LiabilityController;
 use App\Http\Controllers\ManualAssetController;
 use App\Http\Controllers\ManualValuationController;
+use App\Http\Controllers\PensionController;
 use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\PortfolioSliceController;
@@ -113,6 +114,8 @@ Route::middleware('auth')->group(function () {
         ->only(['store', 'destroy']);
 
     Route::resource('liabilities', LiabilityController::class);
+
+    Route::resource('pensions', PensionController::class)->except(['show']);
 
     Route::post('liabilities/{liability}/balances', [LiabilityBalanceController::class, 'store'])
         ->name('liabilities.balances.store');

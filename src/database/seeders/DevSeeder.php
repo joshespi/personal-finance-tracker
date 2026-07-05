@@ -14,6 +14,7 @@ use App\Models\Liability;
 use App\Models\LiabilityBalance;
 use App\Models\ManualAsset;
 use App\Models\ManualValuation;
+use App\Models\Pension;
 use App\Models\Portfolio;
 use App\Models\ScheduledTransaction;
 use App\Models\Transaction;
@@ -47,10 +48,36 @@ class DevSeeder extends Seeder
 
         $this->seedPortfolios($demo);
         $this->seedManualAssetsAndLiabilities($demo);
+        $this->seedPension($demo);
         $this->seedCashAccounts($demo);
         $this->seedEnvelopes($demo);
         $this->seedIncome($demo);
         $this->seedScheduledTransactions($demo);
+    }
+
+    private function seedPension(User $user): void
+    {
+        // A URS Tier 1 Public Employees defined-benefit pension: ~16.6 years of
+        // service credit at a 2% multiplier, drawn at 52, valued as a COLA'd life
+        // annuity at a 2% real discount rate.
+        Pension::updateOrCreate(
+            ['user_id' => $user->id, 'name' => 'URS Pension'],
+            [
+                'plan_label'           => 'Tier 1 Public Employees',
+                'membership_date'      => '2009-12-01',
+                'service_credit_years' => 16.588,
+                'multiplier_pct'       => 2.000,
+                'final_average_salary' => 92000,
+                'salary_growth_pct'    => 0,
+                'cola_pct'             => 4.00,
+                'birth_year'           => CarbonImmutable::now()->subYears(40)->year,
+                'retirement_age'       => 52,
+                'life_expectancy_age'  => 90,
+                'discount_rate_pct'    => 2.00,
+                'include_in_net_worth' => true,
+                'currency'             => 'USD',
+            ],
+        );
     }
 
     private function seedPortfolios(User $user): void

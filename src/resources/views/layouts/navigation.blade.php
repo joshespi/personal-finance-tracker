@@ -1,288 +1,263 @@
-<nav x-data="{
-        open: false,
-        dark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
-    }"
-    x-init="$watch('dark', val => { document.documentElement.classList.toggle('dark', val); localStorage.setItem('theme', val ? 'dark' : 'light'); })"
-    class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex">
-                <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}" class="flex items-center gap-2">
-                        <x-application-logo class="block h-8 w-auto fill-current text-indigo-600" />
-                        <span class="font-semibold text-gray-800 dark:text-gray-200 text-sm hidden sm:block">{{ config('app.name') }}</span>
-                    </a>
-                </div>
-                @php
-                    $portfoliosActive = request()->routeIs('portfolios.*')
-                        || request()->routeIs('manual-assets.*')
-                        || request()->routeIs('transactions.*')
-                        || request()->routeIs('tax.*')
-                        || request()->routeIs('dividends');
-                    // Single source of truth for the "Money" menu, rendered in both the
-                    // desktop dropdown and the mobile nav below.
-                    $moneyLinks = [
-                        ['route' => 'cash-accounts.index',          'label' => 'Spending Accounts',    'active' => 'cash-accounts.index'],
-                        ['route' => 'cash-accounts.all',            'label' => 'All Transactions',     'active' => 'cash-accounts.all'],
-                        ['route' => 'envelopes.index',              'label' => 'Budget Envelopes',     'active' => 'envelopes.*'],
-                        ['route' => 'income-categories.index',      'label' => 'Income Categories',    'active' => 'income-categories.*'],
-                        ['route' => 'budget-rule',                  'label' => '50/30/20 Budget Rule', 'active' => 'budget-rule'],
-                        ['route' => 'emergency-fund',               'label' => 'Emergency Fund',       'active' => 'emergency-fund'],
-                        ['route' => 'allocator',                    'label' => 'Allocator',            'active' => 'allocator'],
-                        ['route' => 'analysis',                     'label' => 'Analysis',             'active' => 'analysis'],
-                        ['route' => 'planning',                     'label' => 'Planning',             'active' => 'planning'],
-                        ['route' => 'cashflow',                     'label' => 'Cashflow',             'active' => 'cashflow'],
-                        ['route' => 'spending-trends',              'label' => 'Spending Trends',      'active' => 'spending-trends'],
-                        ['route' => 'debt-payoff',                  'label' => 'Debt Payoff',          'active' => 'debt-payoff'],
-                        ['route' => 'liabilities.index',            'label' => 'Liabilities',          'active' => 'liabilities.*'],
-                    ];
-                    // The trigger also lights up on routes that aren't direct menu entries.
-                    $moneyPatterns = array_merge(
-                        array_column($moneyLinks, 'active'),
-                        ['ready-to-assign', 'income-entries.*', 'cash-accounts.*', 'scheduled-transactions.*'],
-                    );
-                    $moneyActive = request()->routeIs(...$moneyPatterns);
+@php
+    $req = request();
+    $tab = $req->query('tab');
 
-                    $triggerActive = 'inline-flex items-center px-1 pt-1 border-b-2 border-indigo-400 text-sm font-medium leading-5 text-gray-900 dark:text-gray-100 focus:outline-none transition duration-150 ease-in-out';
-                    $triggerInactive = 'inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600 focus:outline-none transition duration-150 ease-in-out';
-                @endphp
-                <div class="hidden sm:space-x-4 lg:space-x-8 sm:-my-px sm:ms-4 lg:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
-                    </x-nav-link>
+    // ── Section active states (drive accordion auto-open) ──────────────────────
+    $budgetActive   = $req->routeIs('envelopes.*', 'ready-to-assign', 'income-categories.*', 'income-entries.*', 'liabilities.*', 'pensions.*');
+    $accountsActive = $req->routeIs('cash-accounts.*');
+    $investActive   = $req->routeIs('portfolios.*', 'manual-assets.*', 'transactions.*', 'dividends', 'tax.*');
+    $planActive     = $req->routeIs('analysis', 'planning', 'forecast', 'cashflow', 'spending-trends', 'budget-rule', 'emergency-fund', 'debt-payoff', 'allocator');
 
-                    <div class="relative flex items-stretch" x-data="{ open: false }" @click.outside="open = false" @close.stop="open = false">
-                        <button type="button" @click="open = !open" class="{{ $portfoliosActive ? $triggerActive : $triggerInactive }}">
-                            {{ __('Portfolios') }}
-                            <svg class="ms-1 h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                            </svg>
-                        </button>
-                        <div x-show="open"
-                             x-transition:enter="transition ease-out duration-200"
-                             x-transition:enter-start="opacity-0 scale-95"
-                             x-transition:enter-end="opacity-100 scale-100"
-                             x-transition:leave="transition ease-in duration-75"
-                             x-transition:leave-start="opacity-100 scale-100"
-                             x-transition:leave-end="opacity-0 scale-95"
-                             class="absolute z-50 top-full start-0 mt-1 w-48 rounded-md shadow-lg ltr:origin-top-left rtl:origin-top-right"
-                             style="display: none;"
-                             @click="open = false">
-                            <div class="rounded-md ring-1 ring-black ring-opacity-5 dark:ring-gray-700 py-1 bg-white dark:bg-gray-800">
-                                <x-dropdown-link :href="route('portfolios.index')">{{ __('Portfolios') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('transactions.all')">{{ __('Transactions') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('dividends')">{{ __('Dividend Income') }}</x-dropdown-link>
-                                <x-dropdown-link :href="route('tax.summary')">{{ __('Tax Summary') }}</x-dropdown-link>
-                            </div>
-                        </div>
-                    </div>
+    // analysis/planning default to their first tab when no ?tab= is present.
+    $isAnalysisTab = fn (string $t) => $req->routeIs('analysis') && ($tab ?? 'cashflow') === $t;
+    $isPlanningTab = fn (string $t) => $req->routeIs('planning') && ($tab ?? 'debt-payoff') === $t;
 
-                    <div class="relative flex items-stretch" x-data="{ open: false }" @click.outside="open = false" @close.stop="open = false">
-                        <button type="button" @click="open = !open" class="{{ $moneyActive ? $triggerActive : $triggerInactive }}">
-                            {{ __('Money') }}
-                            <svg class="ms-1 h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                            </svg>
-                        </button>
-                        <div x-show="open"
-                             x-transition:enter="transition ease-out duration-200"
-                             x-transition:enter-start="opacity-0 scale-95"
-                             x-transition:enter-end="opacity-100 scale-100"
-                             x-transition:leave="transition ease-in duration-75"
-                             x-transition:leave-start="opacity-100 scale-100"
-                             x-transition:leave-end="opacity-0 scale-95"
-                             class="absolute z-50 top-full start-0 mt-1 w-48 rounded-md shadow-lg ltr:origin-top-left rtl:origin-top-right"
-                             style="display: none;"
-                             @click="open = false">
-                            <div class="rounded-md ring-1 ring-black ring-opacity-5 dark:ring-gray-700 py-1 bg-white dark:bg-gray-800">
-                                @foreach ($moneyLinks as $link)
-                                    <x-dropdown-link :href="route($link['route'])">{{ __($link['label']) }}</x-dropdown-link>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
+    // ── Cash accounts for the Accounts section (single aggregate query) ────────
+    $currentAccountId = optional($req->route('cash_account'))->id;
+    $sidebarAccounts = Auth::user()->cashAccounts()
+        ->withCurrentBalance()
+        ->orderBy('name')
+        ->get()
+        ->each(fn ($a) => $a->current_balance = (float) ($a->deposits_total ?? 0) - (float) ($a->withdrawals_total ?? 0));
 
-                    <x-nav-link :href="route('forecast')" :active="request()->routeIs('forecast')">
-                        {{ __('Forecast') }}
-                    </x-nav-link>
+    $accountItems = [];
+    foreach ($sidebarAccounts as $a) {
+        $accountItems[] = [
+            'label'    => $demo->n($a->name),
+            'href'     => route('cash-accounts.show', $a),
+            'active'   => $currentAccountId === $a->id,
+            'meta'     => ($a->current_balance < 0 ? '−$' : '$').$demo->amt(abs($a->current_balance)),
+            'negative' => $a->current_balance < 0,
+        ];
+    }
+    $accountItems[] = ['label' => 'All Transactions', 'href' => route('cash-accounts.all'), 'active' => $req->routeIs('cash-accounts.all')];
+    $accountItems[] = ['label' => 'Manage accounts', 'href' => route('cash-accounts.index'), 'active' => $req->routeIs('cash-accounts.index', 'cash-accounts.create')];
 
-                    @if (Auth::user()->is_admin)
-                        <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
-                            {{ __('Admin') }}
-                        </x-nav-link>
-                    @endif
-                </div>
-            </div>
+    // ── Icon paths (Heroicons v2 outline) ─────────────────────────────────────
+    $icons = [
+        'home'     => 'm2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25',
+        'budget'   => 'M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75',
+        'accounts' => 'M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z',
+        'invest'   => 'M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941',
+        'plan'     => 'M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008Zm0 2.25h.008v.008H8.25V13.5Zm0 2.25h.008v.008H8.25v-.008Zm0 2.25h.008v.008H8.25V18Zm2.498-6.75h.007v.008h-.007v-.008Zm0 2.25h.007v.008h-.007V13.5Zm0 2.25h.007v.008h-.007v-.008Zm0 2.25h.007v.008h-.007V18Zm2.504-6.75h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V13.5Zm0 2.25h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V18Zm2.498-6.75h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V13.5ZM8.25 6h7.5v2.25h-7.5V6ZM12 2.25c-1.892 0-3.758.11-5.593.322C5.307 2.7 4.5 3.65 4.5 4.757V19.5a2.25 2.25 0 0 0 2.25 2.25h10.5a2.25 2.25 0 0 0 2.25-2.25V4.757c0-1.108-.806-2.057-1.907-2.185A48.507 48.507 0 0 0 12 2.25Z',
+        'admin'    => 'M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z',
+        'plus'     => 'M12 4.5v15m7.5-7.5h-15',
+        'moon'     => 'M21.752 15.002A9.718 9.718 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z',
+        'sun'      => 'M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z',
+    ];
 
-            <div class="hidden sm:flex sm:items-center sm:ms-6 gap-2">
-                <!-- Quick add -->
-                @auth
-                <button @click="$dispatch('open-quick-add')"
-                        class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                        title="Quick add">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                </button>
-                @endauth
-                <!-- Theme toggle -->
-                <button @click="dark = !dark"
-                        class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                        title="Toggle dark mode">
-                    <!-- Moon: show in light mode to switch to dark -->
-                    <svg x-show="!dark" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-                    </svg>
-                    <!-- Sun: show in dark mode to switch to light -->
-                    <svg x-show="dark" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-                    </svg>
-                </button>
+    // Reusable section blocks: key => [label, icon, active, items[]].
+    $sections = [
+        'budget' => [
+            'label'  => 'Budget',
+            'icon'   => $icons['budget'],
+            'active' => $budgetActive,
+            'items'  => [
+                ['label' => 'Envelopes',   'href' => route('envelopes.index'),         'active' => $req->routeIs('envelopes.*', 'ready-to-assign')],
+                ['label' => 'Income',      'href' => route('income-categories.index'), 'active' => $req->routeIs('income-categories.*', 'income-entries.*')],
+                ['label' => 'Liabilities', 'href' => route('liabilities.index'),        'active' => $req->routeIs('liabilities.*')],
+                ['label' => 'Pension',     'href' => route('pensions.index'),           'active' => $req->routeIs('pensions.*')],
+            ],
+        ],
+        'accounts' => [
+            'label'  => 'Accounts',
+            'icon'   => $icons['accounts'],
+            'active' => $accountsActive,
+            'items'  => $accountItems,
+        ],
+        'invest' => [
+            'label'  => 'Invest',
+            'icon'   => $icons['invest'],
+            'active' => $investActive,
+            'items'  => [
+                ['label' => 'Portfolios',   'href' => route('portfolios.index'),  'active' => $req->routeIs('portfolios.*', 'manual-assets.*')],
+                ['label' => 'Transactions', 'href' => route('transactions.all'),  'active' => $req->routeIs('transactions.*')],
+                ['label' => 'Dividends',    'href' => route('dividends'),         'active' => $req->routeIs('dividends')],
+                ['label' => 'Tax',          'href' => route('tax.summary'),       'active' => $req->routeIs('tax.*')],
+            ],
+        ],
+        'plan' => [
+            'label'  => 'Plan',
+            'icon'   => $icons['plan'],
+            'active' => $planActive,
+            'items'  => [
+                ['label' => 'Cashflow',        'href' => route('analysis', ['tab' => 'cashflow']),         'active' => $isAnalysisTab('cashflow') || $req->routeIs('cashflow')],
+                ['label' => 'Spending Trends', 'href' => route('analysis', ['tab' => 'trends']),           'active' => $isAnalysisTab('trends') || $req->routeIs('spending-trends')],
+                ['label' => '50/30/20 Rule',   'href' => route('analysis', ['tab' => 'budget-rule']),      'active' => $isAnalysisTab('budget-rule') || $req->routeIs('budget-rule')],
+                ['label' => 'Emergency Fund',  'href' => route('planning', ['tab' => 'emergency-fund']),   'active' => $isPlanningTab('emergency-fund') || $req->routeIs('emergency-fund')],
+                ['label' => 'Debt Payoff',     'href' => route('planning', ['tab' => 'debt-payoff']),      'active' => $isPlanningTab('debt-payoff') || $req->routeIs('debt-payoff')],
+                ['label' => 'Allocator',       'href' => route('planning', ['tab' => 'allocator']),        'active' => $isPlanningTab('allocator') || $req->routeIs('allocator')],
+                ['label' => 'Retirement',      'href' => route('planning', ['tab' => 'retirement']),       'active' => $isPlanningTab('retirement')],
+                ['label' => 'Forecast',        'href' => route('forecast'),                                'active' => $req->routeIs('forecast')],
+            ],
+        ],
+    ];
+@endphp
 
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none transition ease-in-out duration-150">
-                            <div>{{ Auth::user()->name }}</div>
-                            <div class="ms-1">
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                        </button>
-                    </x-slot>
-                    <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Profile') }}
-                        </x-dropdown-link>
-                        <x-dropdown-link :href="route('export.index')">
-                            {{ __('Export & Backup') }}
-                        </x-dropdown-link>
-                        <form method="POST" action="{{ route('demo-mode.toggle') }}">
-                            @csrf
-                            <x-dropdown-link href="#" onclick="event.preventDefault(); this.closest('form').submit();">
-                                {{ $demo->isActive() ? __('Exit Demo Mode') : __('Demo Mode') }}
-                            </x-dropdown-link>
-                        </form>
-                        <x-dropdown-link :href="route('donate')">
-                            {{ __('Donate') }}
-                        </x-dropdown-link>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault(); this.closest('form').submit();">
-                                {{ __('Log Out') }}
-                            </x-dropdown-link>
-                        </form>
-                    </x-slot>
-                </x-dropdown>
-            </div>
+{{-- Mobile backdrop --}}
+<div x-show="sidebarOpen" x-cloak @click="sidebarOpen = false"
+     x-transition:enter="transition-opacity ease-linear duration-200"
+     x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+     x-transition:leave="transition-opacity ease-linear duration-200"
+     x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-30 bg-black/40 lg:hidden"></div>
 
-            <div class="-me-2 flex items-center sm:hidden gap-1">
-                <!-- Mobile quick add -->
-                @auth
-                <button @click="$dispatch('open-quick-add')"
-                        class="p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                        title="Quick add">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                </button>
-                @endauth
-                <!-- Mobile theme toggle -->
-                <button @click="dark = !dark"
-                        class="p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                    <svg x-show="!dark" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-                    </svg>
-                    <svg x-show="dark" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-                    </svg>
-                </button>
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700 focus:text-gray-500 transition duration-150 ease-in-out">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                        <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-        </div>
+{{-- Sidebar --}}
+<aside x-data="{ open: {
+            budget: {{ $budgetActive ? 'true' : 'false' }},
+            accounts: {{ $accountsActive ? 'true' : 'false' }},
+            invest: {{ $investActive ? 'true' : 'false' }},
+            plan: {{ $planActive ? 'true' : 'false' }},
+        } }"
+       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+       class="fixed inset-y-0 left-0 z-40 w-64 flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 lg:translate-x-0">
+
+    {{-- Brand --}}
+    <div class="h-16 shrink-0 flex items-center gap-2 px-4 border-b border-gray-100 dark:border-gray-700">
+        <a href="{{ route('dashboard') }}" class="flex items-center gap-2 min-w-0">
+            <x-application-logo class="block h-8 w-auto fill-current text-indigo-600" />
+            <span class="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">{{ config('app.name') }}</span>
+        </a>
+        <button @click="sidebarOpen = false"
+                class="ms-auto lg:hidden p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                title="Close menu">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+        </button>
     </div>
 
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
-        <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
-            </x-responsive-nav-link>
+    {{-- Scrollable nav --}}
+    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        {{-- Dashboard --}}
+        <x-sidebar-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['home'] }}" />
+            </svg>
+            <span class="flex-1 truncate">{{ __('Dashboard') }}</span>
+        </x-sidebar-link>
 
-            <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Portfolios') }}</p>
-            <x-responsive-nav-link :href="route('portfolios.index')" :active="request()->routeIs('portfolios.*') || request()->routeIs('manual-assets.*')">
-                {{ __('Portfolios') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('transactions.all')" :active="request()->routeIs('transactions.all')">
-                {{ __('Transactions') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('dividends')" :active="request()->routeIs('dividends')">
-                {{ __('Dividend Income') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('tax.summary')" :active="request()->routeIs('tax.*')">
-                {{ __('Tax Summary') }}
-            </x-responsive-nav-link>
+        {{-- Collapsible sections --}}
+        @foreach ($sections as $key => $section)
+            <div class="pt-1">
+                <button type="button" @click="open['{{ $key }}'] = !open['{{ $key }}']"
+                        class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="{{ $section['icon'] }}" />
+                    </svg>
+                    <span class="flex-1 text-start">{{ $section['label'] }}</span>
+                    <svg class="h-4 w-4 shrink-0 transition-transform duration-200" :class="open['{{ $key }}'] && 'rotate-90'"
+                         fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </button>
 
-            <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Money') }}</p>
-            @foreach ($moneyLinks as $link)
-                <x-responsive-nav-link :href="route($link['route'])" :active="request()->routeIs($link['active'])">
-                    {{ __($link['label']) }}
-                </x-responsive-nav-link>
-            @endforeach
-
-            <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Planning') }}</p>
-            <x-responsive-nav-link :href="route('forecast')" :active="request()->routeIs('forecast')">
-                {{ __('Forecast') }}
-            </x-responsive-nav-link>
-
-            @if (Auth::user()->is_admin)
-                <p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Admin') }}</p>
-                <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
-                    {{ __('Admin') }}
-                </x-responsive-nav-link>
-            @endif
-        </div>
-        <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-700">
-            <div class="px-4">
-                <div class="font-medium text-base text-gray-800 dark:text-gray-200">{{ Auth::user()->name }}</div>
-                <div class="font-medium text-sm text-gray-500 dark:text-gray-400">{{ Auth::user()->email }}</div>
+                <div x-show="open['{{ $key }}']" @unless($section['active']) style="display:none" @endunless
+                     class="mt-0.5 mb-1 ms-4 ps-3 border-s border-gray-100 dark:border-gray-700 space-y-0.5">
+                    @foreach ($section['items'] as $item)
+                        <x-sidebar-link :href="$item['href']" :active="$item['active']">
+                            <span class="flex-1 truncate">{{ $item['label'] }}</span>
+                            @isset($item['meta'])
+                                <span class="ms-2 shrink-0 text-xs font-mono {{ ($item['negative'] ?? false) ? 'text-red-600 dark:text-red-400' : ($item['active'] ? 'text-indigo-500 dark:text-indigo-300' : 'text-gray-400 dark:text-gray-500') }}">{{ $item['meta'] }}</span>
+                            @endisset
+                        </x-sidebar-link>
+                    @endforeach
+                </div>
             </div>
-            <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">
-                    {{ __('Profile') }}
-                </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('export.index')" :active="request()->routeIs('export.*')">
-                    {{ __('Export & Backup') }}
-                </x-responsive-nav-link>
+        @endforeach
+
+        {{-- Admin (standalone) --}}
+        @if (Auth::user()->is_admin)
+            <div class="pt-1">
+                <x-sidebar-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
+                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['admin'] }}" />
+                    </svg>
+                    <span class="flex-1 truncate">{{ __('Admin') }}</span>
+                </x-sidebar-link>
+            </div>
+        @endif
+    </nav>
+
+    {{-- Pinned footer: quick add, theme, user menu --}}
+    <div class="shrink-0 border-t border-gray-100 dark:border-gray-700 p-3 space-y-1">
+        @auth
+        <button @click="$dispatch('open-quick-add')"
+                class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition">
+            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['plus'] }}" />
+            </svg>
+            <span class="flex-1 text-start">{{ __('Quick add') }}</span>
+        </button>
+        @endauth
+
+        <button @click="dark = !dark"
+                class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition">
+            <svg x-show="!dark" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['moon'] }}" />
+            </svg>
+            <svg x-show="dark" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true" style="display:none;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['sun'] }}" />
+            </svg>
+            <span class="flex-1 text-start" x-text="dark ? '{{ __('Light mode') }}' : '{{ __('Dark mode') }}'"></span>
+        </button>
+
+        {{-- User menu (opens upward) --}}
+        <div class="relative" x-data="{ userMenu: false }" @click.outside="userMenu = false" @keydown.escape="userMenu = false">
+            <button @click="userMenu = !userMenu"
+                    class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                <span class="h-8 w-8 shrink-0 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-semibold">
+                    {{ strtoupper(mb_substr(Auth::user()->name, 0, 1)) }}
+                </span>
+                <span class="flex-1 min-w-0 text-start truncate">{{ Auth::user()->name }}</span>
+                <svg class="h-4 w-4 shrink-0 transition-transform duration-200" :class="userMenu && 'rotate-180'"
+                     fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+                </svg>
+            </button>
+
+            <div x-show="userMenu" x-cloak
+                 x-transition:enter="transition ease-out duration-150"
+                 x-transition:enter-start="opacity-0 translate-y-1"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-100"
+                 x-transition:leave-start="opacity-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 translate-y-1"
+                 class="absolute bottom-full inset-x-0 mb-2 rounded-md border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 z-50">
+                <x-sidebar-link :href="route('profile.edit')" :active="request()->routeIs('profile.*')">
+                    <span class="flex-1 truncate">{{ __('Profile') }}</span>
+                </x-sidebar-link>
+                <x-sidebar-link :href="route('import.csv')" :active="request()->routeIs('import.*')">
+                    <span class="flex-1 truncate">{{ __('Import CSV') }}</span>
+                </x-sidebar-link>
+                <x-sidebar-link :href="route('export.index')" :active="request()->routeIs('export.*')">
+                    <span class="flex-1 truncate">{{ __('Export & Backup') }}</span>
+                </x-sidebar-link>
+                <x-sidebar-link :href="route('donate')" :active="request()->routeIs('donate')">
+                    <span class="flex-1 truncate">{{ __('Donate') }}</span>
+                </x-sidebar-link>
                 <form method="POST" action="{{ route('demo-mode.toggle') }}">
                     @csrf
-                    <x-responsive-nav-link href="#" onclick="event.preventDefault(); this.closest('form').submit();">
-                        {{ $demo->isActive() ? __('Exit Demo Mode') : __('Demo Mode') }}
-                    </x-responsive-nav-link>
+                    <button type="submit"
+                            class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-start text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition">
+                        <span class="flex-1 truncate">{{ $demo->isActive() ? __('Exit Demo Mode') : __('Demo Mode') }}</span>
+                    </button>
                 </form>
-                <x-responsive-nav-link :href="route('donate')" :active="request()->routeIs('donate')">
-                    {{ __('Donate') }}
-                </x-responsive-nav-link>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <x-responsive-nav-link :href="route('logout')"
-                            onclick="event.preventDefault(); this.closest('form').submit();">
-                        {{ __('Log Out') }}
-                    </x-responsive-nav-link>
+                    <button type="submit"
+                            class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-start text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition">
+                        <span class="flex-1 truncate">{{ __('Log Out') }}</span>
+                    </button>
                 </form>
             </div>
         </div>
     </div>
-</nav>
+</aside>
 
 @auth
 @php
-    $qaAccounts         = Auth::user()->cashAccounts()->orderBy('name')->get(['id', 'name']);
+    $qaAccounts         = $sidebarAccounts; // already loaded above (id/name is all quick-add needs)
     $qaEnvelopes        = Auth::user()->envelopes()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
     $qaPortfolios       = Auth::user()->portfolios()->orderBy('name')->get(['id', 'name']);
     $qaIncomeCategories = Auth::user()->incomeCategories()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);

@@ -7,6 +7,7 @@ use App\Models\PortfolioSnapshot;
 use App\Models\User;
 use App\Services\BenchmarkService;
 use App\Services\BudgetRuleService;
+use App\Services\PensionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
@@ -18,7 +19,7 @@ class DashboardController extends Controller
 
     private const OTHER_COLOR = '#10b981';
 
-    public function __invoke(Request $request, BudgetRuleService $budgetRule): View
+    public function __invoke(Request $request, BudgetRuleService $budgetRule, PensionService $pensionService): View
     {
         $user       = $request->user();
         $portfolios = $user->portfolios()
@@ -92,6 +93,25 @@ class DashboardController extends Controller
         $interestBleedMonthly = round($revolving->sum(fn ($l) => $l->monthlyInterest()), 2);
         $interestBleedYearly  = round($interestBleedMonthly * 12, 2);
 
+        // Defined-benefit pensions surface two ways. (1) Accrued present value — a
+        // segregated "asset" folded into net worth (only for pensions the user opted
+        // in), kept out of total assets, invested value, and the allocation denominator
+        // so it never distorts rebalancing. (2) Projected monthly income — informational,
+        // shown for every tracked pension, because a pension is really an income stream.
+        $pensionValue         = 0.0;
+        $pensionMonthlyIncome = 0.0;
+        $pensionDrawAge       = null;
+        foreach ($user->pensions()->get() as $pension) {
+            $computed = $pensionService->compute($pension);
+            if ($pension->include_in_net_worth) {
+                $pensionValue += $computed['pvAccrued'];
+            }
+            $pensionMonthlyIncome += $computed['projectedMonthly'];
+            $pensionDrawAge ??= $computed['retirementAge'];
+        }
+        $pensionValue         = round($pensionValue, 2);
+        $pensionMonthlyIncome = round($pensionMonthlyIncome, 2);
+
         $totals = [
             'cost_basis'   => round($summaries->sum('cost_basis'), 2),
             'market_value' => $summaries->contains(fn ($s) => $s['market_value'] !== null)
@@ -101,12 +121,15 @@ class DashboardController extends Controller
             'unrealized'   => $summaries->contains(fn ($s) => $s['unrealized'] !== null)
                 ? round($summaries->sum(fn ($s) => $s['unrealized'] ?? 0), 2)
                 : null,
-            'portfolio_value' => $portfolioValue,
-            'invested_value'  => $investedValue,
-            'total_value'     => $totalAssets,
-            'total_debt'      => $totalDebt,
-            'net_worth'       => round($totalAssets - $totalDebt, 2),
-            'debt_to_asset'   => $totalAssets > 0 ? round($totalDebt / $totalAssets * 100, 1) : null,
+            'portfolio_value'        => $portfolioValue,
+            'invested_value'         => $investedValue,
+            'total_value'            => $totalAssets,
+            'total_debt'             => $totalDebt,
+            'pension_value'          => $pensionValue,
+            'pension_monthly_income' => $pensionMonthlyIncome,
+            'pension_draw_age'       => $pensionDrawAge,
+            'net_worth'              => round($totalAssets - $totalDebt + $pensionValue, 2),
+            'debt_to_asset'          => $totalAssets > 0 ? round($totalDebt / $totalAssets * 100, 1) : null,
         ];
 
         $allHoldings = $portfolioHoldings
