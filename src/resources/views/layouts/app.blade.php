@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <link rel="manifest" href="/manifest.json">
         <meta name="theme-color" content="#4f46e5">
@@ -34,7 +34,8 @@
                 sidebarOpen: false,
                 dark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
              }"
-             x-init="$watch('dark', val => { document.documentElement.classList.toggle('dark', val); localStorage.setItem('theme', val ? 'dark' : 'light'); })">
+             x-init="$watch('dark', val => { document.documentElement.classList.toggle('dark', val); localStorage.setItem('theme', val ? 'dark' : 'light'); })"
+             x-effect="document.body.classList.toggle('overflow-hidden', sidebarOpen)">
 
             @include('layouts.navigation')
 
@@ -42,9 +43,10 @@
             <div class="flex-1 flex flex-col min-w-0 lg:ps-64">
 
                 <!-- Mobile top bar -->
-                <div class="lg:hidden sticky top-0 z-20 flex items-center gap-2 h-14 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <div class="lg:hidden sticky top-0 z-20 flex items-center gap-2 h-[calc(3.5rem_+_env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                     <button @click="sidebarOpen = true"
                             class="p-2 -ms-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                            aria-label="Open menu" aria-controls="app-sidebar" :aria-expanded="sidebarOpen"
                             title="Open menu">
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />

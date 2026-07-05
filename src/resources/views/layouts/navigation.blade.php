@@ -103,14 +103,14 @@
      class="fixed inset-0 z-30 bg-black/40 lg:hidden"></div>
 
 {{-- Sidebar --}}
-<aside x-data="{ open: {
+<aside id="app-sidebar" x-data="{ open: {
             budget: {{ $budgetActive ? 'true' : 'false' }},
             accounts: {{ $accountsActive ? 'true' : 'false' }},
             invest: {{ $investActive ? 'true' : 'false' }},
             plan: {{ $planActive ? 'true' : 'false' }},
         } }"
        :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-       class="fixed inset-y-0 left-0 z-40 w-64 flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 lg:translate-x-0">
+       class="fixed inset-y-0 left-0 z-40 w-64 flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 lg:translate-x-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ps-[env(safe-area-inset-left)]">
 
     {{-- Brand --}}
     <div class="h-16 shrink-0 flex items-center gap-2 px-4 border-b border-gray-100 dark:border-gray-700">
@@ -141,6 +141,7 @@
         @foreach ($sections as $key => $section)
             <div class="pt-1">
                 <button type="button" @click="open['{{ $key }}'] = !open['{{ $key }}']"
+                        :aria-expanded="open['{{ $key }}']"
                         class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                     <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="{{ $section['icon'] }}" />
