@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AssetType;
+use App\Enums\DashboardWidget;
 use App\Models\PortfolioSnapshot;
 use App\Models\User;
 use App\Services\BenchmarkService;
@@ -187,10 +188,19 @@ class DashboardController extends Controller
             ? max(0, (int) round($totalCash / $monthlySpend * 30))
             : null;
 
+        // Per-widget visibility map (value => bool) so the view can gate each
+        // section/tile without re-hitting the model. Missing = visible by default.
+        // Read the stored prefs once rather than decoding the JSON cast per widget.
+        $prefs = $user->dashboard_preferences ?? [];
+        $show  = [];
+        foreach (DashboardWidget::cases() as $widget) {
+            $show[$widget->value] = $prefs[$widget->value] ?? true;
+        }
+
         return view('dashboard', compact(
             'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'rebalancing', 'benchmarkData', 'budgetRuleData',
             'revolvingBalance', 'interestBleedMonthly', 'interestBleedYearly',
-            'totalCash', 'readyToAssign', 'ageOfMoney'
+            'totalCash', 'readyToAssign', 'ageOfMoney', 'show'
         ));
     }
 

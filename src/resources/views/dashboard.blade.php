@@ -1,6 +1,17 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Dashboard</h2>
+        <div class="flex items-center justify-between gap-4">
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Dashboard</h2>
+            <a href="{{ route('profile.edit') }}#dashboard-display"
+               class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition"
+               title="Choose which sections and tiles appear here">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Customize
+            </a>
+        </div>
     </x-slot>
 
     <div class="py-12">
@@ -10,11 +21,19 @@
                 $hasPortfolios = ! $summaries->isEmpty();
                 $hasMoneyData  = $totals['total_value'] > 0 || $totals['total_debt'] > 0 || $totals['pension_value'] > 0 || $totals['pension_monthly_income'] > 0;
                 $monthlySpend  = $budgetRuleData['monthly_mandatory'] + $budgetRuleData['monthly_discretionary'];
+
+                // Chart visibility: data present AND not hidden by the user. Derived once
+                // so the section blocks and the script-include guard below stay in sync.
+                $showNetWorthChart = $chartData->count() > 1 && $show['net_worth_chart'];
+                $showBenchmark     = $chartData->count() > 1 && ! empty($benchmarkData) && $show['benchmark'];
+                $showAllocation    = $allocation['total'] > 0 && $show['allocation'];
             @endphp
 
-            <x-budget-rule-drift-banner :drift="$budgetRuleData['drift']" :ratios="$budgetRuleData['ratios']" />
+            @if ($show['budget_drift_banner'])
+                <x-budget-rule-drift-banner :drift="$budgetRuleData['drift']" :ratios="$budgetRuleData['ratios']" />
+            @endif
 
-            @if ($revolvingBalance > 0)
+            @if ($revolvingBalance > 0 && $show['interest_bleed_banner'])
                 <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-amber-800 dark:text-amber-300">
                     <div>
                         <span class="font-semibold">Interest bleed:</span>
@@ -52,19 +71,30 @@
                 </div>
             @else
 
-                @if ($hasPortfolios)
+                @php
+                    $unr = $totals['unrealized'] ?? 0;
+                    $hasMV = $totals['market_value'] !== null;
+                    $tInvested   = abs($totals['portfolio_value'] - $totals['invested_value']) >= 0.01 && $show['tile_invested_value'];
+                    $tMarketVal  = $hasMV && abs($totals['portfolio_value'] - $totals['market_value']) >= 0.01 && $show['tile_market_value'];
+                    $tUnrealized = $hasMV && $show['tile_unrealized'];
+                    $tPl         = $hasMV && $show['tile_pl'];
+                    $investAny   = $show['tile_portfolio_value'] || $tInvested || $show['tile_cost_basis'] || $tMarketVal || $tUnrealized || $tPl;
+                @endphp
+                @if ($hasPortfolios && $show['investment_stats'] && $investAny)
                     {{-- Section 1: Investment Portfolio --}}
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Investment Portfolio</p>
                         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                            <x-stat-tile>
-                                <x-slot:label>Portfolio Value</x-slot:label>
-                                <p id="tile-total-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                    ${{ $demo->amt($totals['portfolio_value']) }}
-                                </p>
-                            </x-stat-tile>
+                            @if ($show['tile_portfolio_value'])
+                                <x-stat-tile>
+                                    <x-slot:label>Portfolio Value</x-slot:label>
+                                    <p id="tile-total-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                        ${{ $demo->amt($totals['portfolio_value']) }}
+                                    </p>
+                                </x-stat-tile>
+                            @endif
                             {{-- Only show when an asset is flagged out of Invested (e.g. primary residence); otherwise identical to Portfolio Value. --}}
-                            @if (abs($totals['portfolio_value'] - $totals['invested_value']) >= 0.01)
+                            @if ($tInvested)
                                 <x-stat-tile>
                                     <x-slot:label>Invested Assets</x-slot:label>
                                     <p id="tile-invested-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
@@ -72,29 +102,32 @@
                                     </p>
                                 </x-stat-tile>
                             @endif
-                            <x-stat-tile>
-                                <x-slot:label>Cost Basis</x-slot:label>
-                                <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                    ${{ $demo->amt($totals['cost_basis']) }}
-                                </p>
-                            </x-stat-tile>
-                            @if ($totals['market_value'] !== null)
-                                @php $unr = $totals['unrealized'] ?? 0; @endphp
-                                {{-- Only show Market Value when it differs from Portfolio Value (i.e. manual assets exist); otherwise the two tiles are identical. --}}
-                                @if (abs($totals['portfolio_value'] - $totals['market_value']) >= 0.01)
-                                    <x-stat-tile>
-                                        <x-slot:label>Market Value</x-slot:label>
-                                        <p id="tile-market-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                            ${{ $demo->amt($totals['market_value']) }}
-                                        </p>
-                                    </x-stat-tile>
-                                @endif
+                            @if ($show['tile_cost_basis'])
+                                <x-stat-tile>
+                                    <x-slot:label>Cost Basis</x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                        ${{ $demo->amt($totals['cost_basis']) }}
+                                    </p>
+                                </x-stat-tile>
+                            @endif
+                            {{-- Only show Market Value when it differs from Portfolio Value (i.e. manual assets exist); otherwise the two tiles are identical. --}}
+                            @if ($tMarketVal)
+                                <x-stat-tile>
+                                    <x-slot:label>Market Value</x-slot:label>
+                                    <p id="tile-market-value" class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                        ${{ $demo->amt($totals['market_value']) }}
+                                    </p>
+                                </x-stat-tile>
+                            @endif
+                            @if ($tUnrealized)
                                 <x-stat-tile>
                                     <x-slot:label>Unrealized P&L</x-slot:label>
                                     <p class="mt-1 text-2xl font-semibold font-mono {{ $unr >= 0 ? 'text-green-600' : 'text-red-600' }}">
                                         {{ $unr >= 0 ? '+$' : '-$' }}{{ $demo->amt(abs($unr)) }}
                                     </p>
                                 </x-stat-tile>
+                            @endif
+                            @if ($tPl)
                                 <x-stat-tile>
                                     <x-slot:label><span id="tile-pl-label">1Y Gain/Loss</span></x-slot:label>
                                     <p id="tile-pl-value" class="mt-1 text-2xl font-semibold font-mono {{ $unr >= 0 ? 'text-green-600' : 'text-red-600' }}">
@@ -106,51 +139,65 @@
                     </div>
                 @endif
 
-                @if ($hasMoneyData)
+                @php
+                    // Each tile shows only when it has data AND the user hasn't hidden it.
+                    $fCash   = $show['tile_cash'];
+                    $fAssets = $show['tile_total_assets'];
+                    $fDebt   = $show['tile_total_debt'];
+                    $fRet    = $totals['pension_monthly_income'] > 0 && $show['tile_retirement_income'];
+                    $fPen    = $totals['pension_value'] > 0 && $show['tile_pension_value'];
+                    $fNW     = $show['tile_net_worth'];
+                    $fDTA    = $totals['debt_to_asset'] !== null && $show['tile_debt_to_asset'];
+                    $fEF     = $budgetRuleData['emergency_target'] > 0 && $show['tile_emergency_fund'];
+                    $fRTA    = $show['tile_ready_to_assign'];
+                    $fSpend  = $budgetRuleData['has_data'] && $show['tile_monthly_spend'];
+                    $fAoM    = $budgetRuleData['has_data'] && $ageOfMoney !== null && $show['tile_age_of_money'];
+
+                    // Count the tiles actually rendered below; gates the whole section.
+                    $finTileCount = collect([$fCash, $fAssets, $fDebt, $fRet, $fPen, $fNW, $fDTA, $fEF, $fRTA, $fSpend, $fAoM])->filter()->count();
+                @endphp
+                @if ($hasMoneyData && $show['financial_picture'] && $finTileCount > 0)
+                    @php
+                        // Choose a column count that never leaves a single orphan on the
+                        // last row (avoid a remainder of 1). Prefer more columns; literal
+                        // class strings keep Tailwind happy.
+                        $gridCols = 'sm:grid-cols-4';
+                        foreach ([4 => 'sm:grid-cols-4', 3 => 'sm:grid-cols-3', 2 => 'sm:grid-cols-2'] as $c => $cls) {
+                            if ($finTileCount % $c !== 1) {
+                                $gridCols = $cls;
+                                break;
+                            }
+                        }
+                    @endphp
                     {{-- Section 2: Full Financial Picture --}}
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Full Financial Picture</p>
-                        @php
-                            // Count the tiles actually rendered below, then choose a column count
-                            // that never leaves a single orphan on the last row (avoid a remainder
-                            // of 1). Prefer more columns; literal class strings keep Tailwind happy.
-                            $tileCount = 5; // Cash, Total Assets, Total Debt, Net Worth, Ready to Assign
-                            if ($totals['pension_monthly_income'] > 0) $tileCount++;
-                            if ($totals['pension_value'] > 0) $tileCount++;
-                            if ($totals['debt_to_asset'] !== null) $tileCount++;
-                            if ($budgetRuleData['emergency_target'] > 0) $tileCount++;
-                            if ($budgetRuleData['has_data']) {
-                                $tileCount++; // Monthly Spend
-                                if ($ageOfMoney !== null) $tileCount++; // Age of Money
-                            }
-                            $gridCols = 'sm:grid-cols-4';
-                            foreach ([4 => 'sm:grid-cols-4', 3 => 'sm:grid-cols-3', 2 => 'sm:grid-cols-2'] as $c => $cls) {
-                                if ($tileCount % $c !== 1) {
-                                    $gridCols = $cls;
-                                    break;
-                                }
-                            }
-                        @endphp
                         <div class="grid grid-cols-2 {{ $gridCols }} gap-4">
-                            <x-stat-tile>
-                                <x-slot:label>Cash Balance</x-slot:label>
-                                <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                    ${{ $demo->amt($totalCash) }}
-                                </p>
-                            </x-stat-tile>
-                            <x-stat-tile>
-                                <x-slot:label>Total Assets</x-slot:label>
-                                <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                                    ${{ $demo->amt($totals['total_value']) }}
-                                </p>
-                            </x-stat-tile>
-                            <x-stat-tile>
-                                <x-slot:label><a href="{{ route('liabilities.index') }}" class="hover:underline">Total Debt</a></x-slot:label>
-                                <p class="mt-1 text-2xl font-semibold font-mono {{ $totals['total_debt'] > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100' }}">
-                                    {{ $totals['total_debt'] > 0 ? '−' : '' }}${{ $demo->amt($totals['total_debt']) }}
-                                </p>
-                            </x-stat-tile>
-                            @if ($totals['pension_monthly_income'] > 0)
+                            @if ($fCash)
+                                <x-stat-tile>
+                                    <x-slot:label>Cash Balance</x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                        ${{ $demo->amt($totalCash) }}
+                                    </p>
+                                </x-stat-tile>
+                            @endif
+                            @if ($fAssets)
+                                <x-stat-tile>
+                                    <x-slot:label>Total Assets</x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
+                                        ${{ $demo->amt($totals['total_value']) }}
+                                    </p>
+                                </x-stat-tile>
+                            @endif
+                            @if ($fDebt)
+                                <x-stat-tile>
+                                    <x-slot:label><a href="{{ route('liabilities.index') }}" class="hover:underline">Total Debt</a></x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono {{ $totals['total_debt'] > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100' }}">
+                                        {{ $totals['total_debt'] > 0 ? '−' : '' }}${{ $demo->amt($totals['total_debt']) }}
+                                    </p>
+                                </x-stat-tile>
+                            @endif
+                            @if ($fRet)
                                 <x-stat-tile>
                                     <x-slot:label><a href="{{ route('pensions.index') }}" class="hover:underline">Retirement Income</a></x-slot:label>
                                     <p class="mt-1 text-2xl font-semibold font-mono text-indigo-600 dark:text-indigo-400">
@@ -159,7 +206,7 @@
                                     <p class="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">pension{{ $totals['pension_draw_age'] ? ' at '.$totals['pension_draw_age'] : '' }} · for life</p>
                                 </x-stat-tile>
                             @endif
-                            @if ($totals['pension_value'] > 0)
+                            @if ($fPen)
                                 <x-stat-tile>
                                     <x-slot:label><a href="{{ route('pensions.index') }}" class="hover:underline">Pension Value</a></x-slot:label>
                                     <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
@@ -168,13 +215,15 @@
                                     <p class="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">lump-sum PV · in net worth</p>
                                 </x-stat-tile>
                             @endif
-                            <x-stat-tile :highlight="true">
-                                <x-slot:label>Net Worth</x-slot:label>
-                                <p class="mt-1 text-2xl font-semibold font-mono {{ $totals['net_worth'] >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
-                                    {{ $totals['net_worth'] < 0 ? '−' : '' }}${{ $demo->amt(abs($totals['net_worth'])) }}
-                                </p>
-                            </x-stat-tile>
-                            @if ($totals['debt_to_asset'] !== null)
+                            @if ($fNW)
+                                <x-stat-tile :highlight="true">
+                                    <x-slot:label>Net Worth</x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono {{ $totals['net_worth'] >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
+                                        {{ $totals['net_worth'] < 0 ? '−' : '' }}${{ $demo->amt(abs($totals['net_worth'])) }}
+                                    </p>
+                                </x-stat-tile>
+                            @endif
+                            @if ($fDTA)
                                 <x-stat-tile>
                                     <x-slot:label>Debt-to-Asset</x-slot:label>
                                     <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
@@ -182,7 +231,7 @@
                                     </p>
                                 </x-stat-tile>
                             @endif
-                            @if ($budgetRuleData['emergency_target'] > 0)
+                            @if ($fEF)
                                 @php
                                     $efMonths = round(
                                         $budgetRuleData['emergency_balance'] * $budgetRuleData['target_months'] / $budgetRuleData['emergency_target'],
@@ -196,45 +245,47 @@
                                     </p>
                                 </x-stat-tile>
                             @endif
-                            <x-stat-tile>
-                                <x-slot:label><a href="{{ route('ready-to-assign') }}" class="hover:underline">Ready to Assign</a></x-slot:label>
-                                <p class="mt-1 text-2xl font-semibold font-mono {{ $readyToAssign >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                    {{ $readyToAssign < 0 ? '−' : '' }}${{ $demo->amt(abs($readyToAssign)) }}
-                                </p>
-                            </x-stat-tile>
-                            @if ($budgetRuleData['has_data'])
+                            @if ($fRTA)
+                                <x-stat-tile>
+                                    <x-slot:label><a href="{{ route('ready-to-assign') }}" class="hover:underline">Ready to Assign</a></x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono {{ $readyToAssign >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                        {{ $readyToAssign < 0 ? '−' : '' }}${{ $demo->amt(abs($readyToAssign)) }}
+                                    </p>
+                                </x-stat-tile>
+                            @endif
+                            @if ($fSpend)
                                 <x-stat-tile>
                                     <x-slot:label>Monthly Spend</x-slot:label>
                                     <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
                                         ${{ $demo->amt($monthlySpend) }}
                                     </p>
                                 </x-stat-tile>
-                                @if ($ageOfMoney !== null)
-                                    @php $efDaysTarget = ($budgetRuleData['target_months'] ?? 0) * 30; @endphp
-                                    <x-stat-tile>
-                                        <x-slot:label>Age of Money</x-slot:label>
-                                        <p class="mt-1 text-2xl font-semibold font-mono {{
-                                            $ageOfMoney >= 30 ? 'text-green-600 dark:text-green-400' :
-                                            ($ageOfMoney >= 15 ? 'text-amber-500 dark:text-amber-400' : 'text-red-600 dark:text-red-400')
-                                        }}">
-                                            {{ $ageOfMoney }}<span class="text-sm font-normal text-gray-500 dark:text-gray-400"> days</span>
-                                        </p>
-                                        @if ($efDaysTarget > 0 && $ageOfMoney >= $efDaysTarget)
-                                            <span class="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                                </svg>
-                                                {{ $budgetRuleData['target_months'] }}mo goal
-                                            </span>
-                                        @endif
-                                    </x-stat-tile>
-                                @endif
+                            @endif
+                            @if ($fAoM)
+                                @php $efDaysTarget = ($budgetRuleData['target_months'] ?? 0) * 30; @endphp
+                                <x-stat-tile>
+                                    <x-slot:label>Age of Money</x-slot:label>
+                                    <p class="mt-1 text-2xl font-semibold font-mono {{
+                                        $ageOfMoney >= 30 ? 'text-green-600 dark:text-green-400' :
+                                        ($ageOfMoney >= 15 ? 'text-amber-500 dark:text-amber-400' : 'text-red-600 dark:text-red-400')
+                                    }}">
+                                        {{ $ageOfMoney }}<span class="text-sm font-normal text-gray-500 dark:text-gray-400"> days</span>
+                                    </p>
+                                    @if ($efDaysTarget > 0 && $ageOfMoney >= $efDaysTarget)
+                                        <span class="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                            </svg>
+                                            {{ $budgetRuleData['target_months'] }}mo goal
+                                        </span>
+                                    @endif
+                                </x-stat-tile>
                             @endif
                         </div>
                     </div>
                 @endif
 
-                @if ($chartData->count() > 1)
+                @if ($showNetWorthChart)
                     {{-- Portfolio value chart with time range toggles --}}
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -259,33 +310,33 @@
                         </div>
                         <div class="h-64 relative"><canvas id="dashChart"></canvas></div>
                     </div>
+                @endif
 
-                    {{-- Benchmark comparison toggle (shows when benchmark data exists) --}}
-                    @if (!empty($benchmarkData))
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
-                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                                <div>
-                                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Benchmark Comparison</h3>
-                                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Normalized to 100 at start of period — shows relative % return</p>
-                                </div>
-                                <div class="flex flex-wrap gap-1" id="bench-range-btns">
-                                    @foreach (['1M','3M','6M','1Y','5Y','10Y','All'] as $r)
-                                        <button data-range="{{ $r }}"
-                                                class="bench-range-btn px-2.5 py-1 text-xs rounded font-medium transition
-                                                       bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300
-                                                       hover:bg-gray-200 dark:hover:bg-gray-600">
-                                            {{ $r }}
-                                        </button>
-                                    @endforeach
-                                </div>
+                {{-- Benchmark comparison toggle (shows when benchmark data exists) --}}
+                @if ($showBenchmark)
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                            <div>
+                                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Benchmark Comparison</h3>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Normalized to 100 at start of period — shows relative % return</p>
                             </div>
-                            <div class="h-64 relative"><canvas id="benchmarkChart"></canvas></div>
+                            <div class="flex flex-wrap gap-1" id="bench-range-btns">
+                                @foreach (['1M','3M','6M','1Y','5Y','10Y','All'] as $r)
+                                    <button data-range="{{ $r }}"
+                                            class="bench-range-btn px-2.5 py-1 text-xs rounded font-medium transition
+                                                   bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300
+                                                   hover:bg-gray-200 dark:hover:bg-gray-600">
+                                        {{ $r }}
+                                    </button>
+                                @endforeach
+                            </div>
                         </div>
-                    @endif
+                        <div class="h-64 relative"><canvas id="benchmarkChart"></canvas></div>
+                    </div>
                 @endif
 
                 {{-- Asset allocation donut --}}
-                @if ($allocation['total'] > 0)
+                @if ($showAllocation)
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
                         <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Asset Allocation</h3>
                         <div class="flex flex-col sm:flex-row items-center gap-8">
@@ -310,7 +361,7 @@
                 @endif
 
                 {{-- Global rebalancing --}}
-                @if (!empty($rebalancing))
+                @if (!empty($rebalancing) && $show['rebalancing'])
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Global Rebalancing</h3>
@@ -355,7 +406,7 @@
                 @endif
 
                 {{-- All Holdings --}}
-                @if ($allHoldings->isNotEmpty())
+                @if ($allHoldings->isNotEmpty() && $show['holdings'])
                     @php
                         $holdingsRows = $allHoldings->map(fn ($h) => [
                             'symbol'          => $h['asset']->symbol,
@@ -487,7 +538,7 @@
                     </div>
                 @endif
 
-                @if ($hasPortfolios)
+                @if ($hasPortfolios && $show['portfolios'])
                 {{-- Per-portfolio breakdown --}}
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
                     <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
@@ -541,7 +592,7 @@
         </div>
     </div>
 
-    @if ($chartData->count() > 1 || $allocation['total'] > 0)
+    @if ($showNetWorthChart || $showBenchmark || $showAllocation)
         @php
             $jsChartData       = $demo->scaleAmounts($chartData->toArray());
             $jsChartDataExMan  = $demo->scaleAmounts($chartDataExManual->toArray());

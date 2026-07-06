@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex items-center justify-between gap-4">
             <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Money</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Invest</p>
                 <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Pension</h2>
             </div>
             <a href="{{ route('pensions.create') }}"

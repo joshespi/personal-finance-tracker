@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DashboardWidget;
 use App\Models\Asset;
 use App\Models\AssetPrice;
 use App\Models\CashAccount;
@@ -282,5 +283,71 @@ class DashboardTest extends TestCase
         $this->actingAs($user)->get(route('dashboard'))
             ->assertOk()
             ->assertSee('tile-market-value', false);
+    }
+
+    public function test_dashboard_hides_section_when_preference_disables_it(): void
+    {
+        $user      = User::factory()->create(['dashboard_preferences' => ['holdings' => false]]);
+        $portfolio = Portfolio::factory()->for($user)->create();
+        $btc       = $this->makePricedAsset('BTC', 50000.0);
+        Transaction::factory()->for($portfolio)->for($btc)->buy()->create(['quantity' => 1, 'price_per_unit' => 40000]);
+
+        // Data is present, but the user has hidden the All Holdings table. Other
+        // data-driven blocks (e.g. the allocation donut) still render.
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Asset Allocation')
+            ->assertDontSee('All Holdings');
+    }
+
+    public function test_dashboard_hides_individual_tile_when_disabled(): void
+    {
+        $user    = User::factory()->create(['dashboard_preferences' => ['tile_net_worth' => false]]);
+        $account = CashAccount::factory()->for($user)->create();
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create(['amount' => 1000]);
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Cash Balance')   // other tiles unaffected
+            ->assertDontSee('Net Worth'); // the single hidden tile
+    }
+
+    public function test_dashboard_hides_interest_bleed_banner_when_disabled(): void
+    {
+        $user      = User::factory()->create(['dashboard_preferences' => ['interest_bleed_banner' => false]]);
+        $liability = Liability::factory()->for($user)->create(['liability_type' => 'credit_card', 'interest_rate' => 24.0]);
+        LiabilityBalance::factory()->for($liability)->create(['balance' => 5000]);
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('Interest bleed');
+    }
+
+    public function test_update_display_stores_full_visibility_map(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->patch(route('profile.display'), ['widgets' => ['holdings', 'tile_cash']])
+            ->assertRedirect(route('profile.edit'));
+
+        $user->refresh();
+
+        // Submitted widgets are visible; everything else is stored as hidden.
+        $this->assertTrue($user->showsWidget('holdings'));
+        $this->assertTrue($user->showsWidget(DashboardWidget::TileCash));
+        $this->assertFalse($user->showsWidget(DashboardWidget::Allocation));
+        $this->assertFalse($user->showsWidget(DashboardWidget::TileNetWorth));
+
+        // The map is complete: one entry per known widget.
+        $this->assertCount(count(DashboardWidget::cases()), $user->dashboard_preferences);
+    }
+
+    public function test_shows_widget_defaults_to_visible_when_unset(): void
+    {
+        $user = User::factory()->create(['dashboard_preferences' => null]);
+
+        $this->assertTrue($user->showsWidget(DashboardWidget::Holdings));
+        $this->assertTrue($user->showsWidget('tile_net_worth'));
     }
 }

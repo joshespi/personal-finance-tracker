@@ -3,9 +3,9 @@
     $tab = $req->query('tab');
 
     // ── Section active states (drive accordion auto-open) ──────────────────────
-    $budgetActive   = $req->routeIs('envelopes.*', 'ready-to-assign', 'income-categories.*', 'income-entries.*', 'liabilities.*', 'pensions.*');
+    $budgetActive   = $req->routeIs('envelopes.*', 'ready-to-assign', 'income-categories.*', 'income-entries.*', 'liabilities.*');
     $accountsActive = $req->routeIs('cash-accounts.*');
-    $investActive   = $req->routeIs('portfolios.*', 'manual-assets.*', 'transactions.*', 'dividends', 'tax.*');
+    $investActive   = $req->routeIs('portfolios.*', 'manual-assets.*', 'transactions.*', 'dividends', 'tax.*', 'pensions.*');
     $planActive     = $req->routeIs('analysis', 'planning', 'forecast', 'cashflow', 'spending-trends', 'budget-rule', 'emergency-fund', 'debt-payoff', 'allocator');
 
     // analysis/planning default to their first tab when no ?tab= is present.
@@ -56,7 +56,6 @@
                 ['label' => 'Envelopes',   'href' => route('envelopes.index'),         'active' => $req->routeIs('envelopes.*', 'ready-to-assign')],
                 ['label' => 'Income',      'href' => route('income-categories.index'), 'active' => $req->routeIs('income-categories.*', 'income-entries.*')],
                 ['label' => 'Liabilities', 'href' => route('liabilities.index'),        'active' => $req->routeIs('liabilities.*')],
-                ['label' => 'Pension',     'href' => route('pensions.index'),           'active' => $req->routeIs('pensions.*')],
             ],
         ],
         'accounts' => [
@@ -74,6 +73,7 @@
                 ['label' => 'Transactions', 'href' => route('transactions.all'),  'active' => $req->routeIs('transactions.*')],
                 ['label' => 'Dividends',    'href' => route('dividends'),         'active' => $req->routeIs('dividends')],
                 ['label' => 'Tax',          'href' => route('tax.summary'),       'active' => $req->routeIs('tax.*')],
+                ['label' => 'Pension',      'href' => route('pensions.index'),    'active' => $req->routeIs('pensions.*')],
             ],
         ],
         'plan' => [

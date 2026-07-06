@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DashboardWidget;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -65,6 +66,23 @@ class ProfileController extends Controller
         ]);
 
         return Redirect::route('profile.edit')->with('status', 'notifications-updated');
+    }
+
+    public function updateDisplay(Request $request): RedirectResponse
+    {
+        // Checkboxes only submit the visible (checked) widgets; everything else is
+        // hidden. Store an explicit true/false for every known widget so the map is
+        // complete and self-documenting. Iterating the enum keys inherently ignores
+        // any unknown submitted values.
+        $submitted = array_flip((array) $request->input('widgets', []));
+
+        $prefs = collect(DashboardWidget::values())
+            ->mapWithKeys(fn (string $key) => [$key => isset($submitted[$key])])
+            ->all();
+
+        $request->user()->update(['dashboard_preferences' => $prefs]);
+
+        return Redirect::route('profile.edit')->with('status', 'display-updated');
     }
 
     /**

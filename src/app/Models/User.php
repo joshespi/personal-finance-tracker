@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DashboardWidget;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -13,7 +14,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 
-#[Fillable(['name', 'email', 'password', 'is_admin', 'emergency_fund_target_months', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'notify_scheduled_transactions'])]
+#[Fillable(['name', 'email', 'password', 'is_admin', 'emergency_fund_target_months', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'notify_scheduled_transactions', 'dashboard_preferences'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -32,7 +33,20 @@ class User extends Authenticatable implements MustVerifyEmail
             'target_real_estate_pct'        => 'decimal:2',
             'target_bond_pct'               => 'decimal:2',
             'notify_scheduled_transactions' => 'boolean',
+            'dashboard_preferences'         => 'array',
         ];
+    }
+
+    /**
+     * Whether a given dashboard block should render for this user. Widgets are
+     * visible by default — only an explicit false in dashboard_preferences hides
+     * one, so newly-added widgets show up for existing users automatically.
+     */
+    public function showsWidget(DashboardWidget|string $widget): bool
+    {
+        $key = $widget instanceof DashboardWidget ? $widget->value : $widget;
+
+        return (bool) ($this->dashboard_preferences[$key] ?? true);
     }
 
     public function portfolios(): HasMany
