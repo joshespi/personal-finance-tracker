@@ -43,7 +43,7 @@ services:
       - laravel
 
   node:
-    image: node:24-alpine
+    image: node:24.18-alpine
     working_dir: /app
     volumes:
       - ./src:/app

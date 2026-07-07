@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\BackfillRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -12,7 +13,9 @@ class ToolsController extends Controller
 {
     public function index(): View
     {
-        return view('admin.tools');
+        $backfillRequests = BackfillRequest::latest()->limit(5)->get();
+
+        return view('admin.tools', compact('backfillRequests'));
     }
 
     public function backfillSnapshots(Request $request): RedirectResponse
@@ -31,11 +34,20 @@ class ToolsController extends Controller
             }
         }
 
-        if ($request->boolean('skip_fetch')) {
+        $skipFetch = $request->boolean('skip_fetch');
+        $dryRun    = $request->boolean('dry_run');
+
+        if ($skipFetch) {
             $args['--skip-fetch'] = true;
         }
-        if ($request->boolean('dry_run')) {
+        if ($dryRun) {
             $args['--dry-run'] = true;
+        }
+
+        // Fetching historical prices can run long enough to hit provider rate limits or
+        // a proxy timeout — queue it instead so it drains hourly via assets:process-backfill-queue.
+        if (! $skipFetch && ! $dryRun) {
+            $args['--queue'] = true;
         }
 
         set_time_limit(600);

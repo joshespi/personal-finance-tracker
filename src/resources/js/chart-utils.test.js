@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resampleByRange, filterByRange } from './chart-utils';
+import { resampleByRange, filterByRange, dailyChangeMap, buildCalendarWeeks, calendarColor } from './chart-utils';
 
 function dailySeries(startISO, days) {
     const start = new Date(startISO).getTime();
@@ -65,5 +65,97 @@ describe('filterByRange', () => {
     it('returns all rows for the "All" range', () => {
         const s = dailySeries('2020-01-01', 100);
         expect(filterByRange(s, 'All')).toHaveLength(100);
+    });
+});
+
+describe('dailyChangeMap', () => {
+    it('omits the first date (no prior day to diff against)', () => {
+        const s = [
+            { date: '2026-01-01', value: 1000 },
+            { date: '2026-01-02', value: 1010 },
+        ];
+        const map = dailyChangeMap(s);
+        expect(map.has('2026-01-01')).toBe(false);
+        expect(map.has('2026-01-02')).toBe(true);
+    });
+
+    it('computes $ and % change relative to the previous entry', () => {
+        const s = [
+            { date: '2026-01-01', value: 1000 },
+            { date: '2026-01-02', value: 1050 },
+            { date: '2026-01-03', value: 1029 },
+        ];
+        const map = dailyChangeMap(s);
+        expect(map.get('2026-01-02')).toEqual({ dollar: 50, pct: 5 });
+        expect(map.get('2026-01-03').dollar).toBeCloseTo(-21);
+        expect(map.get('2026-01-03').pct).toBeCloseTo(-2);
+    });
+
+    it('skips a day whose prior value is zero (avoids divide-by-zero)', () => {
+        const s = [
+            { date: '2026-01-01', value: 0 },
+            { date: '2026-01-02', value: 500 },
+        ];
+        expect(dailyChangeMap(s).has('2026-01-02')).toBe(false);
+    });
+
+    it('sorts out-of-order input before diffing', () => {
+        const s = [
+            { date: '2026-01-02', value: 1010 },
+            { date: '2026-01-01', value: 1000 },
+        ];
+        expect(dailyChangeMap(s).get('2026-01-02')).toEqual({ dollar: 10, pct: 1 });
+    });
+});
+
+describe('buildCalendarWeeks', () => {
+    it('returns empty output for no data', () => {
+        expect(buildCalendarWeeks([])).toEqual({ weeks: [], monthLabels: [] });
+    });
+
+    it('produces rectangular weeks of 7 days starting on Sunday', () => {
+        const s = dailySeries('2025-06-01', 200);
+        const { weeks } = buildCalendarWeeks(s);
+        expect(weeks.every(w => w.length === 7)).toBe(true);
+        const firstRealDay = weeks[0].find(d => d);
+        expect(new Date(firstRealDay + 'T00:00:00Z').getUTCDay()).toBe(0);
+    });
+
+    it('places the last data date somewhere in the grid', () => {
+        const s = dailySeries('2025-01-01', 365);
+        const { weeks } = buildCalendarWeeks(s);
+        const flat = weeks.flat().filter(d => d);
+        expect(flat).toContain(s[s.length - 1].date);
+    });
+
+    it('pads trailing cells after the last date with null', () => {
+        // 2026-01-05 is a Monday, so the series ends midweek (Wed) and the
+        // final week needs Thu-Sat padded out with null.
+        const s = dailySeries('2026-01-05', 3);
+        const { weeks } = buildCalendarWeeks(s);
+        const flat = weeks.flat();
+        expect(flat).toContain(null);
+    });
+
+    it('emits one month label per month transition, in non-decreasing week order', () => {
+        const s = dailySeries('2025-01-01', 365);
+        const { monthLabels } = buildCalendarWeeks(s);
+        expect(monthLabels.length).toBeGreaterThanOrEqual(12);
+        const indices = monthLabels.map(m => m.weekIndex);
+        expect(indices).toEqual([...indices].sort((a, b) => a - b));
+    });
+});
+
+describe('calendarColor', () => {
+    it('returns a distinct color for no-data vs flat', () => {
+        expect(calendarColor(undefined, false)).not.toBe(calendarColor(0, false));
+    });
+
+    it('returns green shades for gains and red shades for losses', () => {
+        expect(calendarColor(1.5, false)).not.toBe(calendarColor(-1.5, false));
+    });
+
+    it('scales intensity with magnitude', () => {
+        expect(calendarColor(0.1, false)).not.toBe(calendarColor(3, false));
     });
 });

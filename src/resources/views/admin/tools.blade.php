@@ -17,7 +17,8 @@
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Backfill Portfolio Snapshots</h3>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
                         Rebuilds <code>portfolio_snapshots</code> for past dates. Leave dates blank to use the earliest transaction through yesterday.
-                        Fetching prices from Finnhub/CoinGecko can be slow — check <em>Skip fetch</em> to reuse existing price records.
+                        Fetching prices from Finnhub/CoinGecko is queued and drains automatically over time (see below) unless you check
+                        <em>Skip fetch</em> to reuse existing price records instead.
                     </p>
 
                     <form method="POST" action="{{ route('admin.tools.backfill-snapshots') }}" class="space-y-4">
@@ -66,6 +67,42 @@
                         </div>
                     </form>
                 </div>
+
+                @if ($backfillRequests->isNotEmpty())
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Backfill Queue</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                            Fetching a date range (with "Skip fetch" unchecked) is queued rather than run inline, since pulling years of
+                            history can hit Finnhub/CoinGecko free-tier rate limits. Queued requests drain automatically in small
+                            batches via the hourly <code>assets:process-backfill-queue</code> job until complete.
+                        </p>
+
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-xs">
+                                <thead>
+                                    <tr class="text-left text-gray-500 dark:text-gray-400">
+                                        <th class="pr-4 pb-2">#</th>
+                                        <th class="pr-4 pb-2">Range</th>
+                                        <th class="pr-4 pb-2">Status</th>
+                                        <th class="pr-4 pb-2">Progress</th>
+                                        <th class="pb-2">Note</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-gray-700 dark:text-gray-300">
+                                    @foreach ($backfillRequests as $req)
+                                        <tr class="border-t border-gray-100 dark:border-gray-700">
+                                            <td class="pr-4 py-1.5">{{ $req->id }}</td>
+                                            <td class="pr-4 py-1.5">{{ $req->from_date->toDateString() }} → {{ $req->to_date->toDateString() }}</td>
+                                            <td class="pr-4 py-1.5">{{ $req->statusLabel() }}</td>
+                                            <td class="pr-4 py-1.5">{{ $req->fetchedCount() }}/{{ $req->total_assets }} assets</td>
+                                            <td class="py-1.5 text-gray-500 dark:text-gray-400">{{ $req->last_note }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endif
 
             </div>
         </div>

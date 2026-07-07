@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Asset;
 use App\Models\AssetPrice;
+use App\Models\BackfillRequest;
 use App\Models\ManualAsset;
 use App\Models\ManualValuation;
 use App\Models\Portfolio;
@@ -354,5 +355,76 @@ class BackfillPortfolioSnapshotsTest extends TestCase
 
         Http::assertSentCount(1);
         Http::assertSent(fn ($r) => str_contains($r->url(), 'finnhub.io'));
+    }
+
+    public function test_rate_limited_response_defers_remaining_assets_to_a_queued_backfill(): void
+    {
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+        $assetA    = Asset::factory()->stock()->create(['symbol' => 'AAA']);
+        $assetB    = Asset::factory()->stock()->create(['symbol' => 'BBB']);
+
+        foreach ([$assetA, $assetB] as $asset) {
+            Transaction::factory()->for($portfolio)->for($asset)->create([
+                'type'           => 'buy',
+                'quantity'       => 1,
+                'price_per_unit' => 100,
+                'fees'           => 0,
+                'transacted_at'  => '2024-01-02',
+            ]);
+        }
+
+        Http::fake([
+            'finnhub.io/*' => Http::response(['error' => 'rate limit exceeded'], 429),
+        ]);
+
+        config(['services.finnhub.key' => 'test-key']);
+
+        $this->artisan('portfolios:backfill-snapshots', [
+            '--from'      => '2024-01-02',
+            '--to'        => '2024-01-02',
+            '--portfolio' => $portfolio->id,
+        ])->assertExitCode(0);
+
+        // Only the first asset's request is attempted — the second is short-circuited once
+        // the provider is known to be rate-limited this run.
+        Http::assertSentCount(1);
+
+        $request = BackfillRequest::sole();
+        $this->assertSame('pending', $request->status);
+        $this->assertSame(2, $request->total_assets);
+        $this->assertEqualsCanonicalizing([$assetA->id, $assetB->id], $request->pending_asset_ids);
+        $this->assertStringContainsString('rate limit', $request->last_note);
+    }
+
+    public function test_queue_option_enqueues_without_fetching_or_writing_snapshots(): void
+    {
+        Http::fake();
+
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+        $asset     = Asset::factory()->stock()->create();
+
+        Transaction::factory()->for($portfolio)->for($asset)->create([
+            'type'           => 'buy',
+            'quantity'       => 1,
+            'price_per_unit' => 100,
+            'fees'           => 0,
+            'transacted_at'  => '2024-01-02',
+        ]);
+
+        $this->artisan('portfolios:backfill-snapshots', [
+            '--from'      => '2024-01-02',
+            '--to'        => '2024-01-02',
+            '--portfolio' => $portfolio->id,
+            '--queue'     => true,
+        ])->assertExitCode(0);
+
+        Http::assertNothingSent();
+
+        $request = BackfillRequest::sole();
+        $this->assertSame('pending', $request->status);
+        $this->assertSame([$asset->id], $request->pending_asset_ids);
+        $this->assertDatabaseMissing('portfolio_snapshots', ['portfolio_id' => $portfolio->id]);
     }
 }

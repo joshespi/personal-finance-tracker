@@ -15,6 +15,7 @@ enum DashboardWidget: string
     case InvestmentStats     = 'investment_stats';
     case FinancialPicture    = 'financial_picture';
     case NetWorthChart       = 'net_worth_chart';
+    case CalendarHeatmap     = 'calendar_heatmap';
     case Benchmark           = 'benchmark';
     case Allocation          = 'allocation';
     case Rebalancing         = 'rebalancing';
@@ -56,6 +57,7 @@ enum DashboardWidget: string
             self::InvestmentStats     => 'Investment Portfolio stats',
             self::FinancialPicture    => 'Full Financial Picture stats',
             self::NetWorthChart       => 'Portfolio value chart',
+            self::CalendarHeatmap     => 'Daily change calendar',
             self::Benchmark           => 'Benchmark comparison chart',
             self::Allocation          => 'Asset allocation donut',
             self::Rebalancing         => 'Global rebalancing table',
@@ -88,7 +90,7 @@ enum DashboardWidget: string
     public function group(): string
     {
         return match ($this) {
-            self::InvestmentStats, self::FinancialPicture, self::NetWorthChart,
+            self::InvestmentStats, self::FinancialPicture, self::NetWorthChart, self::CalendarHeatmap,
             self::Benchmark, self::Allocation, self::Rebalancing, self::Holdings,
             self::Portfolios, self::InterestBleedBanner, self::BudgetDriftBanner => self::GROUP_SECTIONS,
 

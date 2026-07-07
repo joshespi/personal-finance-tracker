@@ -2,17 +2,19 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\BackfillStatus;
+use App\Enums\PriceFetchOutcome;
 use App\Enums\PriceSource;
 use App\Models\Asset;
 use App\Models\AssetPrice;
+use App\Models\BackfillRequest;
 use App\Models\Portfolio;
 use App\Models\PortfolioSnapshot;
+use App\Services\HistoricalPriceFetchService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class BackfillPortfolioSnapshots extends Command
 {
@@ -21,14 +23,21 @@ class BackfillPortfolioSnapshots extends Command
                             {--from=       : Start date Y-m-d; defaults to earliest transaction}
                             {--to=         : End date Y-m-d; defaults to yesterday}
                             {--skip-fetch  : Skip API calls; use existing AssetPrice records}
-                            {--dry-run     : Preview without writing to the database}';
+                            {--dry-run     : Preview without writing to the database}
+                            {--queue       : Queue price fetching instead of running it inline (drained hourly by assets:process-backfill-queue)}';
 
     protected $description = 'Backfill portfolio_snapshots for past dates using historical asset prices';
+
+    public function __construct(private HistoricalPriceFetchService $priceFetchService)
+    {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
         $dryRun    = $this->option('dry-run');
         $skipFetch = $this->option('skip-fetch');
+        $queue     = $this->option('queue') && ! $dryRun;
 
         $portfolios = $this->resolvePortfolios();
         if ($portfolios->isEmpty()) {
@@ -71,7 +80,16 @@ class BackfillPortfolioSnapshots extends Command
         $allAssets = $positionAssets->concat($proxyAssets)->unique('id')->values();
 
         if (! $skipFetch) {
-            $this->fetchHistoricalPrices($allAssets, $from, $to);
+            if ($queue) {
+                $this->queueBackfill($portfolios, $allAssets, $from, $to);
+
+                return self::SUCCESS;
+            }
+
+            $deferred = $this->fetchHistoricalPrices($allAssets, $from, $to);
+            if ($deferred->isNotEmpty()) {
+                $this->queueBackfill($portfolios, $deferred, $from, $to, 'Deferred after hitting a provider rate limit');
+            }
         }
 
         // Buffer 7 days before $from so weekend lookback finds Friday prices
@@ -178,101 +196,43 @@ class BackfillPortfolioSnapshots extends Command
         return now()->subDay()->startOfDay();
     }
 
-    private function fetchHistoricalPrices(Collection $assets, Carbon $from, Carbon $to): void
+    /** @return Collection<int, Asset> assets whose fetch was deferred due to a rate limit */
+    private function fetchHistoricalPrices(Collection $assets, Carbon $from, Carbon $to): Collection
     {
-        $apiKey = config('services.finnhub.key');
         $this->line('Fetching historical prices...');
 
-        foreach ($assets as $asset) {
-            if ($asset->effectivePriceSource() === PriceSource::Finnhub) {
-                $this->fetchFinnhubCandles($asset, $from, $to, $apiKey);
-                usleep(500_000); // 500ms — Finnhub free tier: 60 req/min
-            } else {
-                $this->fetchCoinGeckoRange($asset, $from, $to);
-                sleep(2); // CoinGecko free tier is more restrictive
+        $result = $this->priceFetchService->fetchBatch($assets, $from, $to,
+            function (Asset $asset, PriceSource $source, array $r) {
+                if ($r['outcome'] === PriceFetchOutcome::RateLimited) {
+                    $this->warn("  {$asset->symbol}: {$r['message']} — deferring remaining {$source->label()} assets to a queued backfill");
+                } elseif ($r['outcome'] === PriceFetchOutcome::NoData) {
+                    $this->warn("  {$asset->symbol}: {$r['message']}");
+                } else {
+                    $this->line("  {$asset->symbol} ({$source->label()}): {$r['count']} day(s)");
+                }
             }
-        }
-    }
-
-    private function fetchFinnhubCandles(Asset $asset, Carbon $from, Carbon $to, ?string $apiKey): void
-    {
-        if (! $apiKey) {
-            $this->warn("  {$asset->symbol}: FINNHUB_API_KEY not set, skipping");
-
-            return;
-        }
-
-        $ticker = $asset->polygon_ticker ?: $asset->symbol;
-        $this->line("  {$asset->symbol} (Finnhub)...");
-
-        $response = Http::timeout(30)->get('https://finnhub.io/api/v1/stock/candle', [
-            'symbol'     => $ticker,
-            'resolution' => 'D',
-            'from'       => $from->timestamp,
-            'to'         => $to->timestamp,
-            'token'      => $apiKey,
-        ]);
-
-        if (! $response->successful() || ($response->json('s') ?? 'no_data') === 'no_data') {
-            $this->warn("  {$asset->symbol}: no data (HTTP {$response->status()})");
-            Log::warning("Backfill: no Finnhub candles for {$asset->symbol}");
-
-            return;
-        }
-
-        $timestamps = $response->json('t') ?? [];
-        $closes     = $response->json('c') ?? [];
-        $count      = 0;
-
-        foreach ($timestamps as $i => $ts) {
-            $recordedAt = Carbon::createFromTimestamp($ts)->toDateString().' 12:00:00';
-            AssetPrice::updateOrCreate(
-                ['asset_id' => $asset->id, 'recorded_at' => $recordedAt],
-                ['price' => $closes[$i], 'currency' => 'USD']
-            );
-            $count++;
-        }
-
-        $this->line("    → {$count} day(s)");
-    }
-
-    private function fetchCoinGeckoRange(Asset $asset, Carbon $from, Carbon $to): void
-    {
-        $coingeckoId = $asset->coingecko_id ?? strtolower($asset->symbol);
-        $this->line("  {$asset->symbol} (CoinGecko, id={$coingeckoId})...");
-
-        $response = Http::timeout(30)->get(
-            "https://api.coingecko.com/api/v3/coins/{$coingeckoId}/market_chart/range",
-            [
-                'vs_currency' => 'usd',
-                'from'        => $from->timestamp,
-                'to'          => $to->timestamp,
-            ]
         );
 
-        if (! $response->successful()) {
-            $this->warn("  {$asset->symbol}: no data (HTTP {$response->status()})");
-            Log::warning("Backfill: no CoinGecko data for {$asset->symbol}");
+        return $result['deferred'];
+    }
 
+    private function queueBackfill(Collection $portfolios, Collection $assets, Carbon $from, Carbon $to, ?string $note = null): void
+    {
+        if ($assets->isEmpty()) {
             return;
         }
 
-        $prices = $response->json('prices') ?? [];
-        $count  = 0;
+        $request = BackfillRequest::create([
+            'portfolio_ids'     => $portfolios->pluck('id')->all(),
+            'from_date'         => $from->toDateString(),
+            'to_date'           => $to->toDateString(),
+            'status'            => BackfillStatus::Pending->value,
+            'total_assets'      => $assets->count(),
+            'pending_asset_ids' => $assets->pluck('id')->all(),
+            'last_note'         => $note,
+        ]);
 
-        foreach ($prices as [$ts, $price]) {
-            $date = Carbon::createFromTimestampMs($ts)->toDateString();
-            if ($date < $from->toDateString() || $date > $to->toDateString()) {
-                continue;
-            }
-            AssetPrice::updateOrCreate(
-                ['asset_id' => $asset->id, 'recorded_at' => $date.' 12:00:00'],
-                ['price' => $price, 'currency' => 'USD']
-            );
-            $count++;
-        }
-
-        $this->line("    → {$count} day(s)");
+        $this->info("Queued backfill request #{$request->id} for {$assets->count()} asset(s) — will resume automatically via the hourly assets:process-backfill-queue job.");
     }
 
     /** @return array{0: float, 1: float} [cost_basis, market_value] */

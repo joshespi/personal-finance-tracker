@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('assets:fetch-prices')->hourly();
+        $schedule->command('assets:process-backfill-queue')->hourly();
         $schedule->command('portfolios:snapshot')->dailyAt('00:05');
         $schedule->command('transactions:materialize')->dailyAt('00:10');
     })

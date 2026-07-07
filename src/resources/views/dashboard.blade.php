@@ -24,9 +24,10 @@
 
                 // Chart visibility: data present AND not hidden by the user. Derived once
                 // so the section blocks and the script-include guard below stay in sync.
-                $showNetWorthChart = $chartData->count() > 1 && $show['net_worth_chart'];
-                $showBenchmark     = $chartData->count() > 1 && ! empty($benchmarkData) && $show['benchmark'];
-                $showAllocation    = $allocation['total'] > 0 && $show['allocation'];
+                $showNetWorthChart   = $chartData->count() > 1 && $show['net_worth_chart'];
+                $showCalendarHeatmap = $chartData->count() > 1 && $show['calendar_heatmap'];
+                $showBenchmark       = $chartData->count() > 1 && ! empty($benchmarkData) && $show['benchmark'];
+                $showAllocation      = $allocation['total'] > 0 && $show['allocation'];
             @endphp
 
             @if ($show['budget_drift_banner'])
@@ -312,6 +313,20 @@
                     </div>
                 @endif
 
+                @if ($showCalendarHeatmap)
+                    {{-- Day-over-day change calendar, GitHub-contribution-style --}}
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                            <div>
+                                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Daily Change Calendar</h3>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Color reflects day-over-day % change &middot; hover a day for the $ and % change</p>
+                            </div>
+                            <div id="calendarHeatmapLegend" class="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 shrink-0"></div>
+                        </div>
+                        <div id="calendarHeatmap" class="overflow-x-auto pb-1"></div>
+                    </div>
+                @endif
+
                 {{-- Benchmark comparison toggle (shows when benchmark data exists) --}}
                 @if ($showBenchmark)
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
@@ -592,7 +607,7 @@
         </div>
     </div>
 
-    @if ($showNetWorthChart || $showBenchmark || $showAllocation)
+    @if ($showNetWorthChart || $showCalendarHeatmap || $showBenchmark || $showAllocation)
         @php
             $jsChartData       = $demo->scaleAmounts($chartData->toArray());
             $jsChartDataExMan  = $demo->scaleAmounts($chartDataExManual->toArray());

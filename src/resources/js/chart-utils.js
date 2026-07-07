@@ -66,6 +66,13 @@ export function fmtFull(v) {
     return (v < 0 ? '-$' : '$') + str;
 }
 
+// Same as fmtFull but always signed (e.g. gain/loss deltas), so a $0 or
+// positive change reads "+$..." instead of the bare "$...".
+export function fmtSigned(v) {
+    const str = Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (v >= 0 ? '+$' : '-$') + str;
+}
+
 export function makeTimeScales(gridColor, labelColor, yFmt) {
     return {
         x: {
@@ -193,6 +200,84 @@ export function makeBenchmarkChart({
     update(range);
 
     return chart;
+}
+
+// Day-over-day $ and % change, keyed by date string. First date in the series
+// has no prior day to diff against, so it's omitted (renders as "no data").
+export function dailyChangeMap(rows) {
+    const sorted = [...rows].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const map = new Map();
+    for (let i = 1; i < sorted.length; i++) {
+        const prev = sorted[i - 1].value;
+        const cur  = sorted[i].value;
+        if (!prev) continue;
+        map.set(sorted[i].date, { dollar: cur - prev, pct: (cur - prev) / prev * 100 });
+    }
+    return map;
+}
+
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function dateStrFromUTC(date) {
+    return date.toISOString().slice(0, 10);
+}
+
+// GitHub-style week grid ending on the last available data date. Weeks start
+// Sunday; the final week is null-padded to stay rectangular. Returns
+// `monthLabels` as {weekIndex, label} so a header row can align above the
+// week column where each month begins. Dates are handled in UTC throughout
+// so day-boundary math doesn't drift with the browser's local timezone.
+export function buildCalendarWeeks(rows, days = 365) {
+    if (!rows.length) return { weeks: [], monthLabels: [] };
+
+    // A bare "YYYY-MM-DD" string parses as UTC midnight per spec, matching the
+    // UTC arithmetic used throughout the rest of this function.
+    const end = new Date(rows[rows.length - 1].date);
+    const start = new Date(end);
+    start.setUTCDate(start.getUTCDate() - (days - 1));
+    start.setUTCDate(start.getUTCDate() - start.getUTCDay()); // snap back to Sunday
+
+    const totalDays = Math.round((end - start) / 86400000) + 1;
+    const cells = [];
+    for (let i = 0; i < totalDays; i++) {
+        const d = new Date(start);
+        d.setUTCDate(d.getUTCDate() + i);
+        cells.push(dateStrFromUTC(d));
+    }
+    while (cells.length % 7 !== 0) cells.push(null);
+
+    const weeks = [];
+    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+
+    const monthLabels = [];
+    let lastMonth = null;
+    weeks.forEach((week, weekIndex) => {
+        const first = week.find(d => d);
+        if (!first) return;
+        const month = Number(first.slice(5, 7)) - 1;
+        if (month !== lastMonth) {
+            monthLabels.push({ weekIndex, label: MONTH_NAMES[month] });
+            lastMonth = month;
+        }
+    });
+
+    return { weeks, monthLabels };
+}
+
+const CALENDAR_GREEN_SHADES = ['#bbf7d0', '#86efac', '#4ade80', '#16a34a'];
+const CALENDAR_RED_SHADES   = ['#fecaca', '#fca5a5', '#f87171', '#dc2626'];
+
+// Diverging color scale for the calendar heatmap: red (loss) <-> gray (flat)
+// <-> green (gain), bucketed by magnitude so it reads consistently regardless
+// of portfolio size (color is driven by %, not $).
+export function calendarColor(pct, isDark) {
+    if (pct === undefined) return isDark ? '#27272a' : '#f3f4f6'; // no data
+    if (pct === 0) return isDark ? '#4b5563' : '#e5e7eb'; // flat
+
+    const a     = Math.abs(pct);
+    const level = a >= 2 ? 3 : a >= 1 ? 2 : a >= 0.25 ? 1 : 0;
+
+    return pct > 0 ? CALENDAR_GREEN_SHADES[level] : CALENDAR_RED_SHADES[level];
 }
 
 export const benchTickerColors = { SPY: '#10b981', BTC: '#f59e0b' };
