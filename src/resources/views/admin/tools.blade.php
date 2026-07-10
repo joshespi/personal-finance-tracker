@@ -17,8 +17,10 @@
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Backfill Portfolio Snapshots</h3>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
                         Rebuilds <code>portfolio_snapshots</code> for past dates. Leave dates blank to use the earliest transaction through yesterday.
-                        Fetching prices from Finnhub/CoinGecko is queued and drains automatically over time (see below) unless you check
-                        <em>Skip fetch</em> to reuse existing price records instead.
+                        With <em>Skip fetch</em> unchecked, fetching prices is queued and drains automatically in small batches (see below),
+                        then writing snapshots a chunk of days at a time. Check <em>Skip fetch</em> to reuse existing price records and run
+                        synchronously instead. <em>Dry run</em> always runs synchronously from existing price records only — it never
+                        fetches or writes anything.
                     </p>
 
                     <form method="POST" action="{{ route('admin.tools.backfill-snapshots') }}" class="space-y-4">
@@ -72,9 +74,10 @@
                     <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
                         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Backfill Queue</h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                            Fetching a date range (with "Skip fetch" unchecked) is queued rather than run inline, since pulling years of
-                            history can hit Finnhub/CoinGecko free-tier rate limits. Queued requests drain automatically in small
-                            batches via the hourly <code>assets:process-backfill-queue</code> job until complete.
+                            Runs that fetch prices are queued rather than run inline, since pulling years of price history can be slow
+                            enough to trip a provider rate limit or a proxy timeout. Queued requests drain automatically in small
+                            batches via the hourly <code>assets:process-backfill-queue</code> job — fetching prices first, then writing
+                            snapshots a chunk of days at a time — until complete.
                         </p>
 
                         <div class="overflow-x-auto">
@@ -94,7 +97,7 @@
                                             <td class="pr-4 py-1.5">{{ $req->id }}</td>
                                             <td class="pr-4 py-1.5">{{ $req->from_date->toDateString() }} → {{ $req->to_date->toDateString() }}</td>
                                             <td class="pr-4 py-1.5">{{ $req->statusLabel() }}</td>
-                                            <td class="pr-4 py-1.5">{{ $req->fetchedCount() }}/{{ $req->total_assets }} assets</td>
+                                            <td class="pr-4 py-1.5">{{ $req->progressLabel() }}</td>
                                             <td class="py-1.5 text-gray-500 dark:text-gray-400">{{ $req->last_note }}</td>
                                         </tr>
                                     @endforeach

@@ -7,13 +7,12 @@ import {
 import 'chartjs-adapter-date-fns';
 import {
     resampleByRange, fmtFull, fmtSigned, makeValueCostChart, makeBenchmarkChart, DEMO_MASK,
-    dailyChangeMap, buildCalendarWeeks, calendarColor,
+    dailyChangeMap, buildCalendarMonths, calendarColor,
 } from './chart-utils';
 
-// Only the trailing window is ever rendered in the calendar heatmap; bounding
-// the rows passed to it keeps that cost from growing with total account
-// history (years of daily snapshots).
-const CALENDAR_WINDOW_DAYS = 365;
+// Months shown per page of the calendar heatmap; prev/next pages through
+// history one month at a time from there.
+const CALENDAR_MONTHS_PER_PAGE = 12;
 
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
 
@@ -102,49 +101,124 @@ document.addEventListener('DOMContentLoaded', function () {
     document.body.appendChild(calendarTooltip);
 
     // dashData() only ever returns allDataFull or allDataMkt, which are fixed
-    // for the life of the page — cache the day-diff/week-grid per toggle
-    // state so switching back and forth doesn't re-bucket ~365 rows each time.
-    const calendarDataCache = new Map();
-    function getCalendarData() {
-        if (calendarDataCache.has(showManual)) return calendarDataCache.get(showManual);
+    // for the life of the page — cache the day-diff map per toggle state so
+    // paging through months doesn't recompute it on every click. It's keyed
+    // off the full series (not the visible window) since the pager can land
+    // on any month, and diffing a few thousand rows is trivial either way.
+    const calendarChangesCache = new Map();
+    function getCalendarChanges() {
+        if (calendarChangesCache.has(showManual)) return calendarChangesCache.get(showManual);
 
         const rows = dashData();
-        let data = null;
-        if (rows && rows.length >= 2) {
-            const windowed = rows.slice(-(CALENDAR_WINDOW_DAYS + 1));
-            data = { changes: dailyChangeMap(windowed), ...buildCalendarWeeks(windowed, CALENDAR_WINDOW_DAYS) };
+        const changes = rows && rows.length >= 2 ? dailyChangeMap(rows) : null;
+
+        calendarChangesCache.set(showManual, changes);
+        return changes;
+    }
+
+    function getCalendarBounds() {
+        const rows = dashData();
+        if (!rows || rows.length < 2) return null;
+        const first = new Date(rows[0].date + 'T00:00:00Z');
+        const last  = new Date(rows[rows.length - 1].date + 'T00:00:00Z');
+        return {
+            min: { year: first.getUTCFullYear(), month: first.getUTCMonth() },
+            max: { year: last.getUTCFullYear(), month: last.getUTCMonth() },
+        };
+    }
+
+    const monthIndex = m => m.year * 12 + m.month;
+    function shiftMonth(m, delta) {
+        const idx = monthIndex(m) + delta;
+        return { year: Math.floor(idx / 12), month: ((idx % 12) + 12) % 12 };
+    }
+
+    // Last month shown in the calendar pager; null until the first render
+    // seeds it from the latest data date. Persists across the manual-asset
+    // toggle so switching it doesn't reset whatever month the user paged to.
+    let calendarWindowEnd = null;
+    function clampCalendarWindow(bounds) {
+        if (!calendarWindowEnd || monthIndex(calendarWindowEnd) > monthIndex(bounds.max)) {
+            calendarWindowEnd = bounds.max;
+        } else if (monthIndex(calendarWindowEnd) < monthIndex(bounds.min)) {
+            calendarWindowEnd = bounds.min;
+        }
+    }
+
+    const calendarPrevBtn    = document.getElementById('calendarPrevBtn');
+    const calendarNextBtn    = document.getElementById('calendarNextBtn');
+    const calendarRangeLabel = document.getElementById('calendarRangeLabel');
+
+    function updateCalendarNav(bounds, months) {
+        if (!calendarPrevBtn || !calendarNextBtn || !calendarRangeLabel) return;
+
+        if (!bounds) {
+            calendarRangeLabel.textContent = '';
+            calendarPrevBtn.disabled = true;
+            calendarNextBtn.disabled = true;
+            return;
         }
 
-        calendarDataCache.set(showManual, data);
-        return data;
+        const first = months[0];
+        const last  = months[months.length - 1];
+        calendarRangeLabel.textContent = first.year === last.year
+            ? `${first.label} – ${last.label} ${last.year}`
+            : `${first.label} ${first.year} – ${last.label} ${last.year}`;
+
+        calendarPrevBtn.disabled = monthIndex(first) <= monthIndex(bounds.min);
+        calendarNextBtn.disabled = monthIndex(calendarWindowEnd) >= monthIndex(bounds.max);
+    }
+
+    if (calendarPrevBtn) {
+        calendarPrevBtn.addEventListener('click', () => {
+            if (calendarPrevBtn.disabled) return;
+            calendarWindowEnd = shiftMonth(calendarWindowEnd, -1);
+            renderCalendarHeatmap();
+        });
+    }
+    if (calendarNextBtn) {
+        calendarNextBtn.addEventListener('click', () => {
+            if (calendarNextBtn.disabled) return;
+            calendarWindowEnd = shiftMonth(calendarWindowEnd, 1);
+            renderCalendarHeatmap();
+        });
     }
 
     function renderCalendarHeatmap() {
         const container = document.getElementById('calendarHeatmap');
         if (!container) return;
 
-        const data = getCalendarData();
-        container.innerHTML = '';
-        if (!data) {
+        const changes = getCalendarChanges();
+        const bounds  = getCalendarBounds();
+
+        if (!changes || !bounds) {
             container.innerHTML = '<p class="text-sm text-gray-400 dark:text-gray-500">Not enough data yet.</p>';
+            updateCalendarNav(null);
             return;
         }
 
-        const { changes, weeks, monthLabels } = data;
+        clampCalendarWindow(bounds);
+        const months = buildCalendarMonths(calendarWindowEnd.year, calendarWindowEnd.month, CALENDAR_MONTHS_PER_PAGE);
+
+        container.innerHTML = '';
 
         const wrap = document.createElement('div');
         wrap.className = 'inline-flex flex-col gap-1 min-w-max';
 
         const monthRow = document.createElement('div');
-        monthRow.className = 'flex gap-[3px] pl-[18px]';
-        weeks.forEach((_, idx) => {
-            const label = monthLabels.find(m => m.weekIndex === idx);
-            monthRow.appendChild(labelCell('w-[11px] text-[10px] text-gray-400 dark:text-gray-500', label?.label));
+        monthRow.className = 'flex gap-3';
+        // Mirrors gridRow's own leading spacer (dayLabels, w-[18px]) + gap-3 so month
+        // labels line up with their grid columns instead of drifting by the gap width.
+        monthRow.appendChild(labelCell('w-[18px]'));
+        months.forEach(m => {
+            const label = labelCell('text-[10px] text-gray-400 dark:text-gray-500', m.label);
+            label.style.width = (m.weeks.length * 14 - 3) + 'px';
+            monthRow.appendChild(label);
         });
         wrap.appendChild(monthRow);
 
         const gridRow = document.createElement('div');
-        gridRow.className = 'flex gap-[3px]';
+        gridRow.className = 'flex gap-3';
 
         const dayLabels = document.createElement('div');
         dayLabels.className = 'flex flex-col gap-[3px] pr-1';
@@ -153,24 +227,29 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         gridRow.appendChild(dayLabels);
 
-        weeks.forEach(week => {
-            const col = document.createElement('div');
-            col.className = 'flex flex-col gap-[3px]';
-            week.forEach(dateStr => {
-                const cell = document.createElement('div');
-                cell.className = 'w-[11px] h-[11px] rounded-sm';
-                if (!dateStr) {
-                    cell.style.background = 'transparent';
+        months.forEach(m => {
+            const monthBlock = document.createElement('div');
+            monthBlock.className = 'flex gap-[3px]';
+            m.weeks.forEach(week => {
+                const col = document.createElement('div');
+                col.className = 'flex flex-col gap-[3px]';
+                week.forEach(dateStr => {
+                    const cell = document.createElement('div');
+                    cell.className = 'w-[11px] h-[11px] rounded-sm';
+                    if (!dateStr) {
+                        cell.style.background = 'transparent';
+                        col.appendChild(cell);
+                        return;
+                    }
+
+                    cell.style.background = calendarColor(changes.get(dateStr)?.pct, isDark);
+                    cell.dataset.date = dateStr;
+
                     col.appendChild(cell);
-                    return;
-                }
-
-                cell.style.background = calendarColor(changes.get(dateStr)?.pct, isDark);
-                cell.dataset.date = dateStr;
-
-                col.appendChild(cell);
+                });
+                monthBlock.appendChild(col);
             });
-            gridRow.appendChild(col);
+            gridRow.appendChild(monthBlock);
         });
 
         // One delegated listener for the whole grid instead of 3 per cell (~1095
@@ -203,6 +282,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         wrap.appendChild(gridRow);
         container.appendChild(wrap);
+
+        updateCalendarNav(bounds, months);
     }
 
     const dashChart = makeValueCostChart({

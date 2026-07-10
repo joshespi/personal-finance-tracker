@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 class Transaction extends Model
 {
@@ -59,5 +60,38 @@ class Transaction extends Model
     public function dividendValue(): float
     {
         return (float) $this->quantity * (float) $this->price_per_unit;
+    }
+
+    /**
+     * Accumulates running quantity and weighted-average cost basis across a set of
+     * same-asset transactions (outflows deduct proportionally from the running cost).
+     * Shared by Portfolio::computeHoldings() (current holdings) and
+     * PortfolioSnapshotBackfillService (historical as-of holdings) — same algorithm,
+     * only the transaction set and the price used to value the result differ.
+     *
+     * @param  Collection<int, Transaction>  $transactions  same-asset transactions, any order
+     * @return array{0: float, 1: float} [quantity, cost_basis]
+     */
+    public static function accumulateCostBasis(Collection $transactions): array
+    {
+        $totalQty  = 0.0;
+        $totalCost = 0.0;
+
+        foreach ($transactions->sortBy('transacted_at') as $t) {
+            $qty = (float) $t->quantity;
+            if ($t->type->isInflow()) {
+                $usdFee = $t->fee_in_asset ? 0.0 : (float) $t->fees;
+                $totalCost += $qty * (float) $t->price_per_unit + $usdFee;
+                $totalQty += $qty;
+            } elseif ($t->type->isOutflow()) {
+                $deduct = $t->fee_in_asset ? $qty + (float) $t->fees : $qty;
+                if ($totalQty > 0) {
+                    $totalCost -= ($totalCost / $totalQty) * min($deduct, $totalQty);
+                }
+                $totalQty -= $deduct;
+            }
+        }
+
+        return [max(0.0, round($totalQty, 8)), max(0.0, $totalCost)];
     }
 }

@@ -222,46 +222,36 @@ function dateStrFromUTC(date) {
     return date.toISOString().slice(0, 10);
 }
 
-// GitHub-style week grid ending on the last available data date. Weeks start
-// Sunday; the final week is null-padded to stay rectangular. Returns
-// `monthLabels` as {weekIndex, label} so a header row can align above the
-// week column where each month begins. Dates are handled in UTC throughout
-// so day-boundary math doesn't drift with the browser's local timezone.
-export function buildCalendarWeeks(rows, days = 365) {
-    if (!rows.length) return { weeks: [], monthLabels: [] };
-
-    // A bare "YYYY-MM-DD" string parses as UTC midnight per spec, matching the
-    // UTC arithmetic used throughout the rest of this function.
-    const end = new Date(rows[rows.length - 1].date);
-    const start = new Date(end);
-    start.setUTCDate(start.getUTCDate() - (days - 1));
-    start.setUTCDate(start.getUTCDate() - start.getUTCDay()); // snap back to Sunday
-
-    const totalDays = Math.round((end - start) / 86400000) + 1;
-    const cells = [];
-    for (let i = 0; i < totalDays; i++) {
-        const d = new Date(start);
-        d.setUTCDate(d.getUTCDate() + i);
-        cells.push(dateStrFromUTC(d));
+// One GitHub-style week-grid per calendar month, each its own Sunday-aligned
+// island padded with null so every column is a full week — rather than one
+// continuous strip spanning month boundaries. That lets months read as
+// distinct blocks and lets a prev/next pager step through history one month
+// at a time regardless of total data size. `endYear`/`endMonth` (0-indexed)
+// is the last month shown; `count` months are returned in chronological
+// order ending there. Dates are handled in UTC throughout so day-boundary
+// math doesn't drift with the browser's local timezone.
+export function buildCalendarMonths(endYear, endMonth, count = 12) {
+    const months = [];
+    for (let i = count - 1; i >= 0; i--) {
+        const d = new Date(Date.UTC(endYear, endMonth - i, 1));
+        months.push({ year: d.getUTCFullYear(), month: d.getUTCMonth() });
     }
-    while (cells.length % 7 !== 0) cells.push(null);
 
-    const weeks = [];
-    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+    return months.map(({ year, month }) => {
+        const daysInMonth   = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+        const leadingBlank  = new Date(Date.UTC(year, month, 1)).getUTCDay();
 
-    const monthLabels = [];
-    let lastMonth = null;
-    weeks.forEach((week, weekIndex) => {
-        const first = week.find(d => d);
-        if (!first) return;
-        const month = Number(first.slice(5, 7)) - 1;
-        if (month !== lastMonth) {
-            monthLabels.push({ weekIndex, label: MONTH_NAMES[month] });
-            lastMonth = month;
+        const cells = new Array(leadingBlank).fill(null);
+        for (let day = 1; day <= daysInMonth; day++) {
+            cells.push(dateStrFromUTC(new Date(Date.UTC(year, month, day))));
         }
-    });
+        while (cells.length % 7 !== 0) cells.push(null);
 
-    return { weeks, monthLabels };
+        const weeks = [];
+        for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+
+        return { year, month, label: MONTH_NAMES[month], weeks };
+    });
 }
 
 const CALENDAR_GREEN_SHADES = ['#bbf7d0', '#86efac', '#4ade80', '#16a34a'];

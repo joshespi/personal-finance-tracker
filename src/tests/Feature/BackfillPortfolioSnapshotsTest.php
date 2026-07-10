@@ -425,6 +425,48 @@ class BackfillPortfolioSnapshotsTest extends TestCase
         $request = BackfillRequest::sole();
         $this->assertSame('pending', $request->status);
         $this->assertSame([$asset->id], $request->pending_asset_ids);
+        $this->assertSame([$asset->id], $request->asset_ids);
+        $this->assertDatabaseMissing('portfolio_snapshots', ['portfolio_id' => $portfolio->id]);
+    }
+
+    public function test_queue_option_with_skip_fetch_still_defers_snapshot_writing(): void
+    {
+        Http::fake();
+
+        $user      = User::factory()->create();
+        $portfolio = Portfolio::factory()->for($user)->create();
+        $asset     = Asset::factory()->stock()->create();
+
+        Transaction::factory()->for($portfolio)->for($asset)->create([
+            'type'           => 'buy',
+            'quantity'       => 1,
+            'price_per_unit' => 100,
+            'fees'           => 0,
+            'transacted_at'  => '2024-01-02',
+        ]);
+
+        AssetPrice::factory()->create([
+            'asset_id'    => $asset->id,
+            'price'       => 110,
+            'recorded_at' => '2024-01-02 12:00:00',
+        ]);
+
+        $this->artisan('portfolios:backfill-snapshots', [
+            '--from'       => '2024-01-02',
+            '--to'         => '2024-01-02',
+            '--portfolio'  => $portfolio->id,
+            '--skip-fetch' => true,
+            '--queue'      => true,
+        ])->assertExitCode(0);
+
+        Http::assertNothingSent();
+
+        $request = BackfillRequest::sole();
+        $this->assertSame('pending', $request->status);
+        $this->assertSame(0, $request->total_assets);
+        $this->assertSame([], $request->pending_asset_ids);
+        $this->assertSame([$asset->id], $request->asset_ids);
+        $this->assertSame('2024-01-02', $request->write_cursor->toDateString());
         $this->assertDatabaseMissing('portfolio_snapshots', ['portfolio_id' => $portfolio->id]);
     }
 }

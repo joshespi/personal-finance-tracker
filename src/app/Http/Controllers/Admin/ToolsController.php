@@ -44,8 +44,10 @@ class ToolsController extends Controller
             $args['--dry-run'] = true;
         }
 
-        // Fetching historical prices can run long enough to hit provider rate limits or
-        // a proxy timeout — queue it instead so it drains hourly via assets:process-backfill-queue.
+        // Fetching historical prices can run long enough to hit provider rate limits or a
+        // proxy timeout, so it's queued unless Skip fetch is checked — skip-fetch makes no
+        // API calls at all, so it's safe (and useful for a quick recompute after fixing a
+        // price) to run inline here, backed by the timeout below.
         if (! $skipFetch && ! $dryRun) {
             $args['--queue'] = true;
         }

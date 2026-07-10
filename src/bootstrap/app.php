@@ -16,7 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('assets:fetch-prices')->hourly();
-        $schedule->command('assets:process-backfill-queue')->hourly();
+        // A large backfill's write phase can now span multiple hourly ticks (chunked by
+        // --day-limit) — withoutOverlapping() stops a slow-running tick from colliding with
+        // the next hour's invocation and corrupting the request's write_cursor/status.
+        $schedule->command('assets:process-backfill-queue')->hourly()->withoutOverlapping();
         $schedule->command('portfolios:snapshot')->dailyAt('00:05');
         $schedule->command('transactions:materialize')->dailyAt('00:10');
     })

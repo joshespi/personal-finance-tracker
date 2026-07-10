@@ -83,27 +83,8 @@ class Portfolio extends Model
             ->filter(fn ($t) => $t->type->affectsPosition())
             ->groupBy('asset_id')
             ->map(function ($txns) {
-                $asset     = $txns->first()->asset;
-                $totalQty  = 0.0;
-                $totalCost = 0.0;
-
-                foreach ($txns->sortBy('transacted_at') as $t) {
-                    $qty = (float) $t->quantity;
-                    if ($t->type->isInflow()) {
-                        $usdFee = $t->fee_in_asset ? 0.0 : (float) $t->fees;
-                        $totalCost += $qty * (float) $t->price_per_unit + $usdFee;
-                        $totalQty += $qty;
-                    } elseif ($t->type->isOutflow()) {
-                        $deduct = $t->fee_in_asset ? $qty + (float) $t->fees : $qty;
-                        if ($totalQty > 0) {
-                            $totalCost -= ($totalCost / $totalQty) * min($deduct, $totalQty);
-                        }
-                        $totalQty -= $deduct;
-                    }
-                }
-
-                $totalQty  = max(0.0, round($totalQty, 8));
-                $totalCost = max(0.0, $totalCost);
+                $asset                  = $txns->first()->asset;
+                [$totalQty, $totalCost] = Transaction::accumulateCostBasis($txns);
 
                 $latestPrice    = $asset->latestPrice ? (float) $asset->latestPrice->price : null;
                 $currentValue   = $latestPrice !== null ? round($totalQty * $latestPrice, 2) : null;

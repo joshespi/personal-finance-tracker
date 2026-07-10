@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resampleByRange, filterByRange, dailyChangeMap, buildCalendarWeeks, calendarColor } from './chart-utils';
+import { resampleByRange, filterByRange, dailyChangeMap, buildCalendarMonths, calendarColor } from './chart-utils';
 
 function dailySeries(startISO, days) {
     const start = new Date(startISO).getTime();
@@ -108,41 +108,44 @@ describe('dailyChangeMap', () => {
     });
 });
 
-describe('buildCalendarWeeks', () => {
-    it('returns empty output for no data', () => {
-        expect(buildCalendarWeeks([])).toEqual({ weeks: [], monthLabels: [] });
+describe('buildCalendarMonths', () => {
+    it('returns `count` months in chronological order ending at endYear/endMonth', () => {
+        const months = buildCalendarMonths(2026, 2, 4); // Mar 2026, 0-indexed
+        expect(months.map(m => `${m.year}-${m.month}`)).toEqual(['2025-11', '2026-0', '2026-1', '2026-2']);
+    });
+
+    it('handles year rollover when stepping back from an early month', () => {
+        const months = buildCalendarMonths(2026, 1, 3); // Feb 2026
+        expect(months).toEqual([
+            expect.objectContaining({ year: 2025, month: 11 }),
+            expect.objectContaining({ year: 2026, month: 0 }),
+            expect.objectContaining({ year: 2026, month: 1 }),
+        ]);
     });
 
     it('produces rectangular weeks of 7 days starting on Sunday', () => {
-        const s = dailySeries('2025-06-01', 200);
-        const { weeks } = buildCalendarWeeks(s);
-        expect(weeks.every(w => w.length === 7)).toBe(true);
-        const firstRealDay = weeks[0].find(d => d);
-        expect(new Date(firstRealDay + 'T00:00:00Z').getUTCDay()).toBe(0);
+        const [month] = buildCalendarMonths(2025, 5, 1); // June 2025
+        expect(month.weeks.every(w => w.length === 7)).toBe(true);
     });
 
-    it('places the last data date somewhere in the grid', () => {
-        const s = dailySeries('2025-01-01', 365);
-        const { weeks } = buildCalendarWeeks(s);
-        const flat = weeks.flat().filter(d => d);
-        expect(flat).toContain(s[s.length - 1].date);
+    it('pads the leading and trailing days of the month with null', () => {
+        // April 2026 starts on a Wednesday and has 30 days, so the grid needs
+        // 3 leading blanks and 2 trailing blanks to stay rectangular.
+        const [month] = buildCalendarMonths(2026, 3, 1); // April 2026
+        const flat = month.weeks.flat();
+        expect(flat.filter(d => d)).toHaveLength(30);
+        expect(flat.filter(d => d === null)).toHaveLength(5);
     });
 
-    it('pads trailing cells after the last date with null', () => {
-        // 2026-01-05 is a Monday, so the series ends midweek (Wed) and the
-        // final week needs Thu-Sat padded out with null.
-        const s = dailySeries('2026-01-05', 3);
-        const { weeks } = buildCalendarWeeks(s);
-        const flat = weeks.flat();
-        expect(flat).toContain(null);
+    it('only contains dates within that month', () => {
+        const [month] = buildCalendarMonths(2026, 1, 1); // Feb 2026
+        const dates = month.weeks.flat().filter(d => d);
+        expect(dates.every(d => d.startsWith('2026-02'))).toBe(true);
     });
 
-    it('emits one month label per month transition, in non-decreasing week order', () => {
-        const s = dailySeries('2025-01-01', 365);
-        const { monthLabels } = buildCalendarWeeks(s);
-        expect(monthLabels.length).toBeGreaterThanOrEqual(12);
-        const indices = monthLabels.map(m => m.weekIndex);
-        expect(indices).toEqual([...indices].sort((a, b) => a - b));
+    it('labels each month with its abbreviated name', () => {
+        const months = buildCalendarMonths(2026, 2, 3);
+        expect(months.map(m => m.label)).toEqual(['Jan', 'Feb', 'Mar']);
     });
 });
 

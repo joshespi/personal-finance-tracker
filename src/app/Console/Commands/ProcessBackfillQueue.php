@@ -8,17 +8,21 @@ use App\Enums\PriceSource;
 use App\Models\Asset;
 use App\Models\BackfillRequest;
 use App\Services\HistoricalPriceFetchService;
+use App\Services\PortfolioSnapshotBackfillService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Artisan;
 
 class ProcessBackfillQueue extends Command
 {
-    protected $signature = 'assets:process-backfill-queue {--limit=25 : Max assets to fetch per run}';
+    protected $signature = 'assets:process-backfill-queue
+                            {--limit=25    : Max assets to fetch per run}
+                            {--day-limit=90 : Max days of snapshots to write per run}';
 
     protected $description = 'Drain the oldest pending portfolio-snapshot backfill request in small, rate-limit-aware batches';
 
-    public function __construct(private HistoricalPriceFetchService $priceFetchService)
-    {
+    public function __construct(
+        private HistoricalPriceFetchService $priceFetchService,
+        private PortfolioSnapshotBackfillService $backfillService,
+    ) {
         parent::__construct();
     }
 
@@ -36,6 +40,21 @@ class ProcessBackfillQueue extends Command
 
         $request->status = BackfillStatus::InProgress->value;
 
+        if (! empty($request->pending_asset_ids)) {
+            $this->drainAssetFetch($request);
+        }
+
+        // Falls through in the same run once fetching just finished, so small requests
+        // still complete in a single hourly tick instead of waiting an extra hour.
+        if (empty($request->pending_asset_ids)) {
+            $this->drainSnapshotWrite($request);
+        }
+
+        return self::SUCCESS;
+    }
+
+    private function drainAssetFetch(BackfillRequest $request): void
+    {
         $limit      = (int) $this->option('limit');
         $pendingIds = collect($request->pending_asset_ids);
         $batch      = $pendingIds->take($limit);
@@ -62,31 +81,78 @@ class ProcessBackfillQueue extends Command
 
         $request->pending_asset_ids = $stillPending->all();
         $request->last_note         = $note;
-        $request->save();
 
         if ($stillPending->isEmpty()) {
-            $this->finalize($request);
+            // Only seed the cursor the first time fetching completes — if this fetch was
+            // reopened mid-backfill (see drainSnapshotWrite()'s new-asset check), the write
+            // phase may already be partway through and shouldn't be rewound to from_date.
+            if (! $request->write_cursor) {
+                $request->write_cursor = $request->from_date;
+            }
         } else {
             $this->info("Backfill request #{$request->id}: {$request->fetchedCount()}/{$request->total_assets} assets fetched so far.");
         }
 
-        return self::SUCCESS;
+        $request->save();
     }
 
-    private function finalize(BackfillRequest $request): void
+    private function drainSnapshotWrite(BackfillRequest $request): void
     {
-        Artisan::call('portfolios:backfill-snapshots', [
-            '--from'       => $request->from_date->toDateString(),
-            '--to'         => $request->to_date->toDateString(),
-            '--portfolio'  => $request->portfolioIdsCsv(),
-            '--skip-fetch' => true,
-        ]);
+        if (! $request->write_cursor) {
+            $request->write_cursor = $request->from_date;
+        }
 
-        $request->status       = BackfillStatus::Completed->value;
-        $request->completed_at = now();
-        $request->last_note    = 'Completed — snapshots generated';
+        $portfolios = $this->backfillService->resolvePortfolios($request->portfolio_ids);
+        $allAssets  = $this->backfillService->collectAssets($portfolios);
+
+        // A transaction or manual-asset proxy referencing an asset outside the set fetched
+        // at queue time can appear while a large backfill is still draining (the write phase
+        // now spans many hourly ticks). Route it through the normal fetch phase instead of
+        // writing snapshots with missing price data for it. asset_ids is only null for
+        // requests that predate this check (or were built directly in tests) — there's
+        // nothing to compare against, so skip rather than treat everything as "new".
+        $knownAssetIds = $request->asset_ids !== null ? collect($request->asset_ids) : null;
+        $newAssets     = $knownAssetIds !== null
+            ? $allAssets->reject(fn ($asset) => $knownAssetIds->contains($asset->id))
+            : collect();
+
+        if ($newAssets->isNotEmpty()) {
+            $request->asset_ids = $knownAssetIds->concat($newAssets->pluck('id'))->unique()->values()->all();
+            $request->total_assets += $newAssets->count();
+            $request->pending_asset_ids = collect($request->pending_asset_ids)->concat($newAssets->pluck('id'))->unique()->values()->all();
+            $request->last_note         = "Fetching prices for {$newAssets->count()} asset(s) added since queueing";
+            $request->save();
+
+            $this->info("Backfill request #{$request->id}: found {$newAssets->count()} new asset(s) since queueing — fetching before resuming snapshot writes.");
+
+            return;
+        }
+
+        $chunkDays = max(1, (int) $this->option('day-limit'));
+        $chunkFrom = $request->write_cursor->copy();
+        $chunkTo   = $chunkFrom->copy()->addDays($chunkDays - 1);
+        if ($chunkTo->gt($request->to_date)) {
+            $chunkTo = $request->to_date->copy();
+        }
+
+        $this->backfillService->writeRange($portfolios, $allAssets, $chunkFrom, $chunkTo, false, priceLoadFrom: $request->from_date);
+
+        $nextCursor            = $chunkTo->copy()->addDay();
+        $request->write_cursor = $nextCursor;
+
+        if ($nextCursor->gt($request->to_date)) {
+            $request->status       = BackfillStatus::Completed->value;
+            $request->completed_at = now();
+            $request->last_note    = 'Completed — snapshots generated';
+            $request->save();
+
+            $this->info("Backfill request #{$request->id} completed — snapshots generated for {$request->from_date->toDateString()} to {$request->to_date->toDateString()}.");
+
+            return;
+        }
+
         $request->save();
 
-        $this->info("Backfill request #{$request->id} completed — snapshots generated for {$request->from_date->toDateString()} to {$request->to_date->toDateString()}.");
+        $this->info("Backfill request #{$request->id}: wrote snapshots through {$chunkTo->toDateString()} ({$request->writtenDays()}/{$request->totalDays()} days).");
     }
 }

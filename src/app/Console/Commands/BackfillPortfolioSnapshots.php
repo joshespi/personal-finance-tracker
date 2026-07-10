@@ -6,13 +6,11 @@ use App\Enums\BackfillStatus;
 use App\Enums\PriceFetchOutcome;
 use App\Enums\PriceSource;
 use App\Models\Asset;
-use App\Models\AssetPrice;
 use App\Models\BackfillRequest;
 use App\Models\Portfolio;
-use App\Models\PortfolioSnapshot;
 use App\Services\HistoricalPriceFetchService;
+use App\Services\PortfolioSnapshotBackfillService;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 
@@ -24,33 +22,34 @@ class BackfillPortfolioSnapshots extends Command
                             {--to=         : End date Y-m-d; defaults to yesterday}
                             {--skip-fetch  : Skip API calls; use existing AssetPrice records}
                             {--dry-run     : Preview without writing to the database}
-                            {--queue       : Queue price fetching instead of running it inline (drained hourly by assets:process-backfill-queue)}';
+                            {--queue       : Queue the whole backfill (fetch + snapshot writing) instead of running it inline (drained hourly by assets:process-backfill-queue)}';
 
     protected $description = 'Backfill portfolio_snapshots for past dates using historical asset prices';
 
-    public function __construct(private HistoricalPriceFetchService $priceFetchService)
-    {
+    public function __construct(
+        private HistoricalPriceFetchService $priceFetchService,
+        private PortfolioSnapshotBackfillService $backfillService,
+    ) {
         parent::__construct();
     }
 
     public function handle(): int
     {
-        $dryRun    = $this->option('dry-run');
-        $skipFetch = $this->option('skip-fetch');
+        $dryRun = $this->option('dry-run');
+        // A dry run is a preview — it shouldn't make real API calls or persist AssetPrice
+        // rows, so it always behaves as skip-fetch regardless of the flag.
+        $skipFetch = $this->option('skip-fetch') || $dryRun;
         $queue     = $this->option('queue') && ! $dryRun;
 
-        $portfolios = $this->resolvePortfolios();
+        $portfolioIds = $this->option('portfolio')
+            ? array_map('intval', explode(',', $this->option('portfolio')))
+            : null;
+        $portfolios = $this->backfillService->resolvePortfolios($portfolioIds);
         if ($portfolios->isEmpty()) {
             $this->warn('No portfolios found.');
 
             return self::SUCCESS;
         }
-
-        $portfolios->load([
-            'transactions.asset',
-            'manualAssets.valuations',
-            'manualAssets.proxyAsset',
-        ]);
 
         $from = $this->resolveFrom($portfolios);
         $to   = $this->resolveTo();
@@ -63,91 +62,29 @@ class BackfillPortfolioSnapshots extends Command
 
         $this->info("Range: {$from->toDateString()} → {$to->toDateString()}, {$portfolios->count()} portfolio(s)");
 
-        $positionAssets = $portfolios
-            ->flatMap(fn ($p) => $p->transactions->map(fn ($t) => $t->asset))
-            ->filter()
-            ->unique('id')
-            ->values();
+        $allAssets = $this->backfillService->collectAssets($portfolios);
 
-        $proxyAssets = $portfolios
-            ->flatMap(fn ($p) => $p->manualAssets
-                ->filter(fn ($ma) => $ma->tracking_method === 'proxy_ticker' && $ma->proxyAsset)
-                ->map(fn ($ma) => $ma->proxyAsset)
-            )
-            ->unique('id')
-            ->values();
+        // Both fetching historical prices and recomputing every day's snapshot can run long
+        // enough to hit provider rate limits or a proxy timeout — queue the whole thing instead
+        // so it drains hourly via assets:process-backfill-queue.
+        if ($queue) {
+            $this->queueBackfill($portfolios, $allAssets, $skipFetch ? collect() : $allAssets, $from, $to);
 
-        $allAssets = $positionAssets->concat($proxyAssets)->unique('id')->values();
+            return self::SUCCESS;
+        }
 
         if (! $skipFetch) {
-            if ($queue) {
-                $this->queueBackfill($portfolios, $allAssets, $from, $to);
-
-                return self::SUCCESS;
-            }
-
             $deferred = $this->fetchHistoricalPrices($allAssets, $from, $to);
             if ($deferred->isNotEmpty()) {
-                $this->queueBackfill($portfolios, $deferred, $from, $to, 'Deferred after hitting a provider rate limit');
+                $this->queueBackfill($portfolios, $allAssets, $deferred, $from, $to, 'Deferred after hitting a provider rate limit');
             }
         }
 
-        // Buffer 7 days before $from so weekend lookback finds Friday prices
-        $loadFrom = $from->copy()->subDays(7);
-        $assetIds = $allAssets->pluck('id');
-
-        $pricesByAssetAndDate = AssetPrice::whereIn('asset_id', $assetIds)
-            ->where('recorded_at', '>=', $loadFrom->toDateString())
-            ->where('recorded_at', '<=', $to->copy()->addDay()->toDateString())
-            ->get()
-            ->groupBy('asset_id')
-            ->map(fn ($prices) => $prices
-                ->groupBy(fn ($p) => Carbon::parse($p->recorded_at)->toDateString())
-                ->map(fn ($day) => $day->sortByDesc('recorded_at')->first())
-            );
-
-        $period  = CarbonPeriod::create($from, $to);
-        $written = 0;
-
-        // Chart-eligible manual assets don't change across the date range — filter once per portfolio.
-        $chartManualAssets = $portfolios->mapWithKeys(fn ($p) => [
-            $p->id => $p->manualAssets->where('include_in_chart', true)->values(),
-        ]);
-
-        foreach ($period as $date) {
-            $dateStr = $date->toDateString();
-
-            foreach ($portfolios as $portfolio) {
-                $txnsAsOf = $portfolio->transactions->filter(
-                    fn ($t) => $t->transacted_at->toDateString() <= $dateStr
-                );
-
-                [$costBasis, $marketValue] = $this->computeHoldingsAsOf(
-                    $txnsAsOf, $pricesByAssetAndDate, $dateStr
-                );
-
-                $manualValue = $this->computeManualValueAsOf(
-                    $chartManualAssets[$portfolio->id],
-                    $pricesByAssetAndDate,
-                    $dateStr
-                );
-
-                if ($dryRun) {
-                    $total = round($marketValue + $manualValue, 2);
-                    $this->line("  [{$dateStr}] {$portfolio->name}: \${$total}");
-                } else {
-                    PortfolioSnapshot::updateOrCreate(
-                        ['portfolio_id' => $portfolio->id, 'recorded_on' => $dateStr],
-                        [
-                            'cost_basis'   => $costBasis,
-                            'market_value' => $marketValue,
-                            'manual_value' => $manualValue,
-                        ]
-                    );
-                    $written++;
-                }
+        $written = $this->backfillService->writeRange($portfolios, $allAssets, $from, $to, $dryRun,
+            function (string $date, Portfolio $portfolio, float $total) {
+                $this->line("  [{$date}] {$portfolio->name}: \${$total}");
             }
-        }
+        );
 
         if ($dryRun) {
             $this->info('Dry run — no snapshots written.');
@@ -156,18 +93,6 @@ class BackfillPortfolioSnapshots extends Command
         }
 
         return self::SUCCESS;
-    }
-
-    private function resolvePortfolios(): Collection
-    {
-        $ids = $this->option('portfolio');
-        if ($ids) {
-            $idList = array_map('intval', explode(',', $ids));
-
-            return Portfolio::whereIn('id', $idList)->get();
-        }
-
-        return Portfolio::all();
     }
 
     private function resolveFrom(Collection $portfolios): Carbon
@@ -216,110 +141,32 @@ class BackfillPortfolioSnapshots extends Command
         return $result['deferred'];
     }
 
-    private function queueBackfill(Collection $portfolios, Collection $assets, Carbon $from, Carbon $to, ?string $note = null): void
+    /**
+     * @param  Collection<int, Asset>  $allAssets  every asset in scope for this backfill, fetched or not —
+     *                                             frozen at queue time so the write phase can detect assets
+     *                                             that enter scope later (a transaction added mid-backfill)
+     *                                             and route them through a fetch instead of silently using
+     *                                             cost-basis for them.
+     * @param  Collection<int, Asset>  $pendingAssets  assets still needing a price fetch; empty if fetch is skipped or already done
+     */
+    private function queueBackfill(Collection $portfolios, Collection $allAssets, Collection $pendingAssets, Carbon $from, Carbon $to, ?string $note = null): void
     {
-        if ($assets->isEmpty()) {
-            return;
-        }
-
         $request = BackfillRequest::create([
             'portfolio_ids'     => $portfolios->pluck('id')->all(),
             'from_date'         => $from->toDateString(),
             'to_date'           => $to->toDateString(),
             'status'            => BackfillStatus::Pending->value,
-            'total_assets'      => $assets->count(),
-            'pending_asset_ids' => $assets->pluck('id')->all(),
+            'total_assets'      => $pendingAssets->count(),
+            'pending_asset_ids' => $pendingAssets->pluck('id')->all(),
+            'asset_ids'         => $allAssets->pluck('id')->all(),
+            'write_cursor'      => $pendingAssets->isEmpty() ? $from->toDateString() : null,
             'last_note'         => $note,
         ]);
 
-        $this->info("Queued backfill request #{$request->id} for {$assets->count()} asset(s) — will resume automatically via the hourly assets:process-backfill-queue job.");
-    }
-
-    /** @return array{0: float, 1: float} [cost_basis, market_value] */
-    private function computeHoldingsAsOf(Collection $transactions, Collection $pricesByAssetAndDate, string $date): array
-    {
-        $costBasis   = 0.0;
-        $marketValue = 0.0;
-
-        $groups = $transactions
-            ->filter(fn ($t) => $t->type->affectsPosition())
-            ->groupBy('asset_id');
-
-        foreach ($groups as $assetId => $txns) {
-            $totalQty  = 0.0;
-            $totalCost = 0.0;
-
-            foreach ($txns->sortBy('transacted_at') as $t) {
-                $qty = (float) $t->quantity;
-                if ($t->type->isInflow()) {
-                    $usdFee = $t->fee_in_asset ? 0.0 : (float) $t->fees;
-                    $totalCost += $qty * (float) $t->price_per_unit + $usdFee;
-                    $totalQty += $qty;
-                } elseif ($t->type->isOutflow()) {
-                    $deduct = $t->fee_in_asset ? $qty + (float) $t->fees : $qty;
-                    if ($totalQty > 0) {
-                        $totalCost -= ($totalCost / $totalQty) * min($deduct, $totalQty);
-                    }
-                    $totalQty -= $deduct;
-                }
-            }
-
-            $totalQty  = max(0.0, round($totalQty, 8));
-            $totalCost = max(0.0, $totalCost);
-            $costBasis += $totalCost;
-
-            $price = $this->closestPrice($pricesByAssetAndDate->get($assetId, collect()), $date);
-            $marketValue += $price !== null ? round($totalQty * $price, 2) : $totalCost;
+        if ($pendingAssets->isEmpty()) {
+            $this->info("Queued backfill request #{$request->id} — snapshots for {$from->toDateString()} to {$to->toDateString()} will be written via the hourly assets:process-backfill-queue job.");
+        } else {
+            $this->info("Queued backfill request #{$request->id} for {$pendingAssets->count()} asset(s) — will resume automatically via the hourly assets:process-backfill-queue job.");
         }
-
-        return [round($costBasis, 2), round($marketValue, 2)];
-    }
-
-    private function computeManualValueAsOf(Collection $manualAssets, Collection $pricesByAssetAndDate, string $date): float
-    {
-        $total = 0.0;
-
-        foreach ($manualAssets as $ma) {
-            if ($ma->tracking_method === 'proxy_ticker') {
-                $anchorDate = $ma->anchor_date?->toDateString();
-                if (! $anchorDate || $anchorDate > $date) {
-                    continue;
-                }
-                $price = $this->closestPrice($pricesByAssetAndDate->get($ma->proxy_asset_id, collect()), $date);
-
-                if ($ma->anchor_synthetic_shares !== null) {
-                    $shares = (float) $ma->anchor_synthetic_shares;
-                } else {
-                    // anchor_synthetic_shares wasn't computed at save time (proxy price unavailable then);
-                    // derive it now from the anchor-date price so the backfill scales correctly.
-                    $anchorPrice = $this->closestPrice($pricesByAssetAndDate->get($ma->proxy_asset_id, collect()), $anchorDate);
-                    $shares      = ($anchorPrice && $anchorPrice > 0) ? (float) $ma->anchor_value / $anchorPrice : 0;
-                }
-
-                $total += ($price !== null && $shares > 0)
-                    ? round($shares * $price, 2)
-                    : (float) ($ma->anchor_value ?? 0);
-            } else {
-                $val = $ma->valuations
-                    ->filter(fn ($v) => $v->valued_at->toDateString() <= $date)
-                    ->sortByDesc('valued_at')
-                    ->first();
-                if ($val) {
-                    $total += (float) $val->value;
-                }
-            }
-        }
-
-        return round($total, 2);
-    }
-
-    private function closestPrice(Collection $pricesByDate, string $date): ?float
-    {
-        $closest = $pricesByDate->keys()
-            ->filter(fn ($d) => $d <= $date)
-            ->sort()
-            ->last();
-
-        return $closest !== null ? (float) $pricesByDate[$closest]->price : null;
     }
 }

@@ -323,6 +323,17 @@
                             </div>
                             <div id="calendarHeatmapLegend" class="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 shrink-0"></div>
                         </div>
+                        <div class="flex items-center justify-center gap-3 mb-2">
+                            <button id="calendarPrevBtn" type="button" aria-label="Previous month"
+                                    class="p-1 rounded-md text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                            </button>
+                            <span id="calendarRangeLabel" aria-live="polite" class="text-xs font-medium text-gray-500 dark:text-gray-400 min-w-[140px] text-center"></span>
+                            <button id="calendarNextBtn" type="button" aria-label="Next month"
+                                    class="p-1 rounded-md text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>
                         <div id="calendarHeatmap" class="overflow-x-auto pb-1"></div>
                     </div>
                 @endif
