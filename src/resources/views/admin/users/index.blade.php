@@ -53,6 +53,15 @@
                                            class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                                             Edit
                                         </a>
+                                        @unless ($user->email_verified_at)
+                                            <form method="POST" action="{{ route('admin.users.verify', $user) }}">
+                                                @csrf
+                                                <button type="submit"
+                                                        class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-green-700 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                                                    Verify
+                                                </button>
+                                            </form>
+                                        @endunless
                                         @if ($user->id !== Auth::id())
                                             <form method="POST" action="{{ route('admin.impersonate', $user) }}">
                                                 @csrf

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -42,6 +43,15 @@ class UserController extends Controller
         $user->update($validated);
 
         return redirect()->route('admin.users.index')->with('success', 'User updated.');
+    }
+
+    public function verify(User $user): RedirectResponse
+    {
+        if (! $user->hasVerifiedEmail() && $user->markEmailAsVerified()) {
+            event(new Verified($user));
+        }
+
+        return redirect()->route('admin.users.show', $user)->with('success', 'User marked as verified.');
     }
 
     public function destroy(Request $request, User $user): RedirectResponse

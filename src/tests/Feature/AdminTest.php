@@ -53,6 +53,29 @@ class AdminTest extends TestCase
             ->assertSee('Unverified');
     }
 
+    public function test_admin_can_manually_verify_user(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user  = User::factory()->unverified()->create();
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.verify', $user))
+            ->assertRedirect(route('admin.users.show', $user));
+
+        $this->assertNotNull($user->fresh()->email_verified_at);
+    }
+
+    public function test_non_admin_cannot_manually_verify_user(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('admin.users.verify', $user))
+            ->assertForbidden();
+
+        $this->assertNull($user->fresh()->email_verified_at);
+    }
+
     public function test_admin_can_view_user_show_page(): void
     {
         $admin = User::factory()->admin()->create();

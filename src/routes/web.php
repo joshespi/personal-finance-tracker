@@ -181,6 +181,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/', AdminDashboardController::class)->name('dashboard');
         Route::resource('users', AdminUserController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);
+        Route::post('users/{user}/verify', [AdminUserController::class, 'verify'])->name('users.verify');
         Route::get('activity', AdminActivityLogController::class)->name('activity');
         Route::get('settings', [AdminSettingsController::class, 'edit'])->name('settings');
         Route::post('settings', [AdminSettingsController::class, 'update'])->name('settings.update');

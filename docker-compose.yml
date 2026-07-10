@@ -1,3 +1,35 @@
+# Shared env for the PHP containers (app + scheduler). Kept in one place so the scheduler
+# can never drift onto a different DB/mail config than the app it schedules for.
+x-app-env: &app-env
+  FINNHUB_API_KEY: ${FINNHUB_API_KEY}
+  DONATE_BTC_ADDRESS: ${DONATE_BTC_ADDRESS:-}
+  APP_URL: ${APP_URL}
+  APP_NAME: ${APP_NAME}
+  APP_ENV: ${APP_ENV}
+  APP_KEY: ${APP_KEY}
+  APP_DEBUG: ${APP_DEBUG}
+  LOG_CHANNEL: ${LOG_CHANNEL}
+  LOG_STACK: ${LOG_STACK}
+  LOG_LEVEL: ${LOG_LEVEL}
+  DB_CONNECTION: mariadb
+  DB_HOST: port-tracker-db
+  DB_PORT: 3306
+  SESSION_DRIVER: database
+  QUEUE_CONNECTION: database
+  CACHE_STORE: database
+  DB_DATABASE: ${DB_DATABASE}
+  DB_USERNAME: ${DB_USERNAME}
+  DB_PASSWORD: ${DB_PASSWORD}
+  MAIL_MAILER: ${MAIL_MAILER:-log}
+  MAIL_HOST: ${MAIL_HOST:-smtp-relay.brevo.com}
+  MAIL_PORT: ${MAIL_PORT:-587}
+  MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+  MAIL_USERNAME: ${MAIL_USERNAME}
+  MAIL_PASSWORD: ${MAIL_PASSWORD}
+  MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
+  MAIL_FROM_NAME: ${MAIL_FROM_NAME}
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES}
+
 services:
   app:
     build:
@@ -6,34 +38,7 @@ services:
     volumes:
       - ./src:/var/www/html
     environment:
-      FINNHUB_API_KEY: ${FINNHUB_API_KEY}
-      DONATE_BTC_ADDRESS: ${DONATE_BTC_ADDRESS:-}
-      APP_URL: ${APP_URL}
-      APP_NAME: ${APP_NAME}
-      APP_ENV: ${APP_ENV}
-      APP_KEY: ${APP_KEY}
-      APP_DEBUG: ${APP_DEBUG}
-      LOG_CHANNEL: ${LOG_CHANNEL}
-      LOG_STACK: ${LOG_STACK}
-      LOG_LEVEL: ${LOG_LEVEL}
-      DB_CONNECTION: mariadb
-      DB_HOST: port-tracker-db
-      DB_PORT: 3306
-      SESSION_DRIVER: database
-      QUEUE_CONNECTION: database
-      CACHE_STORE: database
-      DB_DATABASE: ${DB_DATABASE}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      MAIL_MAILER: ${MAIL_MAILER:-log}
-      MAIL_HOST: ${MAIL_HOST:-smtp-relay.brevo.com}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME}
-      TRUSTED_PROXIES: ${TRUSTED_PROXIES}
+      <<: *app-env
     restart: always
     depends_on:
       db:
@@ -41,6 +46,38 @@ services:
     container_name: port-tracker-app
     networks:
       - laravel
+
+  # Runs Laravel's scheduler in-stack so the hourly/daily commands (price fetches,
+  # snapshots, transaction materialization, backfill-queue drain — see bootstrap/app.php)
+  # keep firing without depending on a host crontab, which silently broke when the stack
+  # was moved on the live host.
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    volumes:
+      - ./src:/var/www/html
+    environment:
+      <<: *app-env
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    container_name: port-tracker-scheduler
+    networks:
+      - laravel
+    # The image ENTRYPOINT runs composer/migrate then execs php-fpm; override it so this
+    # container runs the scheduler instead. It shares ./src (and thus vendor/) with app, so
+    # it waits for app to finish installing dependencies before booting artisan.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until [ -f vendor/autoload.php ]; do
+          echo "scheduler: waiting for app to install dependencies..."
+          sleep 3
+        done
+        exec php artisan schedule:work
 
   node:
     image: node:24.18-alpine
