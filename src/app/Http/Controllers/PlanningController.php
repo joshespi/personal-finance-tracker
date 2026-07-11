@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\AllocatorService;
 use App\Services\DebtPayoffService;
 use App\Services\EmergencyFundService;
+use App\Support\Finance;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -77,10 +78,10 @@ class PlanningController extends Controller
 
         if ($age !== null && $age < $retirementAge) {
             $monthsLeft   = ($retirementAge - $age) * 12;
-            $r            = pow(1 + $annualReturn / 100, 1 / 12) - 1;
+            $r            = Finance::monthlyRate($annualReturn);
             $growthFactor = pow(1 + $r, $monthsLeft);
 
-            $projectedFv = $this->futureValue($currentValue, $monthlyContrib, $r, $monthsLeft);
+            $projectedFv = Finance::futureValue($currentValue, $monthlyContrib, $r, $monthsLeft);
 
             $incomeBase = $annualExpenses ?? ($annualIncome > 0 ? $annualIncome : null);
             $target     = $incomeBase ? round($incomeBase * 25, 2) : null;
@@ -106,7 +107,7 @@ class PlanningController extends Controller
                         continue;
                     }
                     $months       = ($benchAge - $age) * 12;
-                    $proj         = $this->futureValue($currentValue, $monthlyContrib, $r, $months);
+                    $proj         = Finance::futureValue($currentValue, $monthlyContrib, $r, $months);
                     $benchmarks[] = [
                         'age'       => $benchAge,
                         'multiple'  => $mult,
@@ -141,17 +142,6 @@ class PlanningController extends Controller
             'annualIncome'   => $annualIncome,
             'result'         => $result,
         ]);
-    }
-
-    private function futureValue(float $pv, float $pmt, float $r, int $months): float
-    {
-        if ($r > 0) {
-            $gf = pow(1 + $r, $months);
-
-            return $pv * $gf + $pmt * ($gf - 1) / $r;
-        }
-
-        return $pv + $pmt * $months;
     }
 
     private function emergencyFund(Request $request, EmergencyFundService $emergencyFund): View

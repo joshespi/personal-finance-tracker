@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Pension;
+use App\Support\Finance;
 
 class PensionService
 {
@@ -116,10 +117,10 @@ class PensionService
             ? max(0, (float) $overrides['annual_expenses'])
             : null;
 
-        $r      = pow(1 + $expectedReturn / 100, 1 / 12) - 1;
+        $r      = Finance::monthlyRate($expectedReturn);
         $months = max(0, $yearsToRetirement) * 12;
 
-        $portfolioAtRetirement = $this->futureValue($portfolioBase, $monthly, $r, $months);
+        $portfolioAtRetirement = Finance::futureValue($portfolioBase, $monthly, $r, $months);
         $portfolioAnnualIncome = $portfolioAtRetirement * $swr / 100;
         $totalAnnual           = $pensionAnnual + $portfolioAnnualIncome;
 
@@ -142,17 +143,5 @@ class PensionService
             'monthlyContribution'    => $monthly,
             'yearsToRetirement'      => $yearsToRetirement,
         ];
-    }
-
-    /** Monthly-compounded future value of a lump sum plus a level monthly contribution. */
-    private function futureValue(float $pv, float $pmt, float $r, int $months): float
-    {
-        if ($r > 0) {
-            $gf = pow(1 + $r, $months);
-
-            return $pv * $gf + $pmt * ($gf - 1) / $r;
-        }
-
-        return $pv + $pmt * $months;
     }
 }

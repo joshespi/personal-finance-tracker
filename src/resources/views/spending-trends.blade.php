@@ -1,4 +1,8 @@
 <x-app-layout>
+    @push('head-vite')
+        @vite(['resources/js/chartjs.js'])
+    @endpush
+
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <div>
@@ -90,7 +94,7 @@
     @if ($datasets->isNotEmpty())
     @push('scripts')
     <script>
-    (function () {
+    document.addEventListener('DOMContentLoaded', function () {
         const labels   = @json($monthLabels);
         const datasets = @json($datasets);
         const isDark   = document.documentElement.classList.contains('dark');
@@ -136,7 +140,7 @@
                 },
             },
         });
-    })();
+    });
     </script>
     @endpush
     @endif

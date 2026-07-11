@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AssetType;
 use App\Enums\PriceSource;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,7 @@ class Asset extends Model
             return PriceSource::from($this->price_source);
         }
 
-        return $this->asset_type === 'crypto' ? PriceSource::CoinGecko : PriceSource::Finnhub;
+        return $this->asset_type === AssetType::Crypto->value ? PriceSource::CoinGecko : PriceSource::Finnhub;
     }
 
     public function transactions(): HasMany

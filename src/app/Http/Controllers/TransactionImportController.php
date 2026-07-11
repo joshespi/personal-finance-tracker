@@ -96,11 +96,18 @@ class TransactionImportController extends Controller
             return back()->withErrors(['csv_file' => 'No valid rows found in the CSV.']);
         }
 
+        // One lookup for all symbols instead of a firstOrCreate SELECT per row —
+        // real exports repeat the same few symbols hundreds of times.
+        $assets = Asset::whereIn('symbol', array_unique(array_column($rows, 'symbol')))
+            ->get()
+            ->keyBy('symbol');
+
         foreach ($rows as $row) {
-            $asset = Asset::firstOrCreate(
-                ['symbol' => $row['symbol']],
-                ['name' => $row['symbol'], 'asset_type' => $row['asset_type']]
-            );
+            $asset = $assets->get($row['symbol']);
+            if (! $asset) {
+                $asset = Asset::create(['symbol' => $row['symbol'], 'name' => $row['symbol'], 'asset_type' => $row['asset_type']]);
+                $assets->put($row['symbol'], $asset);
+            }
 
             $portfolio->transactions()->create([
                 'asset_id'       => $asset->id,

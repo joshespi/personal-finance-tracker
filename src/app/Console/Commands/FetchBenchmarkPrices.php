@@ -3,8 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Models\BenchmarkPrice;
+use App\Services\BenchmarkService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -40,6 +42,8 @@ class FetchBenchmarkPrices extends Command
             $this->fetchCryptoCandles($ticker, $from, $to);
         }
 
+        Cache::forget(BenchmarkService::CACHE_KEY);
+
         $this->info('Done.');
 
         return self::SUCCESS;
@@ -73,18 +77,16 @@ class FetchBenchmarkPrices extends Command
         $data       = $response->json();
         $timestamps = $data['t'] ?? [];
         $closes     = $data['c'] ?? [];
-        $count      = 0;
+        $rows       = [];
 
         foreach ($timestamps as $i => $ts) {
-            $date = Carbon::createFromTimestamp($ts)->toDateString();
-            BenchmarkPrice::updateOrCreate(
-                ['ticker' => $ticker, 'recorded_on' => $date],
-                ['close_price' => $closes[$i]]
-            );
-            $count++;
+            $date        = Carbon::createFromTimestamp($ts)->toDateString();
+            $rows[$date] = ['ticker' => $ticker, 'recorded_on' => $date, 'close_price' => $closes[$i]];
         }
 
-        $this->line("  {$ticker}: stored {$count} days");
+        $this->storeRows($rows);
+
+        $this->line("  {$ticker}: stored ".count($rows).' days');
     }
 
     private function fetchCryptoCandles(string $ticker, Carbon $from, Carbon $to): void
@@ -113,20 +115,25 @@ class FetchBenchmarkPrices extends Command
         }
 
         $prices = $response->json('prices') ?? [];
-        $count  = 0;
+        $rows   = [];
 
         foreach ($prices as [$ts, $price]) {
             $date = Carbon::createFromTimestampMs($ts)->toDateString();
             if ($date < $from->toDateString() || $date > $to->toDateString()) {
                 continue;
             }
-            BenchmarkPrice::updateOrCreate(
-                ['ticker' => $ticker, 'recorded_on' => $date],
-                ['close_price' => $price]
-            );
-            $count++;
+            $rows[$date] = ['ticker' => $ticker, 'recorded_on' => $date, 'close_price' => $price];
         }
 
-        $this->line("  {$ticker}: stored {$count} days");
+        $this->storeRows($rows);
+
+        $this->line("  {$ticker}: stored ".count($rows).' days');
+    }
+
+    private function storeRows(array $rows): void
+    {
+        foreach (array_chunk(array_values($rows), 500) as $chunk) {
+            BenchmarkPrice::upsert($chunk, ['ticker', 'recorded_on'], ['close_price']);
+        }
     }
 }

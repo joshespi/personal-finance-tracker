@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CashTransaction;
+use App\Support\Finance;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -68,7 +69,7 @@ class ForecastController extends Controller
         int $years,
         ?float $fireTarget
     ): array {
-        $r = pow(1 + $annualReturn / 100, 1 / 12) - 1;
+        $r = Finance::monthlyRate($annualReturn);
 
         $standardThresholds = [500_000, 1_000_000, 2_000_000, 5_000_000];
         $allThresholds      = $standardThresholds;
@@ -83,9 +84,7 @@ class ForecastController extends Controller
         for ($y = 0; $y <= $years; $y++) {
             $t = $y * 12;
 
-            $nominal = $r > 0
-                ? $startingNw * pow(1 + $r, $t) + $monthlySavings * (pow(1 + $r, $t) - 1) / $r
-                : $startingNw + $monthlySavings * $t;
+            $nominal = Finance::futureValue($startingNw, $monthlySavings, $r, $t);
 
             $real = $y > 0
                 ? $nominal / pow(1 + $inflationRate / 100, $y)

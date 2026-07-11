@@ -1,6 +1,25 @@
-import { Chart } from 'chart.js';
+import {
+    Chart,
+    LineController, LineElement, PointElement, Filler,
+    LinearScale, TimeScale, Tooltip, Legend,
+    PieController, ArcElement,
+} from 'chart.js';
+import 'chartjs-adapter-date-fns';
+
+// Register once for every bundle that imports these helpers.
+Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
 
 export const DEMO_MASK = '••••';
+
+// Grid/label colors derived from the current dark-mode class, shared by all bundles.
+export function themeColors() {
+    const isDark = document.documentElement.classList.contains('dark');
+    return {
+        isDark,
+        gridColor:  isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
+        labelColor: isDark ? '#9ca3af' : '#6b7280',
+    };
+}
 
 export function cutoffDate(range) {
     const now = new Date();
@@ -200,6 +219,25 @@ export function makeBenchmarkChart({
     update(range);
 
     return chart;
+}
+
+// Shared allocation pie (dashboard asset-class donut, portfolio holdings donut):
+// legend off, borderless slices, tooltip showing the slice value (masked in demo mode).
+export function makeAllocationPie({ el, labels, values, colors, demoMode = false }) {
+    if (!el) return null;
+
+    return new Chart(el, {
+        type: 'pie',
+        data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => `${ctx.label}: ${demoMode ? DEMO_MASK : fmtFull(ctx.parsed)}` } },
+            },
+        },
+    });
 }
 
 // Day-over-day $ and % change, keyed by date string. First date in the series

@@ -44,6 +44,12 @@ enum AssetType: string
         };
     }
 
+    /** Users-table column holding this type's global target allocation percent. */
+    public function targetColumn(): string
+    {
+        return "target_{$this->value}_pct";
+    }
+
     /** Chart color for this allocation bucket. */
     public function allocationColor(): string
     {

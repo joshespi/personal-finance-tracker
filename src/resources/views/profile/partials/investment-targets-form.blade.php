@@ -9,12 +9,9 @@
 
     <form method="post" action="{{ route('profile.targets') }}" class="mt-6 space-y-4"
           x-data="{
-              stock: {{ (float) $user->target_stock_pct }},
-              crypto: {{ (float) $user->target_crypto_pct }},
-              real_estate: {{ (float) $user->target_real_estate_pct }},
-              bond: {{ (float) $user->target_bond_pct }},
+              targets: {{ Js::from(collect(\App\Enums\AssetType::cases())->mapWithKeys(fn ($type) => [$type->value => (float) $user->{$type->targetColumn()}])) }},
               get total() {
-                  return Math.round((parseFloat(this.stock || 0) + parseFloat(this.crypto || 0) + parseFloat(this.real_estate || 0) + parseFloat(this.bond || 0)) * 100) / 100;
+                  return Math.round(Object.values(this.targets).reduce((sum, v) => sum + parseFloat(v || 0), 0) * 100) / 100;
               },
               get totalOk() { return this.total === 0 || this.total === 100; },
           }">
@@ -22,38 +19,16 @@
         @method('PATCH')
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
-                <x-input-label for="target_stock_pct" value="Stocks %" />
-                <x-text-input id="target_stock_pct" name="target_stock_pct" type="number"
-                              class="mt-1 block w-full"
-                              :value="old('target_stock_pct', $user->target_stock_pct)"
-                              x-model="stock"
-                              min="0" max="100" step="0.5" />
-            </div>
-            <div>
-                <x-input-label for="target_crypto_pct" value="Crypto %" />
-                <x-text-input id="target_crypto_pct" name="target_crypto_pct" type="number"
-                              class="mt-1 block w-full"
-                              :value="old('target_crypto_pct', $user->target_crypto_pct)"
-                              x-model="crypto"
-                              min="0" max="100" step="0.5" />
-            </div>
-            <div>
-                <x-input-label for="target_real_estate_pct" value="Real Estate %" />
-                <x-text-input id="target_real_estate_pct" name="target_real_estate_pct" type="number"
-                              class="mt-1 block w-full"
-                              :value="old('target_real_estate_pct', $user->target_real_estate_pct)"
-                              x-model="real_estate"
-                              min="0" max="100" step="0.5" />
-            </div>
-            <div>
-                <x-input-label for="target_bond_pct" value="Bonds %" />
-                <x-text-input id="target_bond_pct" name="target_bond_pct" type="number"
-                              class="mt-1 block w-full"
-                              :value="old('target_bond_pct', $user->target_bond_pct)"
-                              x-model="bond"
-                              min="0" max="100" step="0.5" />
-            </div>
+            @foreach (\App\Enums\AssetType::cases() as $type)
+                <div>
+                    <x-input-label :for="$type->targetColumn()" :value="$type->allocationLabel().' %'" />
+                    <x-text-input :id="$type->targetColumn()" :name="$type->targetColumn()" type="number"
+                                  class="mt-1 block w-full"
+                                  :value="old($type->targetColumn(), $user->{$type->targetColumn()})"
+                                  x-model="targets.{{ $type->value }}"
+                                  min="0" max="100" step="0.5" />
+                </div>
+            @endforeach
         </div>
 
         <div class="flex items-center gap-2 text-sm">

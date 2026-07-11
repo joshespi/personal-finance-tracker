@@ -123,12 +123,14 @@ class PensionController extends Controller
             'currency'                 => ['required', 'string', 'size:3'],
         ]);
 
+        // Blank optionals arrive as null (ConvertEmptyStringsToNull); absent keys need
+        // an explicit value so update() clears them. The model's casts handle types.
         foreach (['plan_label', 'service_cap_years', 'monthly_benefit_estimate', 'birth_year', 'notes'] as $optional) {
-            $validated[$optional] = $request->filled($optional) ? $validated[$optional] : null;
+            $validated[$optional] ??= null;
         }
 
-        $validated['salary_growth_pct']    = $request->filled('salary_growth_pct') ? (float) $request->input('salary_growth_pct') : 0;
-        $validated['cola_pct']             = $request->filled('cola_pct') ? (float) $request->input('cola_pct') : 0;
+        $validated['salary_growth_pct'] ??= 0;
+        $validated['cola_pct'] ??= 0;
         $validated['include_in_net_worth'] = $request->boolean('include_in_net_worth');
 
         return $validated;

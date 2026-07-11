@@ -1,4 +1,8 @@
 <x-app-layout>
+    @push('head-vite')
+        @vite(['resources/js/chartjs.js'])
+    @endpush
+
     <x-slot name="header">
         <div>
             <p class="text-sm text-gray-500 dark:text-gray-400">Money</p>

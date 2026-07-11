@@ -13,24 +13,34 @@ class DividendController extends Controller
     {
         $portfolioIds = $request->user()->portfolios()->pluck('id');
 
-        $allDividends = Transaction::whereIn('portfolio_id', $portfolioIds)
-            ->where('type', TransactionType::Dividend->value)
-            ->with('asset')
-            ->orderBy('transacted_at')
-            ->get();
+        $dividendQuery = fn () => Transaction::whereIn('portfolio_id', $portfolioIds)
+            ->where('type', TransactionType::Dividend->value);
 
-        $years = $allDividends
-            ->map(fn ($t) => (int) $t->transacted_at->format('Y'))
-            ->unique()->sort()->values()->all();
+        // Slim pass over all history for the year list and all-time total — no asset
+        // eager-load, three columns. Per-year grouping stays PHP-side (no DATE_FORMAT)
+        // so it works on both SQLite and MariaDB.
+        $yearTotals = $dividendQuery()
+            ->get(['transacted_at', 'quantity', 'price_per_unit'])
+            ->groupBy(fn ($t) => (int) $t->transacted_at->format('Y'))
+            ->map(fn ($g) => $g->sum(fn ($t) => $t->dividendValue()))
+            ->sortKeys();
+
+        $years        = $yearTotals->keys()->all();
+        $allTimeTotal = round($yearTotals->sum(), 2);
 
         $selectedYear = $request->integer('year', now()->year);
         if (! in_array($selectedYear, $years, true) && count($years) > 0) {
             $selectedYear = last($years);
         }
 
-        $yearDividends = $allDividends->filter(
-            fn ($t) => (int) $t->transacted_at->format('Y') === $selectedYear
-        );
+        $yearDividends = $dividendQuery()
+            ->whereBetween('transacted_at', [
+                sprintf('%d-01-01 00:00:00', $selectedYear),
+                sprintf('%d-12-31 23:59:59', $selectedYear),
+            ])
+            ->with('asset')
+            ->orderBy('transacted_at')
+            ->get();
 
         $byAsset = $yearDividends
             ->groupBy('asset_id')
@@ -59,7 +69,6 @@ class DividendController extends Controller
         $totalIncome   = round($yearDividends->sum(fn ($t) => $t->dividendValue()), 2);
         $totalPayments = $yearDividends->count();
         $totalTickers  = $byAsset->count();
-        $allTimeTotal  = round($allDividends->sum(fn ($t) => $t->dividendValue()), 2);
 
         return view('dividends', compact(
             'years', 'selectedYear', 'byAsset', 'byMonth',

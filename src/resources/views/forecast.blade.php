@@ -1,4 +1,8 @@
 <x-app-layout>
+    @push('head-vite')
+        @vite(['resources/js/chartjs.js'])
+    @endpush
+
     <x-slot name="header">
         <div>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Net Worth Forecast</h2>
@@ -189,7 +193,7 @@
     </div>
 
     <script>
-    (function () {
+    document.addEventListener('DOMContentLoaded', function () {
         const projection = @json($projection);
         const isDark = document.documentElement.classList.contains('dark');
 
@@ -257,6 +261,6 @@
                 },
             },
         });
-    })();
+    });
     </script>
 </x-app-layout>

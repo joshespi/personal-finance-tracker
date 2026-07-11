@@ -1,4 +1,8 @@
 <x-app-layout>
+    @push('head-vite')
+        @vite(['resources/js/chartjs.js'])
+    @endpush
+
     <x-slot name="header">
         <div class="flex items-center justify-between gap-4">
             <div>
@@ -403,7 +407,7 @@
     @push('scripts')
     @if ($tab === 'cashflow')
     <script>
-    (function () {
+    document.addEventListener('DOMContentLoaded', function () {
         const history = @json($history);
         const isDark  = document.documentElement.classList.contains('dark');
         const grid    = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
@@ -430,11 +434,11 @@
                 },
             },
         });
-    })();
+    });
     </script>
     @elseif ($tab === 'trends' && $datasets->isNotEmpty())
     <script>
-    (function () {
+    document.addEventListener('DOMContentLoaded', function () {
         const labels   = @json($monthLabels);
         const datasets = @json($datasets);
         const isDark   = document.documentElement.classList.contains('dark');
@@ -463,7 +467,7 @@
                 },
             },
         });
-    })();
+    });
     </script>
     @endif
     @endpush

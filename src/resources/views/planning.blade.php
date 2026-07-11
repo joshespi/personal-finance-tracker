@@ -1,4 +1,8 @@
 <x-app-layout>
+    @push('head-vite')
+        @vite(['resources/js/chartjs.js'])
+    @endpush
+
     <x-slot name="header">
         <div class="flex items-center justify-between gap-4">
             <div>

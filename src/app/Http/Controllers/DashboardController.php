@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\BenchmarkService;
 use App\Services\BudgetRuleService;
 use App\Services\PensionService;
+use App\Support\Rebalancing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
@@ -45,33 +46,25 @@ class DashboardController extends Controller
         $chartDataExManual = $rawSnapshots->map(fn ($v, $date) => ['date' => $date, 'value' => $v['market_value'], 'cost' => $v['cost']])
             ->values();
 
-        $benchmarkData = (new BenchmarkService)->all();
+        // Per-widget visibility map (value => bool) so the view can gate each
+        // section/tile without re-hitting the model, and so hidden widgets' data
+        // is never computed. Missing = visible by default.
+        $prefs = $user->dashboard_preferences ?? [];
+        $show  = [];
+        foreach (DashboardWidget::cases() as $widget) {
+            $show[$widget->value] = $prefs[$widget->value] ?? true;
+        }
+
+        $benchmarkData = $show[DashboardWidget::Benchmark->value] ? (new BenchmarkService)->all() : [];
 
         $portfolioHoldings = $portfolios->map(fn ($p) => [
             'portfolio' => $p,
             'holdings'  => $p->computeHoldings(),
         ]);
 
-        $summaries = $portfolioHoldings->map(function ($ph) {
-            $portfolio = $ph['portfolio'];
-            $holdings  = $ph['holdings'];
-
-            $costBasis    = $holdings->sum('total_cost');
-            $marketValue  = $holdings->filter(fn ($h) => $h['current_value'] !== null)->sum('current_value');
-            $unpricedCost = $holdings->filter(fn ($h) => $h['current_value'] === null)->sum('total_cost');
-            $manualValue  = $portfolio->chartManualValue();
-            $unrealized   = $holdings->filter(fn ($h) => $h['unrealized_gain'] !== null)->sum('unrealized_gain');
-            $hasPrice     = $holdings->contains(fn ($h) => $h['current_value'] !== null);
-
-            return [
-                'portfolio'    => $portfolio,
-                'cost_basis'   => round($costBasis, 2),
-                'market_value' => $hasPrice ? round($marketValue + $unpricedCost, 2) : null,
-                'manual_value' => round($manualValue, 2),
-                'unrealized'   => $hasPrice ? round($unrealized, 2) : null,
-                'total_value'  => round(($hasPrice ? $marketValue + $unpricedCost : $costBasis) + $manualValue, 2),
-            ];
-        })->sortByDesc('total_value')->values();
+        $summaries = $portfolioHoldings
+            ->map(fn ($ph) => ['portfolio' => $ph['portfolio']] + $ph['portfolio']->summarizeHoldings($ph['holdings']))
+            ->sortByDesc('total_value')->values();
 
         $portfolioValue = round($summaries->sum('total_value'), 2);
         $totalCash      = round($user->totalCash(), 2);
@@ -188,15 +181,6 @@ class DashboardController extends Controller
             ? max(0, (int) round($totalCash / $monthlySpend * 30))
             : null;
 
-        // Per-widget visibility map (value => bool) so the view can gate each
-        // section/tile without re-hitting the model. Missing = visible by default.
-        // Read the stored prefs once rather than decoding the JSON cast per widget.
-        $prefs = $user->dashboard_preferences ?? [];
-        $show  = [];
-        foreach (DashboardWidget::cases() as $widget) {
-            $show[$widget->value] = $prefs[$widget->value] ?? true;
-        }
-
         return view('dashboard', compact(
             'summaries', 'totals', 'chartData', 'chartDataExManual', 'allHoldings', 'allocation', 'rebalancing', 'benchmarkData', 'budgetRuleData',
             'revolvingBalance', 'interestBleedMonthly', 'interestBleedYearly',
@@ -274,12 +258,10 @@ class DashboardController extends Controller
 
     private function buildGlobalRebalancing(Collection $allHoldings, array $manualBuckets, User $user): array
     {
-        $targets = [
-            'stock'       => (float) $user->target_stock_pct,
-            'crypto'      => (float) $user->target_crypto_pct,
-            'real_estate' => (float) $user->target_real_estate_pct,
-            'bond'        => (float) $user->target_bond_pct,
-        ];
+        $targets = [];
+        foreach (AssetType::cases() as $type) {
+            $targets[$type->value] = (float) $user->{$type->targetColumn()};
+        }
 
         if (array_sum($targets) == 0) {
             return [];
@@ -301,18 +283,8 @@ class DashboardController extends Controller
                 continue;
             }
 
-            $targetVal  = round($total * $targetPct / 100, 2);
-            $currentPct = round($currentVal / $total * 100, 1);
-            $diff       = round($targetVal - $currentVal, 2);
-            $rows[]     = [
-                'label'       => AssetType::from($type)->allocationLabel(),
-                'current_pct' => $currentPct,
-                'target_pct'  => $targetPct,
-                'current_val' => $currentVal,
-                'target_val'  => $targetVal,
-                'diff'        => $diff,
-                'drift_pct'   => round($currentPct - $targetPct, 1),
-            ];
+            $rows[] = ['label' => AssetType::from($type)->allocationLabel()]
+                + Rebalancing::driftRow($currentVal, $targetPct, $total);
         }
 
         return $rows;

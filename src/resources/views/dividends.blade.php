@@ -1,4 +1,8 @@
 <x-app-layout>
+    @push('head-vite')
+        @vite(['resources/js/chartjs.js'])
+    @endpush
+
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Dividend Income</h2>
     </x-slot>
@@ -101,14 +105,17 @@
 
     @push('scripts')
     <script>
-    (function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        const ctx = document.getElementById('dividendChart');
+        if (!ctx) return; // no chart to draw in the "no dividends yet" empty state
+
         const monthData = @json(array_values($byMonth));
         const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         const isDark = document.documentElement.classList.contains('dark');
         const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
         const textColor = isDark ? '#9ca3af' : '#6b7280';
 
-        new Chart(document.getElementById('dividendChart'), {
+        new Chart(ctx, {
             type: 'bar',
             data: {
                 labels,
@@ -140,7 +147,7 @@
                 },
             },
         });
-    })();
+    });
     </script>
     @endpush
 </x-app-layout>

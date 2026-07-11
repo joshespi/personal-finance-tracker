@@ -1,22 +1,11 @@
-import {
-    Chart,
-    LineController, LineElement, PointElement, Filler,
-    LinearScale, TimeScale, Tooltip, Legend,
-    PieController, ArcElement,
-} from 'chart.js';
-import 'chartjs-adapter-date-fns';
-import { makeValueCostChart, makeBenchmarkChart, slicePalette, DEMO_MASK } from './chart-utils';
-
-Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
+import { makeValueCostChart, makeBenchmarkChart, makeAllocationPie, themeColors, slicePalette } from './chart-utils';
 
 document.addEventListener('DOMContentLoaded', function () {
     const { chartData: allData, benchmarkData: benchRaw, allocation: allocData } = window.__portCharts ?? {};
     const demoMode = window.__demoMode ?? false;
     if (!allData) return;
 
-    const isDark     = document.documentElement.classList.contains('dark');
-    const gridColor  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
-    const labelColor = isDark ? '#9ca3af' : '#6b7280';
+    const { gridColor, labelColor } = themeColors();
 
     makeValueCostChart({
         el: document.getElementById('portChart'),
@@ -44,17 +33,6 @@ document.addEventListener('DOMContentLoaded', function () {
             values.push(allocData.manual_value);
         }
         const colors = values.map((_, i) => slicePalette[i % slicePalette.length]);
-        new Chart(donutEl, {
-            type: 'pie',
-            data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: ctx => `${ctx.label}: ${demoMode ? DEMO_MASK : '$' + ctx.parsed.toLocaleString('en-US', { minimumFractionDigits: 2 })}` } },
-                },
-            },
-        });
+        makeAllocationPie({ el: donutEl, labels, values, colors, demoMode });
     }
 });

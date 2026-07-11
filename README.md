@@ -1,6 +1,6 @@
 # Personal Finance Tracker
 
-**Live:** [portfolio.espifam.com](https://portfolio.espifam.com) (planned move to `finance.espifam.com` — see ROADMAP)
+**Live:** [finance.espifam.com](https://finance.espifam.com)
 
 Self-hosted Laravel app covering both halves of personal finance:
 
@@ -21,7 +21,6 @@ cp .env.example .env
 cp src/.env.example src/.env
 ```
 
-Fill in `.env`: set `FINNHUB_API_KEY` and generate an `APP_KEY`:
 
 ```bash
 docker compose run --rm app php artisan key:generate --show
@@ -87,16 +86,6 @@ Seed historical benchmarks once:
 docker compose exec app php artisan benchmarks:fetch
 ```
 
-## Email (Brevo SMTP)
-
-Fill in the `MAIL_*` vars in `src/.env` (see `src/.env.example` for the full list). Set `MAIL_MAILER=log` locally to keep emails in `storage/logs/laravel.log`.
-
-Prod checklist:
-
-- Add Brevo SPF + DKIM DNS records for your sending domain (verify with `mail-tester.com`)
-- Disable open/click tracking in the Brevo dashboard (privacy — this app does not use tracking pixels)
-
-Email is used for password reset and email verification on new registrations.
 
 ## Tests
 
@@ -104,9 +93,6 @@ Email is used for password reset and email verification on new registrations.
 docker compose exec app php artisan test
 ```
 
-Runs against SQLite in-memory (~460 tests, ~15s). The full suite peaks above PHP's 128M default, so the image ships `memory_limit = 512M` for the CLI via `docker/php/zz-app.ini` — without it the run OOMs partway through the YNAB import tests.
-
-If `php artisan test` reports `Command "test" is not defined`, dev dependencies are missing. The entrypoint runs `composer install --no-dev` on every container start (correct for prod), and `vendor/` is volume-mounted from the host — so a restart strips PHPUnit each time. Reinstall before running tests: `docker compose exec app composer install`.
 
 ## Ports
 

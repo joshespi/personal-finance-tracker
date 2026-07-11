@@ -12,7 +12,7 @@ class JournalEntryController extends Controller
 {
     public function index(Request $request, Portfolio $portfolio): View
     {
-        $this->authorizePortfolio($request, $portfolio);
+        $this->authorize('view', $portfolio);
 
         $entries = $portfolio->journalEntries()->get();
 
@@ -21,7 +21,7 @@ class JournalEntryController extends Controller
 
     public function store(Request $request, Portfolio $portfolio): RedirectResponse
     {
-        $this->authorizePortfolio($request, $portfolio);
+        $this->authorize('update', $portfolio);
 
         $data = $request->validate([
             'title'      => ['nullable', 'string', 'max:255'],
@@ -37,7 +37,7 @@ class JournalEntryController extends Controller
 
     public function edit(Request $request, Portfolio $portfolio, JournalEntry $entry): View
     {
-        $this->authorizePortfolio($request, $portfolio);
+        $this->authorize('view', $portfolio);
         abort_if($entry->portfolio_id !== $portfolio->id, 403);
 
         return view('journal.edit', compact('portfolio', 'entry'));
@@ -45,7 +45,7 @@ class JournalEntryController extends Controller
 
     public function update(Request $request, Portfolio $portfolio, JournalEntry $entry): RedirectResponse
     {
-        $this->authorizePortfolio($request, $portfolio);
+        $this->authorize('update', $portfolio);
         abort_if($entry->portfolio_id !== $portfolio->id, 403);
 
         $data = $request->validate([
@@ -62,17 +62,12 @@ class JournalEntryController extends Controller
 
     public function destroy(Request $request, Portfolio $portfolio, JournalEntry $entry): RedirectResponse
     {
-        $this->authorizePortfolio($request, $portfolio);
+        $this->authorize('update', $portfolio);
         abort_if($entry->portfolio_id !== $portfolio->id, 403);
 
         $entry->delete();
 
         return redirect()->route('portfolios.journal.index', $portfolio)
             ->with('success', 'Entry deleted.');
-    }
-
-    private function authorizePortfolio(Request $request, Portfolio $portfolio): void
-    {
-        abort_if($portfolio->user_id !== $request->user()->id, 403);
     }
 }

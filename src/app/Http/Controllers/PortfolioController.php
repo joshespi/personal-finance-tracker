@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\Portfolio;
 use App\Services\BenchmarkService;
 use App\Services\RealizedGainService;
+use App\Support\Rebalancing;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -201,22 +202,11 @@ class PortfolioController extends Controller
 
         $rows = [];
         foreach ($slices as $slice) {
-            $holding    = $holdingsByAssetId->get($slice->asset_id);
-            $currentVal = round((float) ($holding['effective_value'] ?? 0), 2);
-            $targetVal  = round($total * $slice->target_pct / 100, 2);
-            $currentPct = round($currentVal / $total * 100, 1);
-            $diff       = round($targetVal - $currentVal, 2);
+            $holding = $holdingsByAssetId->get($slice->asset_id);
 
-            $rows[] = [
-                'symbol'      => $slice->asset->symbol,
-                'current_pct' => $currentPct,
-                'target_pct'  => (float) $slice->target_pct,
-                'current_val' => $currentVal,
-                'target_val'  => $targetVal,
-                'diff'        => $diff,
-                'drift_pct'   => round($currentPct - (float) $slice->target_pct, 1),
-                'slice_id'    => $slice->id,
-            ];
+            $rows[] = ['symbol' => $slice->asset->symbol]
+                + Rebalancing::driftRow((float) ($holding['effective_value'] ?? 0), (float) $slice->target_pct, $total)
+                + ['slice_id' => $slice->id];
         }
 
         usort($rows, fn ($a, $b) => $b['target_pct'] <=> $a['target_pct']);

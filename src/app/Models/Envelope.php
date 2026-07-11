@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class Envelope extends Model
 {
@@ -36,6 +38,12 @@ class Envelope extends Model
         'is_savings'                => 'boolean',
     ];
 
+    /** Validation rule asserting an envelope_id belongs to the given user. */
+    public static function ownershipRule(int $userId): Exists
+    {
+        return Rule::exists('envelopes', 'id')->where('user_id', $userId);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -51,8 +59,20 @@ class Envelope extends Model
         return $this->hasMany(CashTransaction::class)->withdrawals();
     }
 
+    public function scopeWithBalanceTotals($query)
+    {
+        return $query
+            ->withSum(['transactions as funds_total' => fn ($q) => $q->where('type', 'fund')], 'amount')
+            ->withSum('spendTransactions as spends_total', 'amount');
+    }
+
     public function balance(): float
     {
+        $attrs = $this->getAttributes();
+        if (array_key_exists('funds_total', $attrs) && array_key_exists('spends_total', $attrs)) {
+            return (float) ($this->funds_total ?? 0) - (float) ($this->spends_total ?? 0);
+        }
+
         if ($this->relationLoaded('transactions') && $this->relationLoaded('spendTransactions')) {
             $funded = $this->transactions->where('type', 'fund')->sum('amount');
             $spent  = $this->spendTransactions->sum('amount');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Envelope;
 use App\Models\Liability;
 use App\Models\ManualAsset;
 use App\Models\ScheduledTransaction;
@@ -117,23 +118,17 @@ class LiabilityController extends Controller
             'minimum_payment'         => ['nullable', 'numeric', 'gte:0'],
             'escrow_amount'           => ['nullable', 'numeric', 'gte:0'],
             'payment_day'             => ['nullable', 'integer', 'min:1', 'max:28'],
-            'payment_envelope_id'     => ['nullable', 'integer', Rule::exists('envelopes', 'id')->where('user_id', $userId)],
+            'payment_envelope_id'     => ['nullable', 'integer', Envelope::ownershipRule($userId)],
             'payment_cash_account_id' => ['nullable', 'integer', Rule::exists('cash_accounts', 'id')->where('user_id', $userId)],
             'notes'                   => ['nullable', 'string', 'max:1000'],
             'currency'                => ['required', 'string', 'size:3'],
         ]);
 
-        $validated['minimum_payment'] = $request->filled('minimum_payment')
-            ? (float) $request->input('minimum_payment')
-            : null;
-
-        $validated['escrow_amount'] = $request->filled('escrow_amount')
-            ? (float) $request->input('escrow_amount')
-            : null;
-
-        $validated['payment_day'] = $request->filled('payment_day')
-            ? (int) $request->input('payment_day')
-            : null;
+        // Blank optionals arrive as null (ConvertEmptyStringsToNull); absent keys need
+        // an explicit value so update() clears them. The model's casts handle types.
+        $validated['minimum_payment'] ??= null;
+        $validated['escrow_amount'] ??= null;
+        $validated['payment_day'] ??= null;
 
         return $validated;
     }

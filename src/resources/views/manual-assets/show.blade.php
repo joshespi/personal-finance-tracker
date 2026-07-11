@@ -47,7 +47,7 @@
                 </div>
             @endif
 
-            @if ($manualAsset->tracking_method === 'proxy_ticker')
+            @if ($manualAsset->isProxyTracked())
                 <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 sm:rounded-lg p-4 text-sm">
                     <p class="font-medium text-indigo-700 dark:text-indigo-300">Proxy-tracked via {{ $manualAsset->proxyAsset?->symbol ?? '—' }}</p>
                     <p class="mt-1 text-indigo-600 dark:text-indigo-400">
@@ -63,7 +63,7 @@
                 </div>
             @endif
 
-            @if ($manualAsset->cost_basis !== null || $manualAsset->latestValuation || $manualAsset->tracking_method === 'proxy_ticker')
+            @if ($manualAsset->cost_basis !== null || $manualAsset->latestValuation || $manualAsset->isProxyTracked())
                 @php
                     $cost      = $manualAsset->cost_basis !== null ? (float) $manualAsset->cost_basis : null;
                     $value     = $manualAsset->currentValue() ?: null;

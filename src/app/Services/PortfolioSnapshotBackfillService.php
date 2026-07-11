@@ -38,7 +38,7 @@ class PortfolioSnapshotBackfillService
 
         $proxyAssets = $portfolios
             ->flatMap(fn ($p) => $p->manualAssets
-                ->filter(fn ($ma) => $ma->tracking_method === 'proxy_ticker' && $ma->proxyAsset)
+                ->filter(fn ($ma) => $ma->isProxyTracked() && $ma->proxyAsset)
                 ->map(fn ($ma) => $ma->proxyAsset)
             )
             ->unique('id')
@@ -79,6 +79,7 @@ class PortfolioSnapshotBackfillService
 
         $period  = CarbonPeriod::create($from, $to);
         $written = 0;
+        $rows    = [];
 
         // Chart-eligible manual assets don't change across the date range — filter once per portfolio.
         $chartManualAssets = $portfolios->mapWithKeys(fn ($p) => [
@@ -104,19 +105,34 @@ class PortfolioSnapshotBackfillService
                     continue;
                 }
 
-                PortfolioSnapshot::updateOrCreate(
-                    ['portfolio_id' => $portfolio->id, 'recorded_on' => $dateStr],
-                    [
-                        'cost_basis'   => $costBasis,
-                        'market_value' => $marketValue,
-                        'manual_value' => $manualValue,
-                    ]
-                );
+                $rows[] = [
+                    'portfolio_id' => $portfolio->id,
+                    'recorded_on'  => $dateStr,
+                    'cost_basis'   => $costBasis,
+                    'market_value' => $marketValue,
+                    'manual_value' => $manualValue,
+                ];
                 $written++;
+
+                if (count($rows) >= 500) {
+                    $this->flushSnapshots($rows);
+                    $rows = [];
+                }
             }
         }
 
+        $this->flushSnapshots($rows);
+
         return $written;
+    }
+
+    private function flushSnapshots(array $rows): void
+    {
+        if ($rows === []) {
+            return;
+        }
+
+        PortfolioSnapshot::upsert($rows, ['portfolio_id', 'recorded_on'], ['cost_basis', 'market_value', 'manual_value']);
     }
 
     /** @return array{0: float, 1: float} [cost_basis, market_value] */
@@ -145,7 +161,7 @@ class PortfolioSnapshotBackfillService
         $total = 0.0;
 
         foreach ($manualAssets as $ma) {
-            if ($ma->tracking_method === 'proxy_ticker') {
+            if ($ma->isProxyTracked()) {
                 $anchorDate = $ma->anchor_date?->toDateString();
                 if (! $anchorDate || $anchorDate > $date) {
                     continue;

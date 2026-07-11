@@ -27,8 +27,7 @@ class EnvelopeController extends Controller
 
         $envelopes = $request->user()
             ->envelopes()
-            ->withSum(['transactions as funds_total' => fn ($q) => $q->where('type', 'fund')], 'amount')
-            ->withSum('spendTransactions as spends_total', 'amount')
+            ->withBalanceTotals()
             ->withSum([
                 'spendTransactions as month_spend_total' => fn ($q) => $q
                     ->whereBetween('occurred_at', [$month, $endOfMonth]),
@@ -42,7 +41,7 @@ class EnvelopeController extends Controller
             ->orderBy('name')
             ->get()
             ->each(function ($e) {
-                $e->current_balance   = (float) ($e->funds_total ?? 0) - (float) ($e->spends_total ?? 0);
+                $e->current_balance   = $e->balance();
                 $e->spent_this_month  = (float) ($e->month_spend_total ?? 0);
                 $e->funded_this_month = (float) ($e->month_fund_total ?? 0);
             });
@@ -166,8 +165,7 @@ class EnvelopeController extends Controller
 
         $envelope = $user->envelopes()
             ->where('id', $validated['envelope_id'])
-            ->withSum(['transactions as funds_total' => fn ($q) => $q->where('type', 'fund')], 'amount')
-            ->withSum('spendTransactions as spends_total', 'amount')
+            ->withBalanceTotals()
             ->first();
 
         abort_unless($envelope !== null, 403);

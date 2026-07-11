@@ -3,12 +3,20 @@
 namespace App\Services;
 
 use App\Models\BenchmarkPrice;
+use Illuminate\Support\Facades\Cache;
 
 class BenchmarkService
 {
     public const TICKERS = ['SPY', 'BTC'];
 
+    public const CACHE_KEY = 'benchmark-prices.series';
+
     public function all(): array
+    {
+        return Cache::remember(self::CACHE_KEY, now()->addHour(), fn () => $this->build());
+    }
+
+    private function build(): array
     {
         $result = [];
 

@@ -66,12 +66,12 @@
             {{-- Summary stats --}}
             @if ($holdings->isNotEmpty())
                 @php
-                    $totalCostBasis    = $holdings->sum('total_cost');
-                    $holdingsWithPrice = $holdings->filter(fn($h) => $h['current_value'] !== null);
-                    $totalCurrentValue = $holdingsWithPrice->sum('current_value');
-                    $totalManualValue  = $portfolio->manualAssets->sum(fn($ma) => $ma->latestValuation ? (float)$ma->latestValuation->value : 0);
-                    $totalUnrealized   = $holdingsWithPrice->sum('unrealized_gain');
-                    $hasAnyPrice       = $holdingsWithPrice->isNotEmpty();
+                    $summary           = $portfolio->summarizeHoldings($holdings);
+                    $totalCostBasis    = $summary['cost_basis'];
+                    $totalCurrentValue = $summary['market_value'];
+                    $totalManualValue  = $summary['manual_value'];
+                    $totalUnrealized   = $summary['unrealized'];
+                    $hasAnyPrice       = $summary['has_price'];
                 @endphp
                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">

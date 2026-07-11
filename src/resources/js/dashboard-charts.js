@@ -1,28 +1,17 @@
 import {
-    Chart,
-    LineController, LineElement, PointElement, Filler,
-    LinearScale, TimeScale, Tooltip, Legend,
-    PieController, ArcElement,
-} from 'chart.js';
-import 'chartjs-adapter-date-fns';
-import {
-    resampleByRange, fmtFull, fmtSigned, makeValueCostChart, makeBenchmarkChart, DEMO_MASK,
-    dailyChangeMap, buildCalendarMonths, calendarColor,
+    resampleByRange, fmtFull, fmtSigned, makeValueCostChart, makeBenchmarkChart, makeAllocationPie, DEMO_MASK,
+    dailyChangeMap, buildCalendarMonths, calendarColor, themeColors,
 } from './chart-utils';
 
 // Months shown per page of the calendar heatmap; prev/next pages through
 // history one month at a time from there.
 const CALENDAR_MONTHS_PER_PAGE = 12;
 
-Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
-
 document.addEventListener('DOMContentLoaded', function () {
     const { chartData: allDataFull, chartDataExManual: allDataMkt, benchmarkData: benchRaw, allocation: allocData } = window.__dashCharts ?? {};
     if (!allDataFull) return;
 
-    const isDark     = document.documentElement.classList.contains('dark');
-    const gridColor  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
-    const labelColor = isDark ? '#9ca3af' : '#6b7280';
+    const { isDark, gridColor, labelColor } = themeColors();
 
     let showManual = localStorage.getItem('dashShowManual') !== 'false';
 
@@ -323,20 +312,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const donutEl = document.getElementById('allocationDonut');
     if (donutEl && allocData.total > 0) {
-        new Chart(donutEl, {
-            type: 'pie',
-            data: {
-                labels: allocData.labels,
-                datasets: [{ data: allocData.values, backgroundColor: allocData.colors, borderWidth: 0 }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: ctx => `${ctx.label}: $${ctx.parsed.toLocaleString('en-US', { minimumFractionDigits: 2 })}` } },
-                },
-            },
-        });
+        makeAllocationPie({ el: donutEl, labels: allocData.labels, values: allocData.values, colors: allocData.colors, demoMode });
     }
 });

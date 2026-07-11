@@ -7,6 +7,7 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.js',
+                'resources/js/chartjs.js',
                 'resources/js/dashboard-charts.js',
                 'resources/js/portfolio-charts.js',
                 'resources/js/editor.js',

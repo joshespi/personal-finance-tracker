@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssetType;
 use App\Enums\DashboardWidget;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
@@ -40,12 +41,9 @@ class ProfileController extends Controller
 
     public function updateTargets(Request $request): RedirectResponse
     {
-        $data = $request->validateWithBag('investmentTargets', [
-            'target_stock_pct'       => ['required', 'numeric', 'min:0', 'max:100'],
-            'target_crypto_pct'      => ['required', 'numeric', 'min:0', 'max:100'],
-            'target_real_estate_pct' => ['required', 'numeric', 'min:0', 'max:100'],
-            'target_bond_pct'        => ['required', 'numeric', 'min:0', 'max:100'],
-        ]);
+        $data = $request->validateWithBag('investmentTargets', collect(AssetType::cases())
+            ->mapWithKeys(fn (AssetType $type) => [$type->targetColumn() => ['required', 'numeric', 'min:0', 'max:100']])
+            ->all());
 
         $total = round(array_sum($data), 2);
 

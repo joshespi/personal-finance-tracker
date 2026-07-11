@@ -20,7 +20,7 @@ class CashTransactionController extends Controller
             'amount'             => ['required', 'numeric', 'gt:0'],
             'description'        => ['nullable', 'string', 'max:500'],
             'occurred_at'        => ['required', 'date'],
-            'envelope_id'        => ['nullable', 'integer', 'exists:envelopes,id'],
+            'envelope_id'        => ['nullable', 'integer', Envelope::ownershipRule($request->user()->id)],
             'income_category_id' => [
                 'nullable', 'integer',
                 IncomeCategory::ownershipRule($request->user()->id),
@@ -30,12 +30,9 @@ class CashTransactionController extends Controller
 
         $validated['cleared'] = $request->boolean('cleared');
 
+        // An envelope only applies to withdrawals; ownership is enforced by the validation rule above.
         if (! empty($validated['envelope_id'])) {
-            abort_unless(
-                $validated['type'] === 'withdrawal' &&
-                Envelope::where('id', $validated['envelope_id'])->value('user_id') === $request->user()->id,
-                403
-            );
+            abort_unless($validated['type'] === 'withdrawal', 403);
         } else {
             $validated['envelope_id'] = null;
         }

@@ -38,6 +38,12 @@ class ManualAsset extends Model
         'include_in_invested'     => 'boolean',
     ];
 
+    /** Whether this asset derives its value from a proxy ticker instead of manual valuations. */
+    public function isProxyTracked(): bool
+    {
+        return $this->tracking_method === 'proxy_ticker';
+    }
+
     public function profitLoss(): ?float
     {
         if ($this->cost_basis === null || ! $this->latestValuation) {
@@ -74,7 +80,7 @@ class ManualAsset extends Model
 
     public function currentValue(): float
     {
-        if ($this->tracking_method === 'proxy_ticker') {
+        if ($this->isProxyTracked()) {
             $price = $this->proxyAsset?->latestPrice?->price;
             if ($price !== null && $this->anchor_synthetic_shares !== null) {
                 return round((float) $this->anchor_synthetic_shares * (float) $price, 2);

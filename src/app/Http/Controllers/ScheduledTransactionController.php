@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Recurrence;
+use App\Models\Envelope;
 use App\Models\ScheduledTransaction;
 use App\Services\ScheduledTransactionService;
 use Illuminate\Http\RedirectResponse;
@@ -87,7 +88,7 @@ class ScheduledTransactionController extends Controller
         $type   = $request->input('type');
         $userId = $request->user()->id;
 
-        $envelopeRule    = Rule::exists('envelopes', 'id')->where('user_id', $userId);
+        $envelopeRule    = Envelope::ownershipRule($userId);
         $cashAccountRule = Rule::exists('cash_accounts', 'id')->where('user_id', $userId);
 
         return $request->validate([

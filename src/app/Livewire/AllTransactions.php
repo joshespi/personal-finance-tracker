@@ -173,7 +173,7 @@ class AllTransactions extends Component
             'newAmount'           => ['required', 'numeric', 'gt:0'],
             'newDescription'      => ['nullable', 'string', 'max:500'],
             'newOccurredAt'       => ['required', 'date'],
-            'newEnvelopeId'       => ['nullable', 'integer', 'exists:envelopes,id'],
+            'newEnvelopeId'       => ['nullable', 'integer', Envelope::ownershipRule(auth()->id())],
             'newIncomeCategoryId' => [
                 'nullable', 'integer',
                 IncomeCategory::ownershipRule(auth()->id()),
@@ -184,19 +184,12 @@ class AllTransactions extends Component
         $account = $this->ownedAccount($data['newAccountId']);
         Gate::authorize('update', $account);
 
-        $envelopeId = null;
-        if ($data['newEnvelopeId'] && $data['newType'] === 'withdrawal') {
-            $env = Envelope::find($data['newEnvelopeId']);
-            abort_unless($env && $env->user_id === auth()->id(), 403);
-            $envelopeId = $data['newEnvelopeId'];
-        }
-
         $account->transactions()->create([
             'type'               => $data['newType'],
             'amount'             => $data['newAmount'],
             'description'        => $data['newDescription'] ?: null,
             'occurred_at'        => $data['newOccurredAt'],
-            'envelope_id'        => $envelopeId,
+            'envelope_id'        => $this->resolveEnvelopeId($data['newEnvelopeId'], $data['newType']),
             'income_category_id' => $this->resolveIncomeCategoryId($data['newIncomeCategoryId'], $data['newType']),
             'cleared'            => $this->newCleared,
         ]);
@@ -234,7 +227,7 @@ class AllTransactions extends Component
             'editAmount'           => ['required', 'numeric', 'gt:0'],
             'editDescription'      => ['nullable', 'string', 'max:500'],
             'editOccurredAt'       => ['required', 'date'],
-            'editEnvelopeId'       => ['nullable', 'integer', 'exists:envelopes,id'],
+            'editEnvelopeId'       => ['nullable', 'integer', Envelope::ownershipRule(auth()->id())],
             'editIncomeCategoryId' => [
                 'nullable', 'integer',
                 IncomeCategory::ownershipRule(auth()->id()),
@@ -246,20 +239,13 @@ class AllTransactions extends Component
         $account = $this->ownedAccount($data['editAccountId']);
         Gate::authorize('update', $account);
 
-        $envelopeId = null;
-        if ($data['editEnvelopeId'] && $data['editType'] === 'withdrawal') {
-            $env = Envelope::find($data['editEnvelopeId']);
-            abort_unless($env && $env->user_id === auth()->id(), 403);
-            $envelopeId = $data['editEnvelopeId'];
-        }
-
         $t->update([
             'cash_account_id'    => $account->id,
             'type'               => $data['editType'],
             'amount'             => $data['editAmount'],
             'description'        => $data['editDescription'] ?: null,
             'occurred_at'        => $data['editOccurredAt'],
-            'envelope_id'        => $envelopeId,
+            'envelope_id'        => $this->resolveEnvelopeId($data['editEnvelopeId'], $data['editType']),
             'income_category_id' => $this->resolveIncomeCategoryId($data['editIncomeCategoryId'], $data['editType']),
             'cleared'            => $this->editCleared,
         ]);
@@ -271,6 +257,12 @@ class AllTransactions extends Component
     private function resolveIncomeCategoryId(?int $categoryId, string $type): ?int
     {
         return $type === 'deposit' ? $categoryId : null;
+    }
+
+    /** An envelope only applies to withdrawals; ownership is enforced by validation. */
+    private function resolveEnvelopeId(?int $envelopeId, string $type): ?int
+    {
+        return $type === 'withdrawal' ? $envelopeId : null;
     }
 
     /** Flip a single transaction between cleared and pending (the status-column toggle). */
