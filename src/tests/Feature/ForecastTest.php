@@ -116,6 +116,24 @@ class ForecastTest extends TestCase
             ->assertSee('value="1000"', false);
     }
 
+    public function test_demo_mode_masks_dollar_figures(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withSession(['demo_mode' => true])
+            ->get(route('forecast', [
+                'starting_nw'     => 950000,
+                'monthly_savings' => 10000,
+                'annual_return'   => 7,
+                'fire_target'     => 1000000,
+                'years'           => 30,
+            ]))
+            ->assertOk()
+            ->assertSee('••••')
+            ->assertDontSee('1,000,000');
+    }
+
     public function test_milestone_hit_at_year_zero_when_already_above_threshold(): void
     {
         $user = User::factory()->create();

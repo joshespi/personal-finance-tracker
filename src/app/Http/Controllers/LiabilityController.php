@@ -131,6 +131,13 @@ class LiabilityController extends Controller
         $validated['escrow_amount'] ??= null;
         $validated['payment_day'] ??= null;
 
+        // Escrow only applies to mortgages. The form hides the field for other types,
+        // but an x-show'd input still submits, so a stale value (e.g. after switching
+        // a mortgage to credit_card) would silently inflate totalMonthlyPayment().
+        if ($validated['liability_type'] !== 'mortgage') {
+            $validated['escrow_amount'] = null;
+        }
+
         return $validated;
     }
 
@@ -153,7 +160,7 @@ class LiabilityController extends Controller
             ['liability_id' => $liability->id],
             [
                 'user_id'         => $liability->user_id,
-                'type'            => ScheduledTransactionType::MortgagePayment,
+                'type'            => ScheduledTransactionType::LiabilityPayment,
                 'description'     => $liability->name.' payment',
                 'amount'          => $liability->totalMonthlyPayment(),
                 'recurrence'      => 'monthly',

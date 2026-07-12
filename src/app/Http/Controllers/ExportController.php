@@ -49,19 +49,9 @@ class ExportController extends Controller
         ]);
     }
 
-    public function realizedGains(Request $request): StreamedResponse
+    public function realizedGains(Request $request, RealizedGainService $realizedGainService): StreamedResponse
     {
-        $user       = $request->user();
-        $service    = new RealizedGainService;
-        $portfolios = $user->portfolios()->where('is_tax_advantaged', false)->with('transactions.asset')->get();
-
-        $allLots = collect();
-        foreach ($portfolios as $portfolio) {
-            $result  = $service->compute($portfolio);
-            $allLots = $allLots->concat($result['lots']->map(fn ($l) => array_merge($l, ['portfolio' => $portfolio])));
-        }
-
-        $allLots = $allLots->sortBy('sell_date');
+        $allLots = $realizedGainService->allLotsForUser($request->user())->sortBy('sell_date');
 
         return response()->streamDownload(function () use ($allLots) {
             $out = fopen('php://output', 'w');

@@ -4,28 +4,30 @@ namespace App\Enums;
 
 enum ScheduledTransactionType: string
 {
-    case EnvelopeFund    = 'envelope_fund';
-    case EnvelopeSpend   = 'envelope_spend';
-    case CashDeposit     = 'cash_deposit';
-    case CashWithdrawal  = 'cash_withdrawal';
-    case MortgagePayment = 'mortgage_payment';
+    case EnvelopeFund   = 'envelope_fund';
+    case EnvelopeSpend  = 'envelope_spend';
+    case CashDeposit    = 'cash_deposit';
+    case CashWithdrawal = 'cash_withdrawal';
+    // Covers any liability payment (credit card, auto loan, …); the backing value
+    // predates the generalization and is kept to avoid migrating existing rows.
+    case LiabilityPayment = 'mortgage_payment';
 
     public function label(): string
     {
         return match ($this) {
-            self::EnvelopeFund    => 'Fund envelope',
-            self::EnvelopeSpend   => 'Envelope spend',
-            self::CashDeposit     => 'Cash deposit',
-            self::CashWithdrawal  => 'Cash withdrawal',
-            self::MortgagePayment => 'Mortgage payment',
+            self::EnvelopeFund     => 'Fund envelope',
+            self::EnvelopeSpend    => 'Envelope spend',
+            self::CashDeposit      => 'Cash deposit',
+            self::CashWithdrawal   => 'Cash withdrawal',
+            self::LiabilityPayment => 'Liability payment',
         };
     }
 
-    /** Whether this type is offered in the create/edit form's Type dropdown. Mortgage payments
+    /** Whether this type is offered in the create/edit form's Type dropdown. Liability payments
      *  are system-managed (LiabilityController::syncSchedule) — never manually created. */
     public function userSelectable(): bool
     {
-        return $this !== self::MortgagePayment;
+        return $this !== self::LiabilityPayment;
     }
 
     /** Whether this schedule needs an envelope selected. */
@@ -40,7 +42,7 @@ enum ScheduledTransactionType: string
     /** Whether the cash-account field is shown at all for this type. */
     public function showsCashAccount(): bool
     {
-        return $this !== self::MortgagePayment;
+        return $this !== self::LiabilityPayment;
     }
 
     /** Whether the cash-account field is required (vs. an optional pairing) when shown. */

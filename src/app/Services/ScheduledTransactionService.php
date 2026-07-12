@@ -83,11 +83,11 @@ class ScheduledTransactionService
     private function createTransactions(ScheduledTransaction $scheduled, Carbon $date, bool $cleared): void
     {
         match ($scheduled->type) {
-            ScheduledTransactionType::EnvelopeFund    => $this->envelopeFund($scheduled, $date, $cleared),
-            ScheduledTransactionType::EnvelopeSpend   => $this->envelopeSpend($scheduled, $date, $cleared),
-            ScheduledTransactionType::CashDeposit     => $this->cashDeposit($scheduled, $date, $cleared),
-            ScheduledTransactionType::CashWithdrawal  => $this->cashWithdrawal($scheduled, $date, $cleared),
-            ScheduledTransactionType::MortgagePayment => $this->mortgagePayment($scheduled, $date, $cleared),
+            ScheduledTransactionType::EnvelopeFund     => $this->envelopeFund($scheduled, $date, $cleared),
+            ScheduledTransactionType::EnvelopeSpend    => $this->envelopeSpend($scheduled, $date, $cleared),
+            ScheduledTransactionType::CashDeposit      => $this->cashDeposit($scheduled, $date, $cleared),
+            ScheduledTransactionType::CashWithdrawal   => $this->cashWithdrawal($scheduled, $date, $cleared),
+            ScheduledTransactionType::LiabilityPayment => $this->liabilityPayment($scheduled, $date, $cleared),
         };
     }
 
@@ -126,7 +126,7 @@ class ScheduledTransactionService
         $this->cashEntry($s, $date, $cleared, 'withdrawal');
     }
 
-    private function mortgagePayment(ScheduledTransaction $s, Carbon $date, bool $cleared): void
+    private function liabilityPayment(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
         $this->cashEntry($s, $date, $cleared, 'withdrawal', $s->envelope_id);
 

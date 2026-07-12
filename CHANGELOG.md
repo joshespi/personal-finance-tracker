@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.8.2] - 2026-07-12
+
+### Changed
+- Liability scheduled payments generalized from mortgage-only to any liability type (credit card, auto loan, etc.); label updated to "Liability payment".
+- Portfolio CSV transaction import refactored into `TransactionCsvImportService`, reusing the shared CSV reader (adds UTF-8 BOM handling) and `AssetService` for asset creation.
+- Realized-gain lot aggregation consolidated into `RealizedGainService::allLotsForUser()`, used by both the tax summary page and the realized-gains export.
+- Portfolio slice symbol lookup now does a single query instead of two.
+
+### Fixed
+- Liability escrow amount is now cleared server-side when a liability's type isn't "mortgage" (previously a hidden form field could resubmit a stale escrow value after switching a mortgage to another liability type).
+- Portfolio slice form now accepts lowercase/mixed-case ticker symbols.
+- Forecast page dollar figures now respect demo mode.
+
 ## [1.3.0] - 2026-06-04
 
 ### Added

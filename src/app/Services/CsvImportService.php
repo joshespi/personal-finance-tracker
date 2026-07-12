@@ -200,8 +200,13 @@ class CsvImportService
         return implode(' · ', array_filter([$payee, $category, $memo]));
     }
 
-    /** @return array{headers: list<string>, rows: list<array<string,string>>} */
-    private function parseCsv(string $path): array
+    /**
+     * Generic CSV reader: strips a UTF-8 BOM, skips blank rows, trims cells, and
+     * normalises each row to the header width. Also used by {@see TransactionCsvImportService}.
+     *
+     * @return array{headers: list<string>, rows: list<array<string,string>>}
+     */
+    public function parseCsv(string $path): array
     {
         $handle = fopen($path, 'r');
 

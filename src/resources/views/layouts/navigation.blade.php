@@ -287,7 +287,7 @@
 
             <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
                 <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Quick Add</h3>
-                <button @click="open = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
+                <button @click="open = false" aria-label="Close" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>

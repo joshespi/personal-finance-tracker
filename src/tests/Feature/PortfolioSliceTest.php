@@ -31,7 +31,7 @@ class PortfolioSliceTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('portfolios.slices.store', $portfolio), [
-                'symbol'     => 'VOO',
+                'symbol'     => 'voo', // lowercase on purpose — store normalizes symbols
                 'target_pct' => 80,
             ])
             ->assertRedirect();

@@ -104,7 +104,7 @@ class EmergencyFundService
         $scheduledByEnvelope = ScheduledTransaction::where('user_id', $user->id)
             ->where('is_active', true)
             ->whereIn('envelope_id', $mandatoryEnvelopes->pluck('id'))
-            ->whereIn('type', [ScheduledTransactionType::EnvelopeSpend, ScheduledTransactionType::MortgagePayment])
+            ->whereIn('type', [ScheduledTransactionType::EnvelopeSpend, ScheduledTransactionType::LiabilityPayment])
             ->get(['envelope_id', 'amount', 'recurrence'])
             ->groupBy('envelope_id');
 

@@ -68,7 +68,7 @@
     <x-input-error :messages="$errors->get('notes')" class="mt-2" />
 </div>
 
-<div x-show="liabilityType === 'mortgage'" x-cloak class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4">
+<div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4">
     <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Schedule</p>
 
     <div class="flex flex-wrap gap-4">
@@ -81,7 +81,7 @@
             <x-input-error :messages="$errors->get('payment_day')" class="mt-2" />
         </div>
 
-        <div>
+        <div x-show="liabilityType === 'mortgage'" x-cloak>
             <x-input-label for="escrow_amount" value="Escrow Amount (optional)" />
             <x-text-input id="escrow_amount" name="escrow_amount" type="number" class="mt-1 block w-36"
                           :value="old('escrow_amount', $l?->escrow_amount)" min="0" step="0.01"

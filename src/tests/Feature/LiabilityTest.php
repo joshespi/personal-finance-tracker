@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\CashAccount;
 use App\Models\Liability;
 use App\Models\LiabilityBalance;
 use App\Models\ManualAsset;
 use App\Models\Portfolio;
+use App\Models\ScheduledTransaction;
 use App\Models\User;
 use Tests\TestCase;
 
@@ -120,6 +122,52 @@ class LiabilityTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseHas('liabilities', ['id' => $liability->id, 'name' => 'New Name', 'liability_type' => 'auto_loan']);
+    }
+
+    public function test_credit_card_liability_can_sync_a_payment_schedule(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->post(route('liabilities.store'), [
+                'name'                    => 'Visa Card',
+                'liability_type'          => 'credit_card',
+                'currency'                => 'USD',
+                'minimum_payment'         => 75,
+                'payment_day'             => 15,
+                'payment_cash_account_id' => $account->id,
+            ])
+            ->assertRedirect();
+
+        $liability = Liability::where('name', 'Visa Card')->firstOrFail();
+
+        $this->assertDatabaseHas('scheduled_transactions', [
+            'liability_id'    => $liability->id,
+            'type'            => 'mortgage_payment',
+            'cash_account_id' => $account->id,
+            'amount'          => 75,
+        ]);
+    }
+
+    public function test_clearing_payment_day_removes_synced_schedule(): void
+    {
+        $user      = User::factory()->create();
+        $account   = CashAccount::factory()->for($user)->create();
+        $liability = Liability::factory()->for($user)->create(['liability_type' => 'credit_card', 'minimum_payment' => 75]);
+        ScheduledTransaction::factory()->for($user)->for($liability, 'liability')->for($account, 'cashAccount')->create([
+            'type' => 'mortgage_payment',
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('liabilities.update', $liability), [
+                'name'           => $liability->name,
+                'liability_type' => 'credit_card',
+                'currency'       => 'USD',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('scheduled_transactions', ['liability_id' => $liability->id]);
     }
 
     public function test_delete_liability(): void

@@ -4,10 +4,23 @@ namespace App\Services;
 
 use App\Enums\TransactionType;
 use App\Models\Portfolio;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class RealizedGainService
 {
+    /** Realized-gain lots across every non-tax-advantaged portfolio a user owns, each tagged with its source portfolio. */
+    public function allLotsForUser(User $user): Collection
+    {
+        $portfolios = $user->portfolios()->where('is_tax_advantaged', false)->with('transactions.asset')->get();
+
+        return $portfolios->flatMap(
+            fn (Portfolio $portfolio) => $this->compute($portfolio)['lots']
+                ->map(fn ($lot) => array_merge($lot, ['portfolio' => $portfolio]))
+        );
+    }
+
     public function compute(Portfolio $portfolio): array
     {
         if (! $portfolio->relationLoaded('transactions')) {

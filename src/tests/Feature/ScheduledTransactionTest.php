@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\CashAccount;
 use App\Models\Envelope;
+use App\Models\Liability;
+use App\Models\LiabilityBalance;
 use App\Models\ScheduledTransaction;
 use App\Models\User;
 use App\Services\ScheduledTransactionService;
@@ -359,6 +361,61 @@ class ScheduledTransactionTest extends TestCase
 
         $this->assertDatabaseHas('envelope_transactions', ['envelope_id' => $envelope->id, 'type' => 'fund']);
         $this->assertDatabaseHas('cash_transactions', ['cash_account_id' => $account->id, 'type' => 'withdrawal']);
+    }
+
+    public function test_materialize_mortgage_payment_creates_withdrawal_and_paydown(): void
+    {
+        $user      = User::factory()->create();
+        $account   = CashAccount::factory()->for($user)->create();
+        $liability = Liability::factory()->for($user)->create([
+            'liability_type'  => 'mortgage',
+            'interest_rate'   => 6,
+            'minimum_payment' => 1500,
+        ]);
+        LiabilityBalance::factory()->for($liability)->create([
+            'balance'     => 200000,
+            'recorded_at' => today()->subMonth(),
+        ]);
+        ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->for($liability, 'liability')->pastDue()->create([
+            'type'   => 'mortgage_payment',
+            'amount' => 1500,
+        ]);
+
+        app(ScheduledTransactionService::class)->materializeForUser($user);
+
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $account->id,
+            'type'            => 'withdrawal',
+            'amount'          => 1500,
+            'cleared'         => false,
+        ]);
+
+        // interest = 200000 * 6% / 12 = 1000; principal = 1500 - 1000 = 500; new balance = 199500
+        $this->assertDatabaseHas('liability_balances', [
+            'liability_id' => $liability->id,
+            'balance'      => 199500,
+        ]);
+        $this->assertDatabaseCount('liability_balances', 2);
+    }
+
+    public function test_materialize_mortgage_payment_skips_paydown_when_liability_missing(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+        ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->pastDue()->create([
+            'type'         => 'mortgage_payment',
+            'amount'       => 1500,
+            'liability_id' => null,
+        ]);
+
+        app(ScheduledTransactionService::class)->materializeForUser($user);
+
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $account->id,
+            'type'            => 'withdrawal',
+            'amount'          => 1500,
+        ]);
+        $this->assertDatabaseCount('liability_balances', 0);
     }
 
     public function test_materialize_skips_inactive_scheduled_transactions(): void

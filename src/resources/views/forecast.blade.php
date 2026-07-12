@@ -103,7 +103,7 @@
                     $shortfall  = max(0, $fireTarget - $endNominal);
                 @endphp
                 <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl p-5">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-indigo-500 dark:text-indigo-400">FIRE Target: ${{ number_format($fireTarget, 0) }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-indigo-500 dark:text-indigo-400">FIRE Target: ${{ $demo->amt($fireTarget, 0) }}</p>
                     @if ($fireMilestone)
                         <p class="text-2xl font-bold text-indigo-900 dark:text-indigo-100 mt-1">
                             Year {{ $fireMilestone['year'] }} &mdash; {{ $fireMilestone['calendar'] }}
@@ -114,7 +114,7 @@
                     @else
                         <p class="text-xl font-bold text-indigo-900 dark:text-indigo-100 mt-1">Not reached in {{ $years }} years</p>
                         <p class="text-sm text-indigo-600 dark:text-indigo-400 mt-0.5">
-                            ${{ number_format($shortfall, 0) }} short at year {{ $years }} &mdash; try increasing savings or return rate
+                            ${{ $demo->amt($shortfall, 0) }} short at year {{ $years }} &mdash; try increasing savings or return rate
                         </p>
                     @endif
                 </div>
@@ -179,8 +179,8 @@
                                             {{ $row['year'] === 0 ? 'Now' : 'Year ' . $row['year'] }}
                                         </td>
                                         <td class="px-4 py-2.5 text-right text-gray-500 dark:text-gray-400">{{ $row['label'] }}</td>
-                                        <td class="px-4 py-2.5 text-right font-mono text-gray-900 dark:text-gray-100">${{ number_format($row['nominal'], 0) }}</td>
-                                        <td class="px-4 py-2.5 text-right font-mono text-gray-500 dark:text-gray-400">${{ number_format($row['real'], 0) }}</td>
+                                        <td class="px-4 py-2.5 text-right font-mono text-gray-900 dark:text-gray-100">${{ $demo->amt($row['nominal'], 0) }}</td>
+                                        <td class="px-4 py-2.5 text-right font-mono text-gray-500 dark:text-gray-400">${{ $demo->amt($row['real'], 0) }}</td>
                                     </tr>
                                 @endif
                             @endforeach
@@ -192,9 +192,17 @@
         </div>
     </div>
 
+    @php
+        // Only nominal/real are dollar figures — scaling the whole row would also
+        // scramble year/label and break the chart's x-axis and milestone math.
+        $jsProjection = collect($projection)->map(fn ($row) => array_merge($row, [
+            'nominal' => $demo->scaleScalar($row['nominal']),
+            'real'    => $demo->scaleScalar($row['real']),
+        ]));
+    @endphp
     <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const projection = @json($projection);
+        const projection = @json($jsProjection);
         const { isDark, gridColor, labelColor } = window.themeColors();
 
         function fmtAxis(v) {
