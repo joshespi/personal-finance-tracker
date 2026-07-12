@@ -5,12 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CashTransaction extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['cash_account_id', 'envelope_id', 'income_category_id', 'type', 'cleared', 'amount', 'description', 'occurred_at'];
+    protected $fillable = ['cash_account_id', 'envelope_id', 'income_category_id', 'linked_transaction_id', 'type', 'cleared', 'amount', 'description', 'occurred_at'];
 
     protected $casts = [
         'occurred_at' => 'date',
@@ -63,5 +64,23 @@ class CashTransaction extends Model
     public function incomeCategory(): BelongsTo
     {
         return $this->belongsTo(IncomeCategory::class);
+    }
+
+    /** The withdrawal that originated this transfer's deposit leg (BelongsTo via linked_transaction_id). */
+    public function linkedFrom(): BelongsTo
+    {
+        return $this->belongsTo(CashTransaction::class, 'linked_transaction_id');
+    }
+
+    /** The deposit leg that received this transfer's withdrawal (HasOne reverse). */
+    public function linkedTo(): HasOne
+    {
+        return $this->hasOne(CashTransaction::class, 'linked_transaction_id');
+    }
+
+    /** The other leg of the transfer this transaction is part of, if any. */
+    public function transferCounterpart(): ?self
+    {
+        return $this->linkedTo ?? $this->linkedFrom;
     }
 }

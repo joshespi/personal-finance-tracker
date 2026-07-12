@@ -25,7 +25,11 @@ class TransactionList extends Component
     public function getTransactionsProperty()
     {
         return $this->filteredQuery()
-            ->with(['envelope:id,name', 'incomeCategory:id,name,color'])
+            ->with([
+                'envelope:id,name', 'incomeCategory:id,name,color',
+                'linkedFrom:id,cash_account_id', 'linkedFrom.cashAccount:id,name',
+                'linkedTo:id,cash_account_id,linked_transaction_id', 'linkedTo.cashAccount:id,name',
+            ])
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
             ->paginate(self::PER_PAGE);

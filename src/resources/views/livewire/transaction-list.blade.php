@@ -283,13 +283,7 @@
                                     class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer group"
                                     wire:click="startEdit({{ $t->id }})">
                                     <td class="px-6 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ $t->occurred_at->format('M j, Y') }}</td>
-                                    <td class="px-6 py-3">
-                                        @if ($t->type === 'deposit')
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">Deposit</span>
-                                        @else
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300">Withdrawal</span>
-                                        @endif
-                                    </td>
+                                    <x-transaction-type-cell :transaction="$t" />
                                     <td class="px-6 py-3">
                                         @php
                                             [$dot, $badge, $label, $title] = $t->cleared

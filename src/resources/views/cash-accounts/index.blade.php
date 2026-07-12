@@ -6,6 +6,10 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Checking, savings, credit cards, and other spending accounts.</p>
             </div>
             <div class="flex items-center gap-2">
+                <a href="{{ route('cash-transfers.create') }}"
+                   class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                    Transfer
+                </a>
                 <a href="{{ route('cash-accounts.all') }}"
                    class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                     All Transactions

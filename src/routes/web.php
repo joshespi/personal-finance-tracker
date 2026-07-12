@@ -11,6 +11,7 @@ use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\CashAccountController;
 use App\Http\Controllers\CashTransactionController;
+use App\Http\Controllers\CashTransferController;
 use App\Http\Controllers\CsvImportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DividendController;
@@ -127,6 +128,9 @@ Route::middleware('auth')->group(function () {
         ->name('cash-accounts.transactions.store');
     Route::delete('cash-transactions/{transaction}', [CashTransactionController::class, 'destroy'])
         ->name('cash-accounts.transactions.destroy');
+
+    Route::get('/cash-transfers/create', [CashTransferController::class, 'create'])->name('cash-transfers.create');
+    Route::post('/cash-transfers', [CashTransferController::class, 'store'])->name('cash-transfers.store');
 
     Route::get('/analysis', AnalysisController::class)->name('analysis');
     Route::get('/planning', PlanningController::class)->name('planning');

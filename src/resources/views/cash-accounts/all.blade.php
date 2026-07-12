@@ -8,15 +8,28 @@
                 <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">All Transactions</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Every account's activity, plus what's scheduled next.</p>
             </div>
-            <a href="{{ route('cash-accounts.index') }}"
-               class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
-                Accounts
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('cash-transfers.create') }}"
+                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                    Transfer
+                </a>
+                <a href="{{ route('cash-accounts.index') }}"
+                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                    Accounts
+                </a>
+            </div>
         </div>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+
+            @if (session('success'))
+                <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-300 rounded-md px-4 py-3 text-sm">
+                    {{ session('success') }}
+                </div>
+            @endif
+
             <livewire:all-transactions />
         </div>
     </div>

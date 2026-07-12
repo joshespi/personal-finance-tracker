@@ -11,6 +11,10 @@
                 </p>
             </div>
             <div class="flex items-center gap-2">
+                <a href="{{ route('cash-transfers.create', ['to_account_id' => $account->id]) }}"
+                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                    Transfer
+                </a>
                 <button type="button" @click="$store.reconcile.open = true"
                         class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                     Reconcile
