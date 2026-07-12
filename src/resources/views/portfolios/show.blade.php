@@ -74,54 +74,52 @@
                     $hasAnyPrice       = $summary['has_price'];
                 @endphp
                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Cost Basis</p>
+                    <x-stat-tile>
+                        <x-slot:label>Cost Basis</x-slot:label>
                         <p class="mt-1 text-xl font-semibold font-mono text-gray-900 dark:text-gray-100">
                             {{ $portfolio->currency }} {{ $demo->amt($totalCostBasis) }}
                         </p>
-                    </div>
+                    </x-stat-tile>
                     @if ($hasAnyPrice)
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Market Value</p>
+                        <x-stat-tile>
+                            <x-slot:label>Market Value</x-slot:label>
                             <p class="mt-1 text-xl font-semibold font-mono text-gray-900 dark:text-gray-100">
                                 {{ $portfolio->currency }} {{ $demo->amt($totalCurrentValue) }}
                             </p>
-                        </div>
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Unrealized P&L</p>
+                        </x-stat-tile>
+                        <x-stat-tile>
+                            <x-slot:label>Unrealized P&L</x-slot:label>
                             <p class="mt-1 text-xl font-semibold font-mono {{ $totalUnrealized >= 0 ? 'text-green-600' : 'text-red-600' }}">
                                 {{ $totalUnrealized >= 0 ? '+' : '' }}{{ $portfolio->currency }} {{ $demo->amt($totalUnrealized) }}
                             </p>
-                        </div>
+                        </x-stat-tile>
                     @endif
                     @if ($twr['total_pct'] !== null)
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">TWR Return</p>
+                        <x-stat-tile>
+                            <x-slot:label>TWR Return</x-slot:label>
                             <p class="mt-1 text-xl font-semibold font-mono {{ $twr['total_pct'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
                                 {{ $twr['total_pct'] >= 0 ? '+' : '' }}{{ $twr['total_pct'] }}%
                             </p>
                             @if ($twr['annualized_pct'] !== null)
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                                    {{ $twr['annualized_pct'] >= 0 ? '+' : '' }}{{ $twr['annualized_pct'] }}% ann.
-                                </p>
+                                <x-slot:caption>{{ $twr['annualized_pct'] >= 0 ? '+' : '' }}{{ $twr['annualized_pct'] }}% ann.</x-slot:caption>
                             @endif
-                        </div>
+                        </x-stat-tile>
                     @endif
                     @if ($realizedGains['totalGain'] != 0)
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Realized P&L</p>
+                        <x-stat-tile>
+                            <x-slot:label>Realized P&L</x-slot:label>
                             <p class="mt-1 text-xl font-semibold font-mono {{ $realizedGains['totalGain'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
                                 {{ $realizedGains['totalGain'] >= 0 ? '+' : '' }}{{ $portfolio->currency }} {{ $demo->amt($realizedGains['totalGain']) }}
                             </p>
-                        </div>
+                        </x-stat-tile>
                     @endif
                     @if ($totalManualValue > 0)
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Manual Assets</p>
+                        <x-stat-tile>
+                            <x-slot:label>Manual Assets</x-slot:label>
                             <p class="mt-1 text-xl font-semibold font-mono text-gray-900 dark:text-gray-100">
                                 {{ $portfolio->currency }} {{ $demo->amt($totalManualValue) }}
                             </p>
-                        </div>
+                        </x-stat-tile>
                     @endif
                 </div>
             @endif
@@ -131,16 +129,7 @@
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                         <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Portfolio Value History</h3>
-                        <div class="flex flex-wrap gap-1" id="port-range-btns">
-                            @foreach (['5D','1W','1M','3M','6M','1Y','YTD','5Y','10Y','All'] as $r)
-                                <button data-range="{{ $r }}"
-                                        class="px-2.5 py-1 text-xs rounded font-medium transition
-                                               bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300
-                                               hover:bg-gray-200 dark:hover:bg-gray-600">
-                                    {{ $r }}
-                                </button>
-                            @endforeach
-                        </div>
+                        <x-chart-range-buttons id="port-range-btns" :ranges="['5D','1W','1M','3M','6M','1Y','YTD','5Y','10Y','All']" />
                     </div>
                     <div class="h-72 relative"><canvas id="portChart"></canvas></div>
                 </div>
@@ -153,16 +142,7 @@
                                 <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Benchmark Comparison</h3>
                                 <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Normalized to 100 — relative % return</p>
                             </div>
-                            <div class="flex flex-wrap gap-1" id="port-bench-range-btns">
-                                @foreach (['1M','3M','6M','1Y','5Y','10Y','All'] as $r)
-                                    <button data-range="{{ $r }}"
-                                            class="px-2.5 py-1 text-xs rounded font-medium transition
-                                                   bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300
-                                                   hover:bg-gray-200 dark:hover:bg-gray-600">
-                                        {{ $r }}
-                                    </button>
-                                @endforeach
-                            </div>
+                            <x-chart-range-buttons id="port-bench-range-btns" :ranges="['1M','3M','6M','1Y','5Y','10Y','All']" />
                         </div>
                         <div class="h-64 relative"><canvas id="portBenchChart"></canvas></div>
                     </div>

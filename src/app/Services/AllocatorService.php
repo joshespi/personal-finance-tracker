@@ -11,8 +11,8 @@ class AllocatorService
     /**
      * Greedy "extra cash" allocation: fills the emergency-fund gap, then highest-APR
      * revolving debt, then nearest-dated savings goals, returning the per-bucket plan and
-     * the leftover. Consumed by the standalone AllocatorController and the allocator tab of
-     * PlanningController. A null $amount (nothing entered yet) yields an empty plan.
+     * the leftover. Consumed by the allocator tab of PlanningController. A null $amount
+     * (nothing entered yet) yields an empty plan.
      *
      * @return array{amount: ?float, buckets: array, remainder: float}
      */

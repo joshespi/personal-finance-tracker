@@ -12,7 +12,7 @@ class CashflowTest extends TestCase
 {
     public function test_requires_auth(): void
     {
-        $this->get(route('cashflow'))->assertRedirect(route('login'));
+        $this->get(route('analysis', ['tab' => 'cashflow']))->assertRedirect(route('login'));
     }
 
     public function test_income_comes_from_cash_deposits(): void
@@ -27,7 +27,7 @@ class CashflowTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('cashflow'))
+            ->get(route('analysis', ['tab' => 'cashflow']))
             ->assertOk()
             ->assertSee('3,000.00')
             ->assertSee('Paycheck');
@@ -44,7 +44,7 @@ class CashflowTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('cashflow'))
+            ->get(route('analysis', ['tab' => 'cashflow']))
             ->assertOk()
             ->assertSee('Groceries')
             ->assertSee('250.00');
@@ -64,7 +64,7 @@ class CashflowTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('cashflow'))
+            ->get(route('analysis', ['tab' => 'cashflow']))
             ->assertOk()
             ->assertSee('1,400.00');
     }
@@ -82,7 +82,7 @@ class CashflowTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('cashflow'))
+            ->get(route('analysis', ['tab' => 'cashflow']))
             ->assertOk()
             ->assertDontSee('OtherPaycheck')
             ->assertDontSee('9,999.00');
@@ -100,7 +100,7 @@ class CashflowTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('cashflow'))
+            ->get(route('analysis', ['tab' => 'cashflow']))
             ->assertOk()
             ->assertDontSee('OldPaycheck');
     }
@@ -121,7 +121,7 @@ class CashflowTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('cashflow', ['month' => $targetMonth->format('Y-m')]))
+            ->get(route('analysis', ['tab' => 'cashflow', 'month' => $targetMonth->format('Y-m')]))
             ->assertOk()
             ->assertSee('4,000.00')
             ->assertSee('1,200.00');
@@ -130,7 +130,7 @@ class CashflowTest extends TestCase
     public function test_no_deposits_shows_empty_state(): void
     {
         $this->actingAs(User::factory()->create())
-            ->get(route('cashflow'))
+            ->get(route('analysis', ['tab' => 'cashflow']))
             ->assertOk()
             ->assertSee('No deposits recorded for this month');
     }

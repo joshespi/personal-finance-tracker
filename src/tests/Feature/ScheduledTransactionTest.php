@@ -112,6 +112,25 @@ class ScheduledTransactionTest extends TestCase
         ])->assertSessionHasErrors('envelope_id');
     }
 
+    public function test_store_rejects_system_managed_mortgage_type(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+
+        // mortgage_payment schedules are created only by LiabilityController::syncSchedule;
+        // a user-created one could carry no cash account and fatal materialization.
+        $this->actingAs($user)->post(route('scheduled-transactions.store'), [
+            'description'     => 'Sneaky mortgage',
+            'amount'          => '100.00',
+            'type'            => 'mortgage_payment',
+            'recurrence'      => 'monthly',
+            'next_due_at'     => today()->addMonth()->toDateString(),
+            'cash_account_id' => $account->id,
+        ])->assertSessionHasErrors('type');
+
+        $this->assertDatabaseCount('scheduled_transactions', 0);
+    }
+
     // ── Edit / Update ─────────────────────────────────────────────────────────
 
     public function test_edit_requires_ownership(): void
@@ -142,6 +161,32 @@ class ScheduledTransactionTest extends TestCase
             'id'          => $scheduled->id,
             'description' => 'Updated desc',
             'recurrence'  => 'weekly',
+        ]);
+    }
+
+    public function test_updating_existing_mortgage_schedule_keeps_its_type(): void
+    {
+        $user      = User::factory()->create();
+        $account   = CashAccount::factory()->for($user)->create();
+        $scheduled = ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->create([
+            'type' => 'mortgage_payment',
+        ]);
+
+        // The edit form offers mortgage_payment when the schedule already is one;
+        // re-saving must not be rejected by the user-selectable whitelist.
+        $this->actingAs($user)->put(route('scheduled-transactions.update', $scheduled), [
+            'description'     => 'House payment',
+            'amount'          => '1500.00',
+            'type'            => 'mortgage_payment',
+            'recurrence'      => 'monthly',
+            'next_due_at'     => today()->addMonth()->toDateString(),
+            'cash_account_id' => $account->id,
+        ])->assertRedirect(route('cash-accounts.all'));
+
+        $this->assertDatabaseHas('scheduled_transactions', [
+            'id'          => $scheduled->id,
+            'description' => 'House payment',
+            'type'        => 'mortgage_payment',
         ]);
     }
 

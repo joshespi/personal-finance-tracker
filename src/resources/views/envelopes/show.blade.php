@@ -42,12 +42,12 @@
                 $hasGoal          = $envelope->goal_amount !== null && (float)$envelope->goal_amount > 0;
             @endphp
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Current Balance</p>
+                <x-stat-tile>
+                    <x-slot:label>Current Balance</x-slot:label>
                     <p class="mt-1 text-3xl font-semibold font-mono {{ $envelope->current_balance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600' }}">
-                        {{ $envelope->current_balance < 0 ? '−' : '' }}${{ number_format(abs($envelope->current_balance), 2) }}
+                        {{ $envelope->current_balance < 0 ? '−' : '' }}${{ $demo->amt(abs($envelope->current_balance)) }}
                     </p>
-                </div>
+                </x-stat-tile>
 
                 @if ($hasMonthlyTarget)
                     @php
@@ -55,16 +55,16 @@
                         $spent  = (float) $envelope->spent_this_month;
                         $pct    = min(100, round($spent / $target * 100));
                     @endphp
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Spent This Month</p>
+                    <x-stat-tile>
+                        <x-slot:label>Spent This Month</x-slot:label>
                         <p class="mt-1 text-2xl font-semibold font-mono {{ $spent > $target ? 'text-red-600' : 'text-gray-900 dark:text-gray-100' }}">
-                            ${{ number_format($spent, 2) }} <span class="text-sm text-gray-400">/ ${{ number_format($target, 2) }}</span>
+                            ${{ $demo->amt($spent) }} <span class="text-sm text-gray-400">/ ${{ $demo->amt($target) }}</span>
                         </p>
                         <div class="mt-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
                             <div class="h-full rounded-full transition-all"
                                  style="width: {{ $pct }}%; background-color: {{ $spent > $target ? '#dc2626' : $envelope->color }};"></div>
                         </div>
-                    </div>
+                    </x-stat-tile>
                 @endif
 
                 @if ($hasGoal)
@@ -78,23 +78,23 @@
                         $monthsLeft   = ($monthsLeft !== null && $monthsLeft > 0) ? $monthsLeft : null;
                         $suggestedPmo = ($monthsLeft && $remaining > 0) ? round($remaining / $monthsLeft, 2) : null;
                     @endphp
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <x-stat-tile>
+                        <x-slot:label>
                             Savings Goal{{ $goalDate ? ' · by ' . $goalDate->format('M Y') : '' }}
-                        </p>
+                        </x-slot:label>
                         <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">
-                            ${{ number_format($balance, 2) }} <span class="text-sm text-gray-400">/ ${{ number_format($goalAmount, 2) }}</span>
+                            ${{ $demo->amt($balance) }} <span class="text-sm text-gray-400">/ ${{ $demo->amt($goalAmount) }}</span>
                         </p>
                         <div class="mt-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
                             <div class="h-full rounded-full transition-all"
                                  style="width: {{ $goalPct }}%; background-color: {{ $envelope->color }};"></div>
                         </div>
                         @if ($suggestedPmo)
-                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">~${{ number_format($suggestedPmo, 2) }}/mo suggested · {{ $monthsLeft }} months left</p>
+                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">~${{ $demo->amt($suggestedPmo) }}/mo suggested · {{ $monthsLeft }} months left</p>
                         @elseif ($monthsLeft !== null)
                             <p class="mt-1.5 text-xs text-green-600 dark:text-green-400">Goal reached!</p>
                         @endif
-                    </div>
+                    </x-stat-tile>
                 @endif
             </div>
 
@@ -131,7 +131,7 @@
                         </div>
 
                         @if ($cashAccounts->isNotEmpty())
-                            <div x-show="type === 'fund'" x-cloak>
+                            <div>
                                 <x-input-label for="cash_account_id" value="From spending account (optional)" />
                                 <select id="cash_account_id" name="cash_account_id"
                                         class="mt-1 block w-48 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
@@ -213,7 +213,7 @@
                                         </td>
                                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $row['description'] ?? '—' }}</td>
                                         <td class="px-6 py-3 text-gray-400 dark:text-gray-500 text-xs">{{ $row['source'] ?? '—' }}</td>
-                                        <x-flow-cells :inflow="$row['type'] === 'fund'" :amount="number_format($row['amount'], 2)" />
+                                        <x-flow-cells :inflow="$row['type'] === 'fund'" :amount="$demo->amt((float) $row['amount'])" />
                                         <td class="px-6 py-3 text-right">
                                             <form method="POST" action="{{ $row['delete_url'] }}" class="inline"
                                                   onsubmit="return confirm('Delete this transaction?')">

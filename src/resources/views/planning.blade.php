@@ -187,9 +187,7 @@
                             this.$nextTick(() => {
                                 const ctx = document.getElementById('debtChart');
                                 if (!ctx) return;
-                                const isDark = document.documentElement.classList.contains('dark');
-                                const tc = isDark ? '#9ca3af' : '#6b7280';
-                                const gc = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+                                const { gridColor: gc, labelColor: tc } = window.themeColors();
                                 const s = __debtPayoffSnowball.timeline, a = __debtPayoffAvalanche.timeline;
                                 this.chart = new Chart(ctx, {
                                     type: 'line',
@@ -223,23 +221,23 @@
                     class="space-y-8"
                 >
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total debt</p>
-                            <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">${{ number_format($data['total_balance'], 0) }}</p>
-                            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">high-interest only</p>
-                        </div>
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Interest / month</p>
-                            <p class="mt-1 text-2xl font-semibold font-mono text-rose-600 dark:text-rose-400">${{ number_format($data['total_monthly_interest'], 0) }}</p>
-                            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">given away to lenders</p>
-                        </div>
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Interest / year</p>
-                            <p class="mt-1 text-2xl font-semibold font-mono text-rose-600 dark:text-rose-400">${{ number_format($data['yearly_interest'], 0) }}</p>
-                            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">at current balances</p>
-                        </div>
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Payoff (min only)</p>
+                        <x-stat-tile>
+                            <x-slot:label>Total debt</x-slot:label>
+                            <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">${{ $demo->amt($data['total_balance'], 0) }}</p>
+                            <x-slot:caption>high-interest only</x-slot:caption>
+                        </x-stat-tile>
+                        <x-stat-tile>
+                            <x-slot:label>Interest / month</x-slot:label>
+                            <p class="mt-1 text-2xl font-semibold font-mono text-rose-600 dark:text-rose-400">${{ $demo->amt($data['total_monthly_interest'], 0) }}</p>
+                            <x-slot:caption>given away to lenders</x-slot:caption>
+                        </x-stat-tile>
+                        <x-stat-tile>
+                            <x-slot:label>Interest / year</x-slot:label>
+                            <p class="mt-1 text-2xl font-semibold font-mono text-rose-600 dark:text-rose-400">${{ $demo->amt($data['yearly_interest'], 0) }}</p>
+                            <x-slot:caption>at current balances</x-slot:caption>
+                        </x-stat-tile>
+                        <x-stat-tile>
+                            <x-slot:label>Payoff (min only)</x-slot:label>
                             <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">
                                 @if ($snowball['months'] >= 600)
                                     50+ yrs
@@ -247,12 +245,10 @@
                                     {{ floor($snowball['months'] / 12) > 0 ? floor($snowball['months'] / 12) . 'yr ' : '' }}{{ $snowball['months'] % 12 > 0 ? ($snowball['months'] % 12) . 'mo' : '' }}
                                 @endif
                             </p>
-                            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                                @if ($snowball['months'] < 600)
-                                    {{ \Carbon\Carbon::now()->addMonths($snowball['months'])->format('M Y') }}
-                                @endif
-                            </p>
-                        </div>
+                            @if ($snowball['months'] < 600)
+                                <x-slot:caption>{{ \Carbon\Carbon::now()->addMonths($snowball['months'])->format('M Y') }}</x-slot:caption>
+                            @endif
+                        </x-stat-tile>
                     </div>
 
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
@@ -343,10 +339,10 @@
                                                 @if ($d['negative_amortization']) <span class="ml-1 text-xs text-amber-600 dark:text-amber-400" title="Minimum payment is less than monthly interest">⚠</span> @endif
                                                 @if (! $d['min_payment_set']) <span class="ml-1 text-xs text-blue-500 dark:text-blue-400" title="Estimated minimum payment">est.</span> @endif
                                             </td>
-                                            <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ number_format($d['balance'], 0) }}</td>
+                                            <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ $demo->amt($d['balance'], 0) }}</td>
                                             <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ $d['apr'] > 0 ? number_format($d['apr'], 2) . '%' : '—' }}</td>
-                                            <td class="px-4 py-3 text-right font-mono {{ $d['negative_amortization'] ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400' }}">${{ number_format($d['monthly_interest'], 0) }}</td>
-                                            <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ number_format($d['min_payment'], 0) }}</td>
+                                            <td class="px-4 py-3 text-right font-mono {{ $d['negative_amortization'] ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400' }}">${{ $demo->amt($d['monthly_interest'], 0) }}</td>
+                                            <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ $demo->amt($d['min_payment'], 0) }}</td>
                                             <td class="px-4 py-3 text-right text-gray-600 dark:text-gray-400" x-text="snowballResult.payoff_per_debt['{{ $debtId }}'] ? payoffDate(snowballResult.payoff_per_debt['{{ $debtId }}']) : '—'"></td>
                                             <td class="px-4 py-3 text-right text-gray-600 dark:text-gray-400" x-text="avalancheResult.payoff_per_debt['{{ $debtId }}'] ? payoffDate(avalancheResult.payoff_per_debt['{{ $debtId }}']) : '—'"></td>
                                         </tr>
@@ -378,10 +374,10 @@
                                     @foreach ($mortgages as $m)
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                                             <td class="px-4 py-3"><a href="{{ route('liabilities.show', $m['id']) }}" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ $m['name'] }}</a></td>
-                                            <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ number_format($m['balance'], 0) }}</td>
+                                            <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">${{ $demo->amt($m['balance'], 0) }}</td>
                                             <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ $m['apr'] > 0 ? number_format($m['apr'], 2) . '%' : '—' }}</td>
-                                            <td class="px-4 py-3 text-right font-mono text-gray-500 dark:text-gray-400">${{ number_format($m['monthly_interest'], 0) }}</td>
-                                            <td class="px-4 py-3 text-right font-mono text-gray-500 dark:text-gray-400">{{ $m['min_payment'] !== null ? '$' . number_format($m['min_payment'], 0) : '—' }}</td>
+                                            <td class="px-4 py-3 text-right font-mono text-gray-500 dark:text-gray-400">${{ $demo->amt($m['monthly_interest'], 0) }}</td>
+                                            <td class="px-4 py-3 text-right font-mono text-gray-500 dark:text-gray-400">{{ $m['min_payment'] !== null ? '$' . $demo->amt($m['min_payment'], 0) : '—' }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -423,7 +419,7 @@
                     <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg px-5 py-4 text-sm text-green-800 dark:text-green-300">
                         <p class="font-semibold">Nothing to allocate to — looking good.</p>
                         <p class="mt-1">Emergency fund is on track, no revolving debt, and all savings goals are funded. Consider investing the full
-                            <span class="font-mono font-bold">${{ number_format($amount, 2) }}</span>.</p>
+                            <span class="font-mono font-bold">${{ $demo->amt($amount) }}</span>.</p>
                     </div>
                 @else
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
@@ -448,11 +444,11 @@
                                         </div>
                                         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ $bucket['reason'] }}</p>
                                         @if (! $fully)
-                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">${{ number_format($bucket['gap'] - $bucket['amount'], 2) }} still needed after this allocation</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">${{ $demo->amt($bucket['gap'] - $bucket['amount']) }} still needed after this allocation</p>
                                         @endif
                                     </div>
                                     <div class="flex-shrink-0 text-right">
-                                        <p class="font-mono font-bold text-lg text-gray-900 dark:text-gray-100">${{ number_format($bucket['amount'], 2) }}</p>
+                                        <p class="font-mono font-bold text-lg text-gray-900 dark:text-gray-100">${{ $demo->amt($bucket['amount']) }}</p>
                                     </div>
                                 </div>
                             @endforeach
@@ -465,13 +461,13 @@
                                         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">No further priority buckets. Consider investing in a brokerage or Roth IRA.</p>
                                     </div>
                                     <div class="flex-shrink-0 text-right">
-                                        <p class="font-mono font-bold text-lg text-gray-900 dark:text-gray-100">${{ number_format($remainder, 2) }}</p>
+                                        <p class="font-mono font-bold text-lg text-gray-900 dark:text-gray-100">${{ $demo->amt($remainder) }}</p>
                                     </div>
                                 </div>
                             @endif
                         </div>
                     </div>
-                    <p class="text-right text-xs text-gray-400 dark:text-gray-500">Total: ${{ number_format($amount, 2) }}</p>
+                    <p class="text-right text-xs text-gray-400 dark:text-gray-500">Total: ${{ $demo->amt($amount) }}</p>
                 @endif
             @endif
 
@@ -489,29 +485,29 @@
                 </div>
             @else
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Monthly baseline</p>
-                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">${{ number_format($monthlyBaseline, 2) }}</p>
-                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">avg last 6 months</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">3-month target</p>
-                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">${{ number_format($target3, 2) }}</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">6-month target</p>
-                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">${{ number_format($target6, 2) }}</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">You have</p>
+                    <x-stat-tile>
+                        <x-slot:label>Monthly baseline</x-slot:label>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">${{ $demo->amt($monthlyBaseline) }}</p>
+                        <x-slot:caption>avg last 6 months</x-slot:caption>
+                    </x-stat-tile>
+                    <x-stat-tile>
+                        <x-slot:label>3-month target</x-slot:label>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">${{ $demo->amt($target3) }}</p>
+                    </x-stat-tile>
+                    <x-stat-tile>
+                        <x-slot:label>6-month target</x-slot:label>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">${{ $demo->amt($target6) }}</p>
+                    </x-stat-tile>
+                    <x-stat-tile>
+                        <x-slot:label>You have</x-slot:label>
                         @if ($currentSavings !== null)
-                            <p class="mt-1 text-2xl font-semibold font-mono {{ $currentSavings >= $target3 ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400' }}">${{ number_format($currentSavings, 2) }}</p>
-                            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{{ $emergencyEnvelope->name }}</p>
+                            <p class="mt-1 text-2xl font-semibold font-mono {{ $currentSavings >= $target3 ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400' }}">${{ $demo->amt($currentSavings) }}</p>
+                            <x-slot:caption>{{ $emergencyEnvelope->name }}</x-slot:caption>
                         @else
                             <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">—</p>
                             <a href="{{ route('envelopes.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Set up &rarr;</a>
                         @endif
-                    </div>
+                    </x-stat-tile>
                 </div>
 
                 @if (!empty($bars))
@@ -521,7 +517,7 @@
                                 <div class="flex justify-between text-sm mb-1.5">
                                     <span class="font-medium text-gray-700 dark:text-gray-300">{{ $bar['label'] }}</span>
                                     <span class="font-mono text-gray-600 dark:text-gray-400">
-                                        ${{ number_format($currentSavings, 2) }} / ${{ number_format($bar['target'], 2) }}
+                                        ${{ $demo->amt($currentSavings) }} / ${{ $demo->amt($bar['target']) }}
                                         <span class="text-gray-400 dark:text-gray-500 ml-1">({{ $bar['pct'] }}%)</span>
                                     </span>
                                 </div>
@@ -530,7 +526,7 @@
                                          style="width: {{ $bar['pct'] }}%"></div>
                                 </div>
                                 @if ($currentSavings < $bar['target'])
-                                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">${{ number_format($bar['target'] - $currentSavings, 2) }} to go</p>
+                                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">${{ $demo->amt($bar['target'] - $currentSavings) }} to go</p>
                                 @endif
                             </div>
                         @endforeach
@@ -549,12 +545,12 @@
                                     <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background-color: {{ $row['envelope']->color }}"></span>
                                     <a href="{{ route('envelopes.show', $row['envelope']) }}" class="text-sm text-gray-800 dark:text-gray-200 hover:underline">{{ $row['envelope']->name }}</a>
                                 </div>
-                                <span class="text-sm font-mono text-gray-700 dark:text-gray-300">${{ number_format($row['avg'], 2) }}/mo</span>
+                                <span class="text-sm font-mono text-gray-700 dark:text-gray-300">${{ $demo->amt($row['avg']) }}/mo</span>
                             </div>
                         @endforeach
                         <div class="px-6 py-3 flex items-center justify-between bg-gray-50 dark:bg-gray-700/40">
                             <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Total</span>
-                            <span class="text-sm font-mono font-semibold text-gray-800 dark:text-gray-200">${{ number_format($monthlyBaseline, 2) }}/mo</span>
+                            <span class="text-sm font-mono font-semibold text-gray-800 dark:text-gray-200">${{ $demo->amt($monthlyBaseline) }}/mo</span>
                         </div>
                     </div>
                 </div>
@@ -643,11 +639,11 @@
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 text-sm">$</span>
                             <input type="number" name="annual_expenses" value="{{ $annualExpenses ?? '' }}" step="any" min="0"
-                                   placeholder="{{ $annualIncome > 0 ? number_format($annualIncome, 0) : '' }}"
+                                   placeholder="{{ $annualIncome > 0 ? $demo->amt($annualIncome, 0) : '' }}"
                                    class="pl-7 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
                         </div>
                         @if ($annualIncome > 0 && ! $annualExpenses)
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Using recorded income: ${{ number_format($annualIncome, 0) }}/yr</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Using recorded income: ${{ $demo->amt($annualIncome, 0) }}/yr</p>
                         @endif
                     </div>
                 </div>
@@ -664,29 +660,30 @@
 
                 {{-- Summary cards --}}
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Years to Retirement</p>
+                    <x-stat-tile>
+                        <x-slot:label>Years to Retirement</x-slot:label>
                         <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">{{ $result['years_left'] }}</p>
-                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Retire at {{ $retirementAge }}, currently {{ $age }}</p>
-                    </div>
+                        <x-slot:caption>Retire at {{ $retirementAge }}, currently {{ $age }}</x-slot:caption>
+                    </x-stat-tile>
 
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Projected at Retirement</p>
-                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">${{ number_format($result['projected_fv'], 0) }}</p>
-                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">at {{ $annualReturn }}% annual return</p>
-                    </div>
+                    <x-stat-tile>
+                        <x-slot:label>Projected at Retirement</x-slot:label>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">${{ $demo->amt($result['projected_fv'], 0) }}</p>
+                        <x-slot:caption>at {{ $annualReturn }}% annual return</x-slot:caption>
+                    </x-stat-tile>
 
                     @if ($result['target'] !== null)
-                        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide"
-                               title="25× your annual expenses/income — the amount needed to withdraw 4% per year indefinitely">Target (4% Rule ⓘ)</p>
+                        <x-stat-tile>
+                            <x-slot:label title="25× your annual expenses/income — the amount needed to withdraw 4% per year indefinitely">Target (4% Rule ⓘ)</x-slot:label>
                             <p class="mt-1 text-2xl font-semibold font-mono {{ $result['on_track'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">
-                                ${{ number_format($result['target'], 0) }}
+                                ${{ $demo->amt($result['target'], 0) }}
                             </p>
-                            <p class="mt-0.5 text-xs {{ $result['on_track'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">
-                                {{ $result['on_track'] ? 'On track' : '$' . number_format(abs($result['gap']), 0) . ' short' }}
-                            </p>
-                        </div>
+                            <x-slot:caption>
+                                <span class="{{ $result['on_track'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">
+                                    {{ $result['on_track'] ? 'On track' : '$' . $demo->amt(abs($result['gap']), 0) . ' short' }}
+                                </span>
+                            </x-slot:caption>
+                        </x-stat-tile>
                     @endif
                 </div>
 
@@ -696,10 +693,10 @@
                         <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">Catch-up needed</p>
                         <p class="text-sm text-amber-700 dark:text-amber-400">
                             To reach your target by {{ $retirementAge }}, contribute
-                            <strong>${{ number_format($result['required_contrib'], 0) }}/month</strong>
-                            (you're currently contributing ${{ number_format($monthlyContrib, 0) }}/month —
+                            <strong>${{ $demo->amt($result['required_contrib'], 0) }}/month</strong>
+                            (you're currently contributing ${{ $demo->amt($monthlyContrib, 0) }}/month —
                             {{ $result['required_contrib'] > $monthlyContrib
-                                ? 'an increase of $' . number_format($result['required_contrib'] - $monthlyContrib, 0) . '/month'
+                                ? 'an increase of $' . $demo->amt($result['required_contrib'] - $monthlyContrib, 0) . '/month'
                                 : 'already enough' }}).
                         </p>
                     </div>
@@ -707,7 +704,7 @@
                     <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg px-5 py-4">
                         <p class="text-sm font-semibold text-emerald-800 dark:text-emerald-300">You're on track.</p>
                         <p class="text-sm text-emerald-700 dark:text-emerald-400 mt-0.5">
-                            Your projected value at {{ $retirementAge }} exceeds the 4% rule target by ${{ number_format(abs($result['gap']), 0) }}.
+                            Your projected value at {{ $retirementAge }} exceeds the 4% rule target by ${{ $demo->amt(abs($result['gap']), 0) }}.
                         </p>
                     </div>
                 @endif
@@ -718,7 +715,7 @@
                         <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700">
                             <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Fidelity Milestones</h3>
                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                                Fidelity recommends saving a multiple of your annual income by each age. Based on ${{ number_format($annualIncome, 0) }}/yr.
+                                Fidelity recommends saving a multiple of your annual income by each age. Based on ${{ $demo->amt($annualIncome, 0) }}/yr.
                             </p>
                         </div>
                         <div class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -731,12 +728,12 @@
                                     <div class="flex items-center gap-4 text-sm">
                                         <div class="text-right">
                                             <p class="text-xs text-gray-400 dark:text-gray-500">Target</p>
-                                            <p class="font-mono text-gray-700 dark:text-gray-300">${{ number_format($b['target'], 0) }}</p>
+                                            <p class="font-mono text-gray-700 dark:text-gray-300">${{ $demo->amt($b['target'], 0) }}</p>
                                         </div>
                                         <div class="text-right">
                                             <p class="text-xs text-gray-400 dark:text-gray-500">Projected</p>
                                             <p class="font-mono {{ $b['on_track'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">
-                                                ${{ number_format($b['projected'], 0) }}
+                                                ${{ $demo->amt($b['projected'], 0) }}
                                             </p>
                                         </div>
                                         <span class="text-xs font-semibold {{ $b['on_track'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">

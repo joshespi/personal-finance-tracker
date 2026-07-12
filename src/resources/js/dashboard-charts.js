@@ -1,7 +1,8 @@
 import {
-    resampleByRange, fmtFull, fmtSigned, makeValueCostChart, makeBenchmarkChart, makeAllocationPie, DEMO_MASK,
+    resampleByRange, makeValueCostChart, makeBenchmarkChart, makeAllocationPie,
     dailyChangeMap, buildCalendarMonths, calendarColor, themeColors,
 } from './chart-utils';
+import { DEMO_MASK, fmtFull, fmtSigned } from './format-utils';
 
 // Months shown per page of the calendar heatmap; prev/next pages through
 // history one month at a time from there.

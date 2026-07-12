@@ -6,19 +6,14 @@ use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\ToolsController as AdminToolsController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
-use App\Http\Controllers\AllocatorController;
 use App\Http\Controllers\AllTransactionsController;
 use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\AssetController;
-use App\Http\Controllers\BudgetRuleController;
 use App\Http\Controllers\CashAccountController;
-use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\CashTransactionController;
 use App\Http\Controllers\CsvImportController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DebtPayoffController;
 use App\Http\Controllers\DividendController;
-use App\Http\Controllers\EmergencyFundController;
 use App\Http\Controllers\EnvelopeController;
 use App\Http\Controllers\EnvelopeTransactionController;
 use App\Http\Controllers\ExportController;
@@ -37,7 +32,6 @@ use App\Http\Controllers\PortfolioSliceController;
 use App\Http\Controllers\PortfolioTransferController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ScheduledTransactionController;
-use App\Http\Controllers\SpendingTrendsController;
 use App\Http\Controllers\TaxSummaryController;
 use App\Http\Controllers\TickerSearchController;
 use App\Http\Controllers\TransactionController;
@@ -136,12 +130,15 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/analysis', AnalysisController::class)->name('analysis');
     Route::get('/planning', PlanningController::class)->name('planning');
-    Route::get('/cashflow', CashflowController::class)->name('cashflow');
-    Route::get('/spending-trends', SpendingTrendsController::class)->name('spending-trends');
-    Route::get('/emergency-fund', EmergencyFundController::class)->name('emergency-fund');
-    Route::get('/debt-payoff', DebtPayoffController::class)->name('debt-payoff');
-    Route::get('/allocator', AllocatorController::class)->name('allocator');
-    Route::get('/budget-rule', BudgetRuleController::class)->name('budget-rule');
+    // These six used to be standalone pages; each is now a tab of /analysis or
+    // /planning. Kept as redirects (not simply removed) so old bookmarks still land
+    // somewhere, mirroring the /ready-to-assign redirect below.
+    Route::get('/cashflow', fn () => redirect()->route('analysis', [...request()->query(), 'tab' => 'cashflow']))->name('cashflow');
+    Route::get('/spending-trends', fn () => redirect()->route('analysis', [...request()->query(), 'tab' => 'trends']))->name('spending-trends');
+    Route::get('/budget-rule', fn () => redirect()->route('analysis', [...request()->query(), 'tab' => 'budget-rule']))->name('budget-rule');
+    Route::get('/debt-payoff', fn () => redirect()->route('planning', [...request()->query(), 'tab' => 'debt-payoff']))->name('debt-payoff');
+    Route::get('/allocator', fn () => redirect()->route('planning', [...request()->query(), 'tab' => 'allocator']))->name('allocator');
+    Route::get('/emergency-fund', fn () => redirect()->route('planning', [...request()->query(), 'tab' => 'emergency-fund']))->name('emergency-fund');
     Route::get('/forecast', ForecastController::class)->name('forecast');
     Route::get('/ready-to-assign', fn () => redirect()->route('envelopes.index'))->name('ready-to-assign');
     Route::post('/income-entries', [IncomeEntryController::class, 'store'])->name('income-entries.store');

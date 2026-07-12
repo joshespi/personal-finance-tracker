@@ -3,14 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Asset;
+use App\Services\CoinGeckoClient;
+use App\Services\FinnhubClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class TickerSearchController extends Controller
 {
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request, FinnhubClient $finnhub, CoinGeckoClient $coinGecko): JsonResponse
     {
         $query     = trim($request->input('q', ''));
         $assetType = $request->input('type', 'stock');
@@ -35,8 +36,8 @@ class TickerSearchController extends Controller
         }
 
         $remote = match ($assetType) {
-            'crypto' => $this->searchCrypto($query),
-            default  => $this->searchStock($query, $assetType),
+            'crypto' => $this->searchCrypto($query, $coinGecko),
+            default  => $this->searchStock($query, $assetType, $finnhub),
         };
 
         // Merge local + remote, deduplicate by symbol, limit to 8
@@ -48,18 +49,14 @@ class TickerSearchController extends Controller
         return response()->json($combined);
     }
 
-    private function searchStock(string $query, string $resultType = 'stock'): array
+    private function searchStock(string $query, string $resultType, FinnhubClient $finnhub): array
     {
-        $apiKey = config('services.finnhub.key');
-        if (! $apiKey) {
+        if (! $finnhub->configured()) {
             return [];
         }
 
         try {
-            $response = Http::timeout(5)->get('https://finnhub.io/api/v1/search', [
-                'q'     => $query,
-                'token' => $apiKey,
-            ]);
+            $response = $finnhub->search($query);
 
             if (! $response->successful()) {
                 return [];
@@ -83,12 +80,10 @@ class TickerSearchController extends Controller
         }
     }
 
-    private function searchCrypto(string $query): array
+    private function searchCrypto(string $query, CoinGeckoClient $coinGecko): array
     {
         try {
-            $response = Http::timeout(5)->get('https://api.coingecko.com/api/v3/search', [
-                'query' => $query,
-            ]);
+            $response = $coinGecko->search($query);
 
             if (! $response->successful()) {
                 return [];

@@ -23,6 +23,7 @@ class RealizedGainService
 
         foreach ($txns as $t) {
             $assetId = $t->asset_id;
+            $openLots[$assetId] ??= [];
 
             if ($t->type->isInflow()) {
                 $usdFee               = $t->fee_in_asset ? 0.0 : (float) $t->fees;
@@ -42,12 +43,8 @@ class RealizedGainService
                 $sellDate  = $t->transacted_at;
                 $isSale    = $t->type === TransactionType::Sell;
 
-                while ($remainingToSell > 0.000001 && ! empty($openLots[$assetId])) {
-                    $lot = &$openLots[$assetId][0];
-
-                    $matched = min($lot['qty'], $remainingToSell);
-
-                    // transfers move cost basis to the destination portfolio — not a taxable event
+                // transfers move cost basis to the destination portfolio — not a taxable event
+                $this->consumeFifo($openLots[$assetId], $remainingToSell, function (array $lot, float $matched) use ($lots, $isSale, $t, $sellPrice, $sellDate) {
                     if ($isSale) {
                         $lots->push([
                             'asset'        => $t->asset,
@@ -62,14 +59,7 @@ class RealizedGainService
                             'holding_days' => (int) $lot['date']->diffInDays($sellDate),
                         ]);
                     }
-
-                    $lot['qty'] -= $matched;
-                    $remainingToSell -= $matched;
-
-                    if ($lot['qty'] < 0.000001) {
-                        array_shift($openLots[$assetId]);
-                    }
-                }
+                });
             }
         }
 
@@ -124,18 +114,36 @@ class RealizedGainService
                     ? (float) $t->quantity + (float) $t->fees
                     : (float) $t->quantity;
 
-                while ($remaining > 0.000001 && ! empty($openLots)) {
-                    $matched = min($openLots[0]['qty'], $remaining);
-                    $openLots[0]['qty'] -= $matched;
-                    $remaining -= $matched;
-                    if ($openLots[0]['qty'] < 0.000001) {
-                        array_shift($openLots);
-                    }
-                }
+                $this->consumeFifo($openLots, $remaining);
             }
         }
 
         return array_values(array_filter($openLots, fn ($l) => $l['qty'] > 0.000001));
+    }
+
+    /**
+     * Consume $remaining units FIFO from &$lots (each ['qty' => float, ...]),
+     * decrementing qty and shifting fully-consumed lots off the front.
+     * $onMatch, if given, is invoked with (lot, matchedQty) — before qty is
+     * decremented — for every partial/full match, so callers can record
+     * per-match detail (e.g. a realized-gain row) without duplicating the walk.
+     */
+    private function consumeFifo(array &$lots, float $remaining, ?callable $onMatch = null): void
+    {
+        while ($remaining > 0.000001 && ! empty($lots)) {
+            $matched = min($lots[0]['qty'], $remaining);
+
+            if ($onMatch !== null) {
+                $onMatch($lots[0], $matched);
+            }
+
+            $lots[0]['qty'] -= $matched;
+            $remaining -= $matched;
+
+            if ($lots[0]['qty'] < 0.000001) {
+                array_shift($lots);
+            }
+        }
     }
 
     /**

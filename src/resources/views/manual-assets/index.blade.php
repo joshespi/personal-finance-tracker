@@ -40,7 +40,7 @@
                                 <div class="flex items-center gap-4">
                                     <div class="text-right">
                                         @if ($ma->latestValuation)
-                                            <p class="font-mono text-gray-900 dark:text-gray-100 text-sm">{{ number_format((float)$ma->latestValuation->value, 2) }}</p>
+                                            <p class="font-mono text-gray-900 dark:text-gray-100 text-sm">{{ $demo->amt((float) $ma->latestValuation->value) }}</p>
                                             <p class="text-xs text-gray-400 dark:text-gray-500">{{ $ma->latestValuation->valued_at->format('M j, Y') }}</p>
                                         @else
                                             <span class="text-xs text-gray-400 dark:text-gray-500">No valuation</span>

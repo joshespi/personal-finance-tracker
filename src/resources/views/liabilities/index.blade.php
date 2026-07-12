@@ -22,12 +22,12 @@
             @endif
 
             @if ($liabilities->isNotEmpty())
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Debt</p>
+                <x-stat-tile>
+                    <x-slot:label>Total Debt</x-slot:label>
                     <p class="mt-1 text-2xl font-semibold font-mono text-red-600 dark:text-red-400">
                         −${{ $demo->amt($totalDebt) }}
                     </p>
-                </div>
+                </x-stat-tile>
             @endif
 
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">

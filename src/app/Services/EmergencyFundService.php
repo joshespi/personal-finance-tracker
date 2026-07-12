@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Concerns\BucketsByMonth;
 use App\Enums\Recurrence;
+use App\Enums\ScheduledTransactionType;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\ScheduledTransaction;
@@ -17,7 +18,7 @@ class EmergencyFundService
     /**
      * Emergency-fund readiness: the 6-month mandatory-spend baseline (with per-envelope
      * breakdown), 3- and 6-month targets, current savings, and progress bars. Consumed by
-     * the standalone EmergencyFundController and the emergency-fund tab of PlanningController.
+     * the emergency-fund tab of PlanningController.
      *
      * @return array{emergencyEnvelope: ?Envelope, mandatoryEnvelopes: Collection, monthlyBreakdown: Collection, monthlyBaseline: float|int, target3: float, target6: float, currentSavings: ?float, bars: array}
      */
@@ -103,7 +104,7 @@ class EmergencyFundService
         $scheduledByEnvelope = ScheduledTransaction::where('user_id', $user->id)
             ->where('is_active', true)
             ->whereIn('envelope_id', $mandatoryEnvelopes->pluck('id'))
-            ->whereIn('type', ['envelope_spend', 'mortgage_payment'])
+            ->whereIn('type', [ScheduledTransactionType::EnvelopeSpend, ScheduledTransactionType::MortgagePayment])
             ->get(['envelope_id', 'amount', 'recurrence'])
             ->groupBy('envelope_id');
 

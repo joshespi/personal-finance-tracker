@@ -13,8 +13,7 @@ class SpendingTrendsService
 
     /**
      * Per-envelope monthly spend over a clamped 3–12 month lookback, shaped for the
-     * trends chart. Consumed by the standalone SpendingTrendsController and the trends
-     * tab of AnalysisController.
+     * trends chart. Consumed by the trends tab of AnalysisController.
      *
      * @return array{monthLabels: Collection, datasets: Collection, monthStarts: Collection, monthlyTotals: Collection, lookback: int}
      */

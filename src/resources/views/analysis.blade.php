@@ -82,24 +82,24 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Income</p>
+                <x-stat-tile>
+                    <x-slot:label>Income</x-slot:label>
                     <p class="mt-1 text-2xl font-semibold font-mono text-green-600 dark:text-green-400">
-                        ${{ number_format($income, 2) }}
+                        ${{ $demo->amt($income) }}
                     </p>
-                </div>
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Spent</p>
+                </x-stat-tile>
+                <x-stat-tile>
+                    <x-slot:label>Spent</x-slot:label>
                     <p class="mt-1 text-2xl font-semibold font-mono text-red-600 dark:text-red-400">
-                        ${{ number_format($totalSpent, 2) }}
+                        ${{ $demo->amt($totalSpent) }}
                     </p>
-                </div>
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Net</p>
+                </x-stat-tile>
+                <x-stat-tile>
+                    <x-slot:label>Net</x-slot:label>
                     <p class="mt-1 text-2xl font-semibold font-mono {{ $net >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400' }}">
-                        {{ $net < 0 ? '−' : '' }}${{ number_format(abs($net), 2) }}
+                        {{ $net < 0 ? '−' : '' }}${{ $demo->amt(abs($net)) }}
                     </p>
-                </div>
+                </x-stat-tile>
             </div>
 
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
@@ -119,7 +119,7 @@
                                     <p class="text-xs text-gray-400 dark:text-gray-500">{{ $entry->occurred_at->format('M j') }}</p>
                                 </div>
                                 <span class="text-sm font-mono font-semibold text-green-600 dark:text-green-400">
-                                    ${{ number_format($entry->amount, 2) }}
+                                    ${{ $demo->amt($entry->amount) }}
                                 </span>
                             </div>
                         @endforeach
@@ -157,10 +157,10 @@
                                     </div>
                                     <div class="text-sm font-mono text-right shrink-0 ml-4">
                                         <span class="{{ $over ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200' }} font-semibold">
-                                            ${{ number_format($row['spent'], 2) }}
+                                            ${{ $demo->amt($row['spent']) }}
                                         </span>
                                         @if ($row['target'] > 0)
-                                            <span class="text-gray-400 dark:text-gray-500"> / ${{ number_format($row['target'], 2) }}</span>
+                                            <span class="text-gray-400 dark:text-gray-500"> / ${{ $demo->amt($row['target']) }}</span>
                                         @endif
                                     </div>
                                 </div>
@@ -215,11 +215,11 @@
                                     </td>
                                     @foreach ($ds['data'] as $val)
                                         <td class="px-3 py-3 text-right font-mono text-gray-700 dark:text-gray-300">
-                                            {{ $val > 0 ? '$'.number_format($val, 2) : '—' }}
+                                            {{ $val > 0 ? '$'.$demo->amt($val) : '—' }}
                                         </td>
                                     @endforeach
                                     <td class="px-5 py-3 text-right font-mono font-semibold text-gray-800 dark:text-gray-200">
-                                        ${{ number_format($rowTotal, 2) }}
+                                        ${{ $demo->amt($rowTotal) }}
                                     </td>
                                 </tr>
                             @endforeach
@@ -229,11 +229,11 @@
                                 <td class="px-5 py-3 font-semibold text-gray-700 dark:text-gray-300">Total</td>
                                 @foreach ($monthlyTotals as $total)
                                     <td class="px-3 py-3 text-right font-mono font-semibold text-gray-800 dark:text-gray-200">
-                                        ${{ number_format($total, 2) }}
+                                        ${{ $demo->amt($total) }}
                                     </td>
                                 @endforeach
                                 <td class="px-5 py-3 text-right font-mono font-semibold text-gray-800 dark:text-gray-200">
-                                    ${{ number_format($monthlyTotals->sum(), 2) }}
+                                    ${{ $demo->amt($monthlyTotals->sum()) }}
                                 </td>
                             </tr>
                         </tfoot>
@@ -276,43 +276,38 @@
                 </div>
             @else
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Monthly income</p>
+                    <x-stat-tile>
+                        <x-slot:label>Monthly income</x-slot:label>
                         <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">
-                            ${{ number_format($data['monthly_income'], 2) }}
+                            ${{ $demo->amt($data['monthly_income']) }}
                         </p>
-                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">avg / month</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4"
-                         title="Envelopes marked 'Mandatory' — rent, utilities, groceries, insurance. Target: 50% or less.">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Needs</p>
+                        <x-slot:caption>avg / month</x-slot:caption>
+                    </x-stat-tile>
+                    <x-stat-tile title="Envelopes marked 'Mandatory' — rent, utilities, groceries, insurance. Target: 50% or less.">
+                        <x-slot:label>Needs</x-slot:label>
                         <p class="mt-1 text-2xl font-semibold font-mono {{ $drift['mandatory_over'] ? 'text-amber-600 dark:text-amber-400' : 'text-gray-800 dark:text-gray-100' }}">
-                            ${{ number_format($data['monthly_mandatory'], 2) }}
+                            ${{ $demo->amt($data['monthly_mandatory']) }}
                         </p>
-                        <p class="mt-0.5 text-xs {{ $drift['mandatory_over'] ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500' }}">
-                            {{ $ratios['mandatory'] }}% (target ≤ {{ $targets['mandatory'] }}%)
-                        </p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4"
-                         title="Everything not tagged mandatory or wealth building — dining, entertainment, subscriptions, and sinking funds for planned purchases. Target: 30% or less.">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Wants</p>
+                        <x-slot:caption>
+                            <span class="{{ $drift['mandatory_over'] ? 'text-amber-600 dark:text-amber-400' : '' }}">{{ $ratios['mandatory'] }}% (target ≤ {{ $targets['mandatory'] }}%)</span>
+                        </x-slot:caption>
+                    </x-stat-tile>
+                    <x-stat-tile title="Everything not tagged mandatory or wealth building — dining, entertainment, subscriptions, and sinking funds for planned purchases. Target: 30% or less.">
+                        <x-slot:label>Wants</x-slot:label>
                         <p class="mt-1 text-2xl font-semibold font-mono text-gray-800 dark:text-gray-100">
-                            ${{ number_format($data['monthly_discretionary'], 2) }}
+                            ${{ $demo->amt($data['monthly_discretionary']) }}
                         </p>
-                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                            {{ $ratios['discretionary'] }}% (target ≤ {{ $targets['discretionary'] }}%)
-                        </p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4"
-                         title="Envelopes marked 'Wealth building' — emergency fund and investing. Target: 20% or more.">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Wealth Building</p>
+                        <x-slot:caption>{{ $ratios['discretionary'] }}% (target ≤ {{ $targets['discretionary'] }}%)</x-slot:caption>
+                    </x-stat-tile>
+                    <x-stat-tile title="Envelopes marked 'Wealth building' — emergency fund and investing. Target: 20% or more.">
+                        <x-slot:label>Wealth Building</x-slot:label>
                         <p class="mt-1 text-2xl font-semibold font-mono {{ $drift['savings_under'] ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400' }}">
-                            ${{ number_format($data['monthly_savings'], 2) }}
+                            ${{ $demo->amt($data['monthly_savings']) }}
                         </p>
-                        <p class="mt-0.5 text-xs {{ $drift['savings_under'] ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500' }}">
-                            {{ $ratios['savings'] }}% (target ≥ {{ $targets['savings'] }}%)
-                        </p>
-                    </div>
+                        <x-slot:caption>
+                            <span class="{{ $drift['savings_under'] ? 'text-amber-600 dark:text-amber-400' : '' }}">{{ $ratios['savings'] }}% (target ≥ {{ $targets['savings'] }}%)</span>
+                        </x-slot:caption>
+                    </x-stat-tile>
                 </div>
 
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5 space-y-3">
@@ -358,7 +353,7 @@
                                     {{ $data['emergency_envelope']->name }} ({{ $data['target_months'] }}-month target)
                                 </a>
                                 <span class="font-mono text-gray-600 dark:text-gray-400">
-                                    ${{ number_format($data['emergency_balance'], 2) }} / ${{ number_format($data['emergency_target'], 2) }}
+                                    ${{ $demo->amt($data['emergency_balance']) }} / ${{ $demo->amt($data['emergency_target']) }}
                                     <span class="text-gray-400 dark:text-gray-500 ml-1">({{ $pct }}%)</span>
                                 </span>
                             </div>
@@ -368,7 +363,7 @@
                             </div>
                             @if (! $data['emergency_funded'] && $remaining > 0)
                                 <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                                    ${{ number_format($remaining, 2) }} to go — direct your 20% here first.
+                                    ${{ $demo->amt($remaining) }} to go — direct your 20% here first.
                                 </p>
                             @endif
                         </div>
@@ -409,9 +404,7 @@
     <script>
     document.addEventListener('DOMContentLoaded', function () {
         const history = @json($history);
-        const isDark  = document.documentElement.classList.contains('dark');
-        const grid    = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-        const ticks   = isDark ? '#9ca3af' : '#6b7280';
+        const { gridColor: grid, labelColor: ticks } = window.themeColors();
 
         new Chart(document.getElementById('cashflowChart'), {
             type: 'bar',
@@ -441,9 +434,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         const labels   = @json($monthLabels);
         const datasets = @json($datasets);
-        const isDark   = document.documentElement.classList.contains('dark');
-        const grid     = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-        const ticks    = isDark ? '#9ca3af' : '#6b7280';
+        const { gridColor: grid, labelColor: ticks } = window.themeColors();
 
         new Chart(document.getElementById('trendsChart'), {
             type: 'bar',

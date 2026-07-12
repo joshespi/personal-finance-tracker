@@ -195,10 +195,7 @@
     <script>
     document.addEventListener('DOMContentLoaded', function () {
         const projection = @json($projection);
-        const isDark = document.documentElement.classList.contains('dark');
-
-        const gridColor  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-        const labelColor = isDark ? '#9ca3af' : '#6b7280';
+        const { isDark, gridColor, labelColor } = window.themeColors();
 
         function fmtAxis(v) {
             if (v >= 1_000_000) return '$' + (v / 1_000_000).toFixed(1) + 'M';

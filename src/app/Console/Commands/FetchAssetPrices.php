@@ -6,9 +6,10 @@ use App\Enums\PriceSource;
 use App\Models\Asset;
 use App\Models\AssetPrice;
 use App\Models\ManualAsset;
+use App\Services\CoinGeckoClient;
+use App\Services\FinnhubClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class FetchAssetPrices extends Command
@@ -16,6 +17,13 @@ class FetchAssetPrices extends Command
     protected $signature = 'assets:fetch-prices';
 
     protected $description = 'Fetch latest prices for all tracked assets from CoinGecko (crypto) and Finnhub (stocks, bonds + real estate)';
+
+    public function __construct(
+        private readonly FinnhubClient $finnhub,
+        private readonly CoinGeckoClient $coinGecko,
+    ) {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -56,12 +64,7 @@ class FetchAssetPrices extends Command
 
     private function fetchCryptoPrices(Collection $assets): void
     {
-        $response = Http::timeout(15)->get('https://api.coingecko.com/api/v3/coins/markets', [
-            'vs_currency' => 'usd',
-            'order'       => 'market_cap_desc',
-            'per_page'    => 250,
-            'page'        => 1,
-        ]);
+        $response = $this->coinGecko->markets();
 
         if (! $response->successful()) {
             Log::error('CoinGecko price fetch failed', ['status' => $response->status()]);
@@ -104,9 +107,7 @@ class FetchAssetPrices extends Command
 
     private function fetchStockPrices(Collection $assets): void
     {
-        $apiKey = config('services.finnhub.key');
-
-        if (! $apiKey) {
+        if (! $this->finnhub->configured()) {
             $this->error('FINNHUB_API_KEY not set in .env — skipping stocks');
 
             return;
@@ -117,10 +118,7 @@ class FetchAssetPrices extends Command
         foreach ($assets as $asset) {
             $ticker = $asset->polygon_ticker ?: $asset->symbol;
 
-            $response = Http::timeout(10)->get('https://finnhub.io/api/v1/quote', [
-                'symbol' => $ticker,
-                'token'  => $apiKey,
-            ]);
+            $response = $this->finnhub->quote($ticker);
 
             if (! $response->successful()) {
                 $this->warn("  {$asset->symbol}: request failed (HTTP {$response->status()})");

@@ -77,6 +77,54 @@ class ReadyToAssignTest extends TestCase
         $this->assertEquals(600.0, $user->readyToAssign());
     }
 
+    public function test_assign_one_sets_month_total_instead_of_stacking(): void
+    {
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        CashTransaction::factory()->for($account)->deposit()->create(['amount' => 1000]);
+
+        // First edit assigns 400 for the month.
+        $this->actingAs($user)->postJson(route('envelopes.assign-one'), [
+            'envelope_id' => $envelope->id,
+            'amount'      => 400,
+        ])->assertOk();
+
+        // Re-editing the same field to 500 should raise the month total to 500, not 900.
+        $this->actingAs($user)->postJson(route('envelopes.assign-one'), [
+            'envelope_id' => $envelope->id,
+            'amount'      => 500,
+        ])->assertOk()->assertJson(['envelope_balance' => 500.0]);
+
+        $funded = (float) EnvelopeTransaction::where('envelope_id', $envelope->id)
+            ->where('type', 'fund')->sum('amount');
+
+        $this->assertEquals(500.0, $funded);
+        $this->assertEquals(500.0, $user->readyToAssign());
+    }
+
+    public function test_assign_one_can_lower_assignment_with_negative_delta(): void
+    {
+        $user     = User::factory()->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create([
+            'amount'      => 300,
+            'occurred_at' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($user)->postJson(route('envelopes.assign-one'), [
+            'envelope_id' => $envelope->id,
+            'amount'      => 100,
+        ])->assertOk()->assertJson(['envelope_balance' => 100.0]);
+
+        $funded = (float) EnvelopeTransaction::where('envelope_id', $envelope->id)
+            ->where('type', 'fund')->sum('amount');
+
+        $this->assertEquals(100.0, $funded);
+    }
+
     public function test_assign_one_without_month_dates_today(): void
     {
         $user     = User::factory()->create();

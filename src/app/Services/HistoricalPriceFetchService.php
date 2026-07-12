@@ -8,11 +8,15 @@ use App\Models\Asset;
 use App\Models\AssetPrice;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class HistoricalPriceFetchService
 {
+    public function __construct(
+        private FinnhubClient $finnhub,
+        private CoinGeckoClient $coinGecko,
+    ) {}
+
     /**
      * Fetch prices for a batch of assets, honoring provider rate limits: once
      * a provider returns 429, the remaining assets sharing that provider are
@@ -71,21 +75,13 @@ class HistoricalPriceFetchService
 
     private function fetchFinnhub(Asset $asset, Carbon $from, Carbon $to): array
     {
-        $apiKey = config('services.finnhub.key');
-
-        if (! $apiKey) {
+        if (! $this->finnhub->configured()) {
             return ['outcome' => PriceFetchOutcome::NoData, 'count' => 0, 'message' => 'FINNHUB_API_KEY not set'];
         }
 
         $ticker = $asset->polygon_ticker ?: $asset->symbol;
 
-        $response = Http::timeout(30)->get('https://finnhub.io/api/v1/stock/candle', [
-            'symbol'     => $ticker,
-            'resolution' => 'D',
-            'from'       => $from->timestamp,
-            'to'         => $to->timestamp,
-            'token'      => $apiKey,
-        ]);
+        $response = $this->finnhub->dailyCandles($ticker, $from->timestamp, $to->timestamp);
 
         if ($response->status() === 429) {
             return ['outcome' => PriceFetchOutcome::RateLimited, 'count' => 0, 'message' => 'rate-limited (HTTP 429)'];
@@ -117,14 +113,7 @@ class HistoricalPriceFetchService
     {
         $coingeckoId = $asset->coingecko_id ?? strtolower($asset->symbol);
 
-        $response = Http::timeout(30)->get(
-            "https://api.coingecko.com/api/v3/coins/{$coingeckoId}/market_chart/range",
-            [
-                'vs_currency' => 'usd',
-                'from'        => $from->timestamp,
-                'to'          => $to->timestamp,
-            ]
-        );
+        $response = $this->coinGecko->marketChartRange($coingeckoId, $from->timestamp, $to->timestamp);
 
         if ($response->status() === 429) {
             return ['outcome' => PriceFetchOutcome::RateLimited, 'count' => 0, 'message' => 'rate-limited (HTTP 429)'];

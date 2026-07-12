@@ -16,8 +16,11 @@ class EnvelopeController extends Controller
     public function index(Request $request): View
     {
         try {
+            // '!' resets unparsed fields (day) to 1 — plain 'Y-m' keeps today's
+            // day-of-month, which overflows short months on the 29th–31st
+            // (e.g. '2026-02' on Mar 30 → Feb 30 → Mar 2 → wrong month).
             $month = $request->filled('month')
-                ? Carbon::createFromFormat('Y-m', $request->input('month'))->startOfMonth()
+                ? Carbon::createFromFormat('!Y-m', $request->input('month'))->startOfMonth()
                 : now()->startOfMonth();
         } catch (\Exception) {
             $month = now()->startOfMonth();
@@ -32,11 +35,7 @@ class EnvelopeController extends Controller
                 'spendTransactions as month_spend_total' => fn ($q) => $q
                     ->whereBetween('occurred_at', [$month, $endOfMonth]),
             ], 'amount')
-            ->withSum([
-                'transactions as month_fund_total' => fn ($q) => $q
-                    ->where('type', 'fund')
-                    ->whereBetween('occurred_at', [$month, $endOfMonth]),
-            ], 'amount')
+            ->withMonthFundTotal($month)
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get()
@@ -159,36 +158,51 @@ class EnvelopeController extends Controller
 
         $validated = $request->validate([
             'envelope_id' => ['required', 'integer'],
-            'amount'      => ['required', 'numeric', 'gt:0'],
+            'amount'      => ['required', 'numeric', 'gte:0'],
             'month'       => ['nullable', 'date_format:Y-m'],
         ]);
+
+        // `amount` is the *desired total assigned* for the month, not an increment.
+        // Default to today; when assigning into a past month, date it to that month's 1st
+        // so it counts toward that month's "Assigned" total. RTA stays all-time either way.
+        // ('!' pins the day to 1 — see index().)
+        $targetMonth = ! empty($validated['month'])
+            ? Carbon::createFromFormat('!Y-m', $validated['month'])->startOfMonth()
+            : now()->startOfMonth();
+
+        // Future months are view-only in the grid; a delta computed against a future
+        // window but dated today would stack on every call and land in the wrong month.
+        abort_if($targetMonth->gt(now()->startOfMonth()), 422, 'Cannot assign into a future month.');
+
+        $occurredAt = $targetMonth->lt(now()->startOfMonth())
+            ? $targetMonth->toDateString()
+            : now()->toDateString();
 
         $envelope = $user->envelopes()
             ->where('id', $validated['envelope_id'])
             ->withBalanceTotals()
+            ->withMonthFundTotal($targetMonth)
             ->first();
 
         abort_unless($envelope !== null, 403);
 
-        // Default to today; when assigning into a past month, date it to that month's 1st
-        // so it counts toward that month's "Assigned" total. RTA stays all-time either way.
-        $occurredAt = now()->toDateString();
-        if (! empty($validated['month'])) {
-            $assignMonth = Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth();
-            if ($assignMonth->lt(now()->startOfMonth())) {
-                $occurredAt = $assignMonth->toDateString();
-            }
+        // How much is already assigned in the target month (same definition the budget
+        // grid seeds its inputs from); record only the delta so repeated edits set the
+        // month's total instead of stacking on top of it.
+        $delta = round((float) $validated['amount'] - (float) ($envelope->month_fund_total ?? 0), 2);
+
+        if (abs($delta) >= 0.005) {
+            EnvelopeTransaction::create([
+                'envelope_id' => $envelope->id,
+                'type'        => 'fund',
+                'amount'      => $delta,
+                'description' => 'Assigned',
+                'occurred_at' => $occurredAt,
+            ]);
         }
 
-        EnvelopeTransaction::create([
-            'envelope_id' => $validated['envelope_id'],
-            'type'        => 'fund',
-            'amount'      => $validated['amount'],
-            'description' => 'Ready to assign',
-            'occurred_at' => $occurredAt,
-        ]);
-
-        $envelopeBalance = (float) ($envelope->funds_total ?? 0) - (float) ($envelope->spends_total ?? 0);
+        // funds_total was captured before the delta above, so fold it in for a fresh balance.
+        $envelopeBalance = round((float) ($envelope->funds_total ?? 0) - (float) ($envelope->spends_total ?? 0) + $delta, 2);
         $readyToAssign   = $user->readyToAssign();
 
         return response()->json([

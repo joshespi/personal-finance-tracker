@@ -28,11 +28,13 @@
         <script>window.__demoMode = @json($demo->isActive());</script>
         {{-- Pages needing window.Chart (legacy report pages) push their @vite tag here,
              so it's a module script ordered before app.js — required since Alpine's
-             init() lifecycle (used by debt-payoff/planning) runs during app.js's
-             Alpine.start() call, and both are deferred module scripts that execute
-             in document order. --}}
+             init() lifecycle (used by debt-payoff/planning) runs on 'alpine:init'/
+             DOMContentLoaded, which always fires after deferred module scripts, but
+             still only after chartjs.js has had a chance to register window.Chart if
+             it's ordered first among them. --}}
         @stack('head-vite')
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @livewireStyles
     </head>
     <body class="font-sans antialiased bg-slate-100 dark:bg-gray-900">
         <div class="min-h-screen flex"
@@ -145,5 +147,6 @@
                 navigator.serviceWorker.register('/sw.js');
             }
         </script>
+        @livewireScripts
     </body>
 </html>

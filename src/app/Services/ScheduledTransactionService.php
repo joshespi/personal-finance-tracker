@@ -3,12 +3,14 @@
 namespace App\Services;
 
 use App\Enums\Recurrence;
+use App\Enums\ScheduledTransactionType;
 use App\Models\LiabilityBalance;
 use App\Models\ScheduledTransaction;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ScheduledTransactionService
 {
@@ -81,11 +83,11 @@ class ScheduledTransactionService
     private function createTransactions(ScheduledTransaction $scheduled, Carbon $date, bool $cleared): void
     {
         match ($scheduled->type) {
-            'envelope_fund'    => $this->envelopeFund($scheduled, $date, $cleared),
-            'envelope_spend'   => $this->envelopeSpend($scheduled, $date, $cleared),
-            'cash_deposit'     => $this->cashDeposit($scheduled, $date, $cleared),
-            'cash_withdrawal'  => $this->cashWithdrawal($scheduled, $date, $cleared),
-            'mortgage_payment' => $this->mortgagePayment($scheduled, $date, $cleared),
+            ScheduledTransactionType::EnvelopeFund    => $this->envelopeFund($scheduled, $date, $cleared),
+            ScheduledTransactionType::EnvelopeSpend   => $this->envelopeSpend($scheduled, $date, $cleared),
+            ScheduledTransactionType::CashDeposit     => $this->cashDeposit($scheduled, $date, $cleared),
+            ScheduledTransactionType::CashWithdrawal  => $this->cashWithdrawal($scheduled, $date, $cleared),
+            ScheduledTransactionType::MortgagePayment => $this->mortgagePayment($scheduled, $date, $cleared),
         };
     }
 
@@ -111,48 +113,22 @@ class ScheduledTransactionService
 
     private function envelopeSpend(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
-        $s->cashAccount->transactions()->create([
-            'type'        => 'withdrawal',
-            'envelope_id' => $s->envelope_id,
-            'amount'      => $s->amount,
-            'description' => $s->description,
-            'occurred_at' => $date,
-            'cleared'     => $cleared,
-        ]);
+        $this->cashEntry($s, $date, $cleared, 'withdrawal', $s->envelope_id);
     }
 
     private function cashDeposit(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
-        $s->cashAccount->transactions()->create([
-            'type'        => 'deposit',
-            'amount'      => $s->amount,
-            'description' => $s->description,
-            'occurred_at' => $date,
-            'cleared'     => $cleared,
-        ]);
+        $this->cashEntry($s, $date, $cleared, 'deposit');
     }
 
     private function cashWithdrawal(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
-        $s->cashAccount->transactions()->create([
-            'type'        => 'withdrawal',
-            'amount'      => $s->amount,
-            'description' => $s->description,
-            'occurred_at' => $date,
-            'cleared'     => $cleared,
-        ]);
+        $this->cashEntry($s, $date, $cleared, 'withdrawal');
     }
 
     private function mortgagePayment(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
-        $s->cashAccount->transactions()->create([
-            'type'        => 'withdrawal',
-            'envelope_id' => $s->envelope_id,
-            'amount'      => $s->amount,
-            'description' => $s->description,
-            'occurred_at' => $date,
-            'cleared'     => $cleared,
-        ]);
+        $this->cashEntry($s, $date, $cleared, 'withdrawal', $s->envelope_id);
 
         if ($s->liability) {
             $liability  = $s->liability;
@@ -173,5 +149,26 @@ class ScheduledTransactionService
     private function advance(Carbon $date, ?Recurrence $recurrence): Carbon
     {
         return ($recurrence ?? Recurrence::Monthly)->advance($date);
+    }
+
+    private function cashEntry(ScheduledTransaction $s, Carbon $date, bool $cleared, string $type, ?int $envelopeId = null): void
+    {
+        // A schedule can lack a cash account (e.g. a liability with a payment day but
+        // no payment account). Skip the ledger entry rather than fatal the whole
+        // materialization run — one bad row must not take down every ledger page.
+        if ($s->cashAccount === null) {
+            Log::warning('Scheduled transaction has no cash account — ledger entry skipped', ['id' => $s->id]);
+
+            return;
+        }
+
+        $s->cashAccount->transactions()->create([
+            'type'        => $type,
+            'envelope_id' => $envelopeId,
+            'amount'      => $s->amount,
+            'description' => $s->description,
+            'occurred_at' => $date,
+            'cleared'     => $cleared,
+        ]);
     }
 }

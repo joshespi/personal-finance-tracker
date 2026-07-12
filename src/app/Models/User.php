@@ -135,6 +135,22 @@ class User extends Authenticatable implements MustVerifyEmail
             ->where('cash_transactions.type', 'deposit');
     }
 
+    /**
+     * Total deposits over the last $months *complete* calendar months (the
+     * in-progress month is excluded so a mid-month call doesn't dilute the
+     * average). The one definition of "trailing income" shared by the forecast
+     * and retirement projections.
+     */
+    public function incomeForTrailingMonths(int $months): float
+    {
+        return (float) $this->cashDeposits()
+            ->whereBetween('cash_transactions.occurred_at', [
+                now()->subMonths($months)->startOfMonth(),
+                now()->subMonth()->endOfMonth(),
+            ])
+            ->sum('cash_transactions.amount');
+    }
+
     public function readyToAssign(): float
     {
         $funded = (float) EnvelopeTransaction::query()
@@ -157,11 +173,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function totalCash(): float
     {
         if ($this->totalCashCache === null) {
-            $this->totalCashCache = (float) CashTransaction::query()
+            $query = CashTransaction::query()
                 ->join('cash_accounts', 'cash_accounts.id', '=', 'cash_transactions.cash_account_id')
-                ->where('cash_accounts.user_id', $this->id)
-                ->selectRaw("COALESCE(SUM(CASE WHEN cash_transactions.type = 'deposit' THEN cash_transactions.amount ELSE -cash_transactions.amount END), 0) AS bal")
-                ->value('bal');
+                ->where('cash_accounts.user_id', $this->id);
+
+            $this->totalCashCache = CashTransaction::balanceTotals($query)['working'];
         }
 
         return $this->totalCashCache;

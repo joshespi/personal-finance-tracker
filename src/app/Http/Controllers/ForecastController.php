@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CashTransaction;
-use App\Support\Finance;
+use App\Services\ForecastService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ForecastController extends Controller
 {
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request, ForecastService $forecast): View
     {
         $user = $request->user();
 
-        [$defaultStartNw, $defaultMonthlySavings] = $this->computeDefaults($user);
+        [$defaultStartNw, $defaultMonthlySavings] = $forecast->computeDefaults($user);
 
         $startingNw     = (float) $request->input('starting_nw', $defaultStartNw);
         $monthlySavings = (float) $request->input('monthly_savings', $defaultMonthlySavings);
@@ -26,91 +25,10 @@ class ForecastController extends Controller
         $inflationRate = max(0, min(20, $inflationRate));
         $years         = in_array($years, [10, 20, 30, 40, 50]) ? $years : 30;
 
-        [$projection, $standardMilestones, $fireMilestone] = $this->project(
-            $startingNw, $monthlySavings, $annualReturn, $inflationRate, $years, $fireTarget
-        );
-
-        return view('forecast', compact(
-            'projection', 'standardMilestones', 'fireMilestone',
-            'startingNw', 'monthlySavings', 'annualReturn', 'inflationRate', 'years', 'fireTarget',
-            'defaultStartNw', 'defaultMonthlySavings',
-        ));
-    }
-
-    private function computeDefaults($user): array
-    {
-        $defaultStartNw = round($user->latestPortfolioValue() + $user->totalCash() - $user->totalDebt(), 2);
-
-        $threeMonthsAgo = now()->subMonths(3)->startOfMonth();
-        $lastMonthEnd   = now()->subMonth()->endOfMonth();
-
-        $income3m = (float) $user->cashDeposits()
-            ->whereBetween('cash_transactions.occurred_at', [$threeMonthsAgo, $lastMonthEnd])
-            ->sum('cash_transactions.amount');
-
-        $envelopeIds = $user->envelopes()->pluck('id');
-        $spend3m     = $envelopeIds->isNotEmpty()
-            ? (float) CashTransaction::whereIn('envelope_id', $envelopeIds)
-                ->withdrawals()
-                ->whereBetween('occurred_at', [$threeMonthsAgo, $lastMonthEnd])
-                ->sum('amount')
-            : 0.0;
-
-        $defaultMonthlySavings = round(max(0, ($income3m - $spend3m) / 3), 2);
-
-        return [$defaultStartNw, $defaultMonthlySavings];
-    }
-
-    private function project(
-        float $startingNw,
-        float $monthlySavings,
-        float $annualReturn,
-        float $inflationRate,
-        int $years,
-        ?float $fireTarget
-    ): array {
-        $r = Finance::monthlyRate($annualReturn);
-
-        $standardThresholds = [500_000, 1_000_000, 2_000_000, 5_000_000];
-        $allThresholds      = $standardThresholds;
-        if ($fireTarget !== null && ! in_array((int) $fireTarget, $standardThresholds)) {
-            $allThresholds[] = $fireTarget;
-        }
-
-        $hitMap      = array_fill_keys($allThresholds, null);
-        $projection  = [];
-        $currentYear = now()->year;
-
-        for ($y = 0; $y <= $years; $y++) {
-            $t = $y * 12;
-
-            $nominal = Finance::futureValue($startingNw, $monthlySavings, $r, $t);
-
-            $real = $y > 0
-                ? $nominal / pow(1 + $inflationRate / 100, $y)
-                : $nominal;
-
-            $projection[] = [
-                'year'    => $y,
-                'label'   => $currentYear + $y,
-                'nominal' => round($nominal, 2),
-                'real'    => round($real, 2),
-            ];
-
-            foreach ($allThresholds as $threshold) {
-                if ($hitMap[$threshold] === null && $nominal >= $threshold) {
-                    $hitMap[$threshold] = ['year' => $y, 'calendar' => $currentYear + $y];
-                }
-            }
-        }
-
-        $standardMilestones = array_map(
-            fn ($t) => ['threshold' => $t, 'hit' => $hitMap[$t]],
-            $standardThresholds
-        );
-
-        $fireMilestone = ($fireTarget !== null) ? ($hitMap[$fireTarget] ?? null) : null;
-
-        return [$projection, $standardMilestones, $fireMilestone];
+        return view('forecast', [
+            ...$forecast->compute($startingNw, $monthlySavings, $annualReturn, $inflationRate, $years, $fireTarget),
+            'defaultStartNw'        => $defaultStartNw,
+            'defaultMonthlySavings' => $defaultMonthlySavings,
+        ]);
     }
 }

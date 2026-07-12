@@ -14,9 +14,8 @@ class CashflowService
 
     /**
      * Shared monthly cashflow figures: per-envelope spend rows, income rows, totals,
-     * and a 6-month income/spend history. Consumed by both the standalone
-     * CashflowController (which groups the rows by category) and the cashflow tab of
-     * AnalysisController (which lists them flat).
+     * and a 6-month income/spend history. Consumed by the cashflow tab of
+     * AnalysisController.
      *
      * @return array{month: Carbon, income: float, totalSpent: float, net: float, incomeRows: Collection, envelopeRows: Collection, history: Collection}
      */

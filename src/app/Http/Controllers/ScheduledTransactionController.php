@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Recurrence;
+use App\Enums\ScheduledTransactionType;
 use App\Models\Envelope;
 use App\Models\ScheduledTransaction;
 use App\Services\ScheduledTransactionService;
@@ -42,7 +43,7 @@ class ScheduledTransactionController extends Controller
     public function update(Request $request, ScheduledTransaction $scheduledTransaction): RedirectResponse
     {
         $this->authorize('update', $scheduledTransaction);
-        $scheduledTransaction->update($this->validated($request));
+        $scheduledTransaction->update($this->validated($request, $scheduledTransaction));
 
         return redirect()->route('cash-accounts.all')
             ->with('success', 'Scheduled transaction updated.');
@@ -83,24 +84,32 @@ class ScheduledTransactionController extends Controller
         return back()->with('success', "Skipped — next due {$scheduledTransaction->next_due_at->format('M j, Y')}.");
     }
 
-    private function validated(Request $request): array
+    private function validated(Request $request, ?ScheduledTransaction $existing = null): array
     {
-        $type   = $request->input('type');
+        $type   = ScheduledTransactionType::tryFrom($request->input('type'));
         $userId = $request->user()->id;
 
         $envelopeRule    = Envelope::ownershipRule($userId);
         $cashAccountRule = Rule::exists('cash_accounts', 'id')->where('user_id', $userId);
 
+        // Users may never create system-managed types (mortgage payments come from
+        // LiabilityController::syncSchedule), but re-saving an existing mortgage
+        // schedule must keep its type — mirror the edit form's dropdown exactly.
+        $allowedTypes = ScheduledTransactionType::userSelectableValues();
+        if ($existing !== null && ! $existing->type->userSelectable()) {
+            $allowedTypes[] = $existing->type->value;
+        }
+
         return $request->validate([
             'description' => 'required|string|max:500',
             'amount'      => 'required|numeric|min:0.01',
-            'type'        => 'required|in:envelope_fund,envelope_spend,cash_deposit,cash_withdrawal',
+            'type'        => ['required', Rule::in($allowedTypes)],
             'recurrence'  => ['required', Rule::in(Recurrence::values())],
             'next_due_at' => 'required|date',
-            'envelope_id' => in_array($type, ['envelope_fund', 'envelope_spend'])
+            'envelope_id' => $type?->needsEnvelope()
                 ? ['required', $envelopeRule]
                 : 'nullable',
-            'cash_account_id' => in_array($type, ['cash_deposit', 'cash_withdrawal', 'envelope_spend'])
+            'cash_account_id' => $type?->requiresCashAccount()
                 ? ['required', $cashAccountRule]
                 : ['nullable', $cashAccountRule],
             'is_active' => 'boolean',

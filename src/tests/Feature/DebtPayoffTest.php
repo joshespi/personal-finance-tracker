@@ -12,7 +12,7 @@ class DebtPayoffTest extends TestCase
 {
     public function test_index_requires_auth(): void
     {
-        $this->get(route('debt-payoff'))->assertRedirect(route('login'));
+        $this->get(route('planning', ['tab' => 'debt-payoff']))->assertRedirect(route('login'));
     }
 
     public function test_shows_empty_state_when_no_debts(): void
@@ -20,7 +20,7 @@ class DebtPayoffTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('debt-payoff'))
+            ->get(route('planning', ['tab' => 'debt-payoff']))
             ->assertOk()
             ->assertSee('No active debt found');
     }
@@ -251,7 +251,7 @@ class DebtPayoffTest extends TestCase
         LiabilityBalance::factory()->for($debt)->create(['balance' => 2000]);
 
         $this->actingAs($user)
-            ->get(route('debt-payoff'))
+            ->get(route('planning', ['tab' => 'debt-payoff']))
             ->assertOk()
             ->assertSee('My Card')
             ->assertSee('Snowball')

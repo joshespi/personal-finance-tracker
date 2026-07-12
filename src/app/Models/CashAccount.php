@@ -49,42 +49,34 @@ class CashAccount extends Model
     /** Working balance — every transaction, cleared or not. */
     public function balance(): float
     {
-        return $this->balanceQuery();
+        return $this->balances()['working'];
     }
 
     /** Cleared balance — only transactions that have cleared the bank. */
     public function clearedBalance(): float
     {
-        return $this->balanceQuery(true);
+        return $this->balances()['cleared'];
     }
 
     /** Uncleared (pending) balance — working minus cleared. */
     public function unclearedBalance(): float
     {
-        return $this->balanceQuery(false);
+        return $this->balances()['uncleared'];
     }
 
     /**
      * Working, cleared and pending balances in a single query — for views that show all
      * three at once. Pending is derived arithmetically rather than summed a third time.
+     * Memoized per instance (no invalidation) so the three single-figure accessors
+     * share one query — don't re-read from the same instance after writing
+     * transactions; refetch or query directly instead.
      *
      * @return array{working: float, cleared: float, uncleared: float}
      */
     public function balances(): array
     {
-        return CashTransaction::balanceTotals($this->transactions());
+        return $this->balancesCache ??= CashTransaction::balanceTotals($this->transactions());
     }
 
-    private function balanceQuery(?bool $cleared = null): float
-    {
-        $query = $this->transactions();
-
-        if ($cleared !== null) {
-            $query->where('cleared', $cleared);
-        }
-
-        return (float) $query
-            ->selectRaw("COALESCE(SUM(CASE WHEN type = 'deposit' THEN amount ELSE -amount END), 0) AS bal")
-            ->value('bal');
-    }
+    private ?array $balancesCache = null;
 }

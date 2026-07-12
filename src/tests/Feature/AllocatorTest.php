@@ -15,7 +15,7 @@ class AllocatorTest extends TestCase
 {
     public function test_allocator_requires_auth(): void
     {
-        $this->get(route('allocator'))->assertRedirect(route('login'));
+        $this->get(route('planning', ['tab' => 'allocator']))->assertRedirect(route('login'));
     }
 
     public function test_allocator_shows_form_without_amount(): void
@@ -23,7 +23,7 @@ class AllocatorTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('allocator'))
+            ->get(route('planning', ['tab' => 'allocator']))
             ->assertOk()
             ->assertSee('Extra cash to allocate')
             ->assertDontSee('Remainder');
@@ -34,7 +34,7 @@ class AllocatorTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('allocator', ['amount' => -100]))
+            ->get(route('planning', ['tab' => 'allocator', 'amount' => -100]))
             ->assertSessionHasErrors('amount');
     }
 
@@ -56,7 +56,7 @@ class AllocatorTest extends TestCase
         Envelope::factory()->for($user)->create(['is_emergency_fund' => true, 'is_mandatory' => false]);
 
         $this->actingAs($user)
-            ->get(route('allocator', ['amount' => 2000]))
+            ->get(route('planning', ['tab' => 'allocator', 'amount' => 2000]))
             ->assertOk()
             ->assertSee('Emergency')
             ->assertSee('1,800.00') // target / allocated
@@ -81,7 +81,7 @@ class AllocatorTest extends TestCase
 
         // EF funded → nothing to allocate, "invest" message shown instead
         $this->actingAs($user)
-            ->get(route('allocator', ['amount' => 500]))
+            ->get(route('planning', ['tab' => 'allocator', 'amount' => 500]))
             ->assertOk()
             ->assertSee('Nothing to allocate to');
     }
@@ -97,7 +97,7 @@ class AllocatorTest extends TestCase
 
         // $700 covers the $500 high-APR card fully then $200 of the low-APR card
         $response = $this->actingAs($user)
-            ->get(route('allocator', ['amount' => 700]))
+            ->get(route('planning', ['tab' => 'allocator', 'amount' => 700]))
             ->assertOk()
             ->assertSee('High APR Card')
             ->assertSee('Low APR Card');
@@ -122,7 +122,7 @@ class AllocatorTest extends TestCase
         EnvelopeTransaction::factory()->fund()->for($env)->create(['amount' => 400]);
 
         $this->actingAs($user)
-            ->get(route('allocator', ['amount' => 200]))
+            ->get(route('planning', ['tab' => 'allocator', 'amount' => 200]))
             ->assertOk()
             ->assertSee('Vacation Fund')
             ->assertSee('200.00'); // full amount goes to goal
@@ -136,7 +136,7 @@ class AllocatorTest extends TestCase
         LiabilityBalance::factory()->for($liability)->create(['balance' => 300]);
 
         $this->actingAs($user)
-            ->get(route('allocator', ['amount' => 1000]))
+            ->get(route('planning', ['tab' => 'allocator', 'amount' => 1000]))
             ->assertOk()
             ->assertSee('Remainder')
             ->assertSee('700.00'); // 1000 - 300 remaining
@@ -147,7 +147,7 @@ class AllocatorTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('allocator', ['amount' => 500]))
+            ->get(route('planning', ['tab' => 'allocator', 'amount' => 500]))
             ->assertOk()
             ->assertSee('Nothing to allocate to');
     }
@@ -161,7 +161,7 @@ class AllocatorTest extends TestCase
         LiabilityBalance::factory()->for($lib)->create(['balance' => 500]);
 
         $this->actingAs($userA)
-            ->get(route('allocator', ['amount' => 200]))
+            ->get(route('planning', ['tab' => 'allocator', 'amount' => 200]))
             ->assertOk()
             ->assertDontSee('Other User Debt');
     }

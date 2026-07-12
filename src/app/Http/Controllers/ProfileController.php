@@ -72,7 +72,12 @@ class ProfileController extends Controller
         // hidden. Store an explicit true/false for every known widget so the map is
         // complete and self-documenting. Iterating the enum keys inherently ignores
         // any unknown submitted values.
-        $submitted = array_flip((array) $request->input('widgets', []));
+        $validated = $request->validate([
+            'widgets'   => ['nullable', 'array'],
+            'widgets.*' => ['string'],
+        ]);
+
+        $submitted = array_flip($validated['widgets'] ?? []);
 
         $prefs = collect(DashboardWidget::values())
             ->mapWithKeys(fn (string $key) => [$key => isset($submitted[$key])])

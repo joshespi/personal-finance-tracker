@@ -179,7 +179,7 @@
                                         </td>
                                         <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ number_format((float)$t->price_per_unit, 4) }}</td>
                                         <td class="px-4 py-3 text-right font-mono text-gray-500 dark:text-gray-400">{{ number_format((float)$t->fees, 4) }}</td>
-                                        <td class="px-4 py-3 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">{{ number_format($t->totalCost(), 2) }}</td>
+                                        <td class="px-4 py-3 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $demo->amt($t->totalCost()) }}</td>
                                         <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{{ $t->currency }}</td>
                                         <td class="px-4 py-3 text-right whitespace-nowrap">
                                             <a href="{{ route('transactions.edit', $t) }}"

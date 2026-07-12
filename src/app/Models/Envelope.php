@@ -66,6 +66,21 @@ class Envelope extends Model
             ->withSum('spendTransactions as spends_total', 'amount');
     }
 
+    /**
+     * Aggregate `month_fund_total`: how much was assigned ('fund') within the
+     * given month. The single definition of "assigned this month" — the budget
+     * grid and the inline-assign endpoint must agree on it, since the grid seeds
+     * inputs from it and assignOne diffs the desired total against it.
+     */
+    public function scopeWithMonthFundTotal($query, CarbonInterface $month)
+    {
+        return $query->withSum([
+            'transactions as month_fund_total' => fn ($q) => $q
+                ->where('type', 'fund')
+                ->whereBetween('occurred_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()]),
+        ], 'amount');
+    }
+
     public function balance(): float
     {
         $attrs = $this->getAttributes();

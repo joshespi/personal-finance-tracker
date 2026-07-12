@@ -20,6 +20,10 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        {{-- app.js no longer bundles Alpine; Livewire's copy (below) provides it.
+             Included here for parity with layouts/app.blade.php so any x-data
+             used on guest pages actually initializes. --}}
+        @livewireStyles
     </head>
     <body class="font-sans text-gray-900 dark:text-gray-100 antialiased bg-gray-100 dark:bg-gray-900">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0">
@@ -34,5 +38,6 @@
                 {{ $slot }}
             </div>
         </div>
+        @livewireScripts
     </body>
 </html>

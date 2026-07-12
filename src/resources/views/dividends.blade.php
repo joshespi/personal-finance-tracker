@@ -31,22 +31,22 @@
 
                 {{-- Summary tiles --}}
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $selectedYear }} Income</p>
-                        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 font-mono">${{ number_format($totalIncome, 2) }}</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Tickers</p>
+                    <x-stat-tile>
+                        <x-slot:label>{{ $selectedYear }} Income</x-slot:label>
+                        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 font-mono">${{ $demo->amt($totalIncome) }}</p>
+                    </x-stat-tile>
+                    <x-stat-tile>
+                        <x-slot:label>Tickers</x-slot:label>
                         <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ $totalTickers }}</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Payments</p>
+                    </x-stat-tile>
+                    <x-stat-tile>
+                        <x-slot:label>Payments</x-slot:label>
                         <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ $totalPayments }}</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400">All-Time Total</p>
-                        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 font-mono">${{ number_format($allTimeTotal, 2) }}</p>
-                    </div>
+                    </x-stat-tile>
+                    <x-stat-tile>
+                        <x-slot:label>All-Time Total</x-slot:label>
+                        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 font-mono">${{ $demo->amt($allTimeTotal) }}</p>
+                    </x-stat-tile>
                 </div>
 
                 {{-- Monthly bar chart --}}
@@ -78,7 +78,7 @@
                                             <td class="px-6 py-3 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $row['symbol'] }}</td>
                                             <td class="px-6 py-3 text-gray-500 dark:text-gray-400 capitalize">{{ str_replace('_', ' ', $row['asset_type']) }}</td>
                                             <td class="px-6 py-3 text-right text-gray-700 dark:text-gray-300">{{ $row['payments'] }}</td>
-                                            <td class="px-6 py-3 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">${{ number_format($row['total'], 2) }}</td>
+                                            <td class="px-6 py-3 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">${{ $demo->amt((float) $row['total']) }}</td>
                                             <td class="px-6 py-3 text-right text-gray-500 dark:text-gray-400">
                                                 {{ $totalIncome > 0 ? number_format($row['total'] / $totalIncome * 100, 1) : '—' }}%
                                             </td>
@@ -86,7 +86,7 @@
                                     @endforeach
                                     <tr class="bg-gray-50 dark:bg-gray-700/40 font-semibold">
                                         <td class="px-6 py-3 text-gray-700 dark:text-gray-300" colspan="3">Total</td>
-                                        <td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-100">${{ number_format($totalIncome, 2) }}</td>
+                                        <td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-100">${{ $demo->amt($totalIncome) }}</td>
                                         <td class="px-6 py-3 text-right text-gray-500 dark:text-gray-400">100%</td>
                                     </tr>
                                 </tbody>
@@ -111,9 +111,7 @@
 
         const monthData = @json(array_values($byMonth));
         const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        const isDark = document.documentElement.classList.contains('dark');
-        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-        const textColor = isDark ? '#9ca3af' : '#6b7280';
+        const { gridColor, labelColor: textColor } = window.themeColors();
 
         new Chart(ctx, {
             type: 'bar',

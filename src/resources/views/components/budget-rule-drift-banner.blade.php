@@ -22,7 +22,7 @@
                     Wealth building is {{ $ratios['savings'] }}% of income (target ≥ 20%).
                 @endif
             </div>
-            <a href="{{ route('budget-rule') }}" class="shrink-0 inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-600 rounded-md text-xs font-semibold text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">
+            <a href="{{ route('analysis', ['tab' => 'budget-rule']) }}" class="shrink-0 inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-600 rounded-md text-xs font-semibold text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">
                 View breakdown &rarr;
             </a>
         @endif

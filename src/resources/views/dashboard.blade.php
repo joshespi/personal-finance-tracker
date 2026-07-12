@@ -41,7 +41,7 @@
                         <span class="font-mono">${{ $demo->amt($interestBleedMonthly) }}/mo &middot; ${{ $demo->amt($interestBleedYearly) }}/yr</span>
                         draining to lenders.
                     </div>
-                    <a href="{{ route('debt-payoff') }}" class="shrink-0 inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-600 rounded-md text-xs font-semibold text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">
+                    <a href="{{ route('planning', ['tab' => 'debt-payoff']) }}" class="shrink-0 inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-600 rounded-md text-xs font-semibold text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">
                         View payoff plan &rarr;
                     </a>
                 </div>
@@ -298,16 +298,7 @@
                                     Manual
                                 </button>
                             </div>
-                            <div class="flex flex-wrap gap-1" id="dash-range-btns">
-                                @foreach (['5D','1W','1M','3M','6M','1Y','YTD','5Y','10Y','All'] as $r)
-                                    <button data-range="{{ $r }}"
-                                            class="range-btn px-2.5 py-1 text-xs rounded font-medium transition
-                                                   bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300
-                                                   hover:bg-gray-200 dark:hover:bg-gray-600">
-                                        {{ $r }}
-                                    </button>
-                                @endforeach
-                            </div>
+                            <x-chart-range-buttons id="dash-range-btns" :ranges="['5D','1W','1M','3M','6M','1Y','YTD','5Y','10Y','All']" />
                         </div>
                         <div class="h-64 relative"><canvas id="dashChart"></canvas></div>
                     </div>
@@ -346,16 +337,7 @@
                                 <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Benchmark Comparison</h3>
                                 <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Normalized to 100 at start of period — shows relative % return</p>
                             </div>
-                            <div class="flex flex-wrap gap-1" id="bench-range-btns">
-                                @foreach (['1M','3M','6M','1Y','5Y','10Y','All'] as $r)
-                                    <button data-range="{{ $r }}"
-                                            class="bench-range-btn px-2.5 py-1 text-xs rounded font-medium transition
-                                                   bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300
-                                                   hover:bg-gray-200 dark:hover:bg-gray-600">
-                                        {{ $r }}
-                                    </button>
-                                @endforeach
-                            </div>
+                            <x-chart-range-buttons id="bench-range-btns" :ranges="['1M','3M','6M','1Y','5Y','10Y','All']" />
                         </div>
                         <div class="h-64 relative"><canvas id="benchmarkChart"></canvas></div>
                     </div>

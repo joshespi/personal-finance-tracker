@@ -5,11 +5,10 @@ import {
     PieController, ArcElement,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
+import { DEMO_MASK, fmtFull, fmtK } from './format-utils';
 
 // Register once for every bundle that imports these helpers.
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
-
-export const DEMO_MASK = '••••';
 
 // Grid/label colors derived from the current dark-mode class, shared by all bundles.
 export function themeColors() {
@@ -21,7 +20,7 @@ export function themeColors() {
     };
 }
 
-export function cutoffDate(range) {
+function cutoffDate(range) {
     const now = new Date();
     const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
     switch (range) {
@@ -60,7 +59,7 @@ export function resampleByRange(data) {
     return Array.from(buckets.values());
 }
 
-export function activateBtn(containerSel, activeRange) {
+function activateBtn(containerSel, activeRange) {
     document.querySelectorAll(containerSel + ' button[data-range]').forEach(b => {
         const active = b.dataset.range === activeRange;
         b.classList.toggle('bg-indigo-600', active);
@@ -73,26 +72,7 @@ export function activateBtn(containerSel, activeRange) {
     });
 }
 
-export function fmtK(v) {
-    const abs = Math.abs(v);
-    if (abs >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
-    if (abs >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K';
-    return '$' + v.toFixed(0);
-}
-
-export function fmtFull(v) {
-    const str = Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return (v < 0 ? '-$' : '$') + str;
-}
-
-// Same as fmtFull but always signed (e.g. gain/loss deltas), so a $0 or
-// positive change reads "+$..." instead of the bare "$...".
-export function fmtSigned(v) {
-    const str = Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return (v >= 0 ? '+$' : '-$') + str;
-}
-
-export function makeTimeScales(gridColor, labelColor, yFmt) {
+function makeTimeScales(gridColor, labelColor, yFmt) {
     return {
         x: {
             type: 'time',
@@ -107,15 +87,15 @@ export function makeTimeScales(gridColor, labelColor, yFmt) {
     };
 }
 
-export function makeLegendOpts(labelColor) {
+function makeLegendOpts(labelColor) {
     return { display: true, position: 'bottom', labels: { color: labelColor } };
 }
 
-export function pointFromRow(r, key) {
+function pointFromRow(r, key) {
     return { x: new Date(r.date).getTime(), y: r[key] };
 }
 
-export function buildNorm(data, key, range) {
+function buildNorm(data, key, range) {
     const f = filterByRange(data, range);
     if (!f.length) return [];
     const base = f[0][key];
@@ -308,7 +288,7 @@ export function calendarColor(pct, isDark) {
     return pct > 0 ? CALENDAR_GREEN_SHADES[level] : CALENDAR_RED_SHADES[level];
 }
 
-export const benchTickerColors = { SPY: '#10b981', BTC: '#f59e0b' };
+const benchTickerColors = { SPY: '#10b981', BTC: '#f59e0b' };
 
 export const slicePalette = [
     '#6366f1','#10b981','#f59e0b','#ef4444','#3b82f6',

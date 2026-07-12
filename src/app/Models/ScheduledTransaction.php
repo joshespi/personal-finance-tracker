@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\Recurrence;
+use App\Enums\ScheduledTransactionType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +23,7 @@ class ScheduledTransaction extends Model
         'next_due_at' => 'date',
         'is_active'   => 'boolean',
         'recurrence'  => Recurrence::class,
+        'type'        => ScheduledTransactionType::class,
     ];
 
     public function user(): BelongsTo
@@ -45,20 +48,25 @@ class ScheduledTransaction extends Model
 
     public function typeLabel(): string
     {
-        return match ($this->type) {
-            'envelope_fund'    => 'Fund envelope',
-            'envelope_spend'   => 'Envelope spend',
-            'cash_deposit'     => 'Cash deposit',
-            'cash_withdrawal'  => 'Cash withdrawal',
-            'mortgage_payment' => 'Mortgage payment',
-            default            => $this->type,
-        };
+        return $this->type->label();
     }
 
     /** Whether this scheduled entry increases a balance (deposit/fund) vs. draws it down. */
     public function isInflow(): bool
     {
-        return in_array($this->type, ['cash_deposit', 'envelope_fund'], true);
+        return $this->type->isInflow();
+    }
+
+    /**
+     * Secondary ordering that sorts inflows below outflows — the SQL twin of
+     * isInflow(), kept here so the two stay in lockstep with the enum.
+     */
+    public function scopeInflowsLast(Builder $query): Builder
+    {
+        $inflows      = ScheduledTransactionType::inflowValues();
+        $placeholders = implode(',', array_fill(0, count($inflows), '?'));
+
+        return $query->orderByRaw("CASE WHEN type IN ({$placeholders}) THEN 1 ELSE 0 END", $inflows);
     }
 
     public function recurrenceLabel(): string

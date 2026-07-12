@@ -40,7 +40,7 @@
                         $total = $yearDetail['total_gain'];
                         $short = $yearDetail['short_gain'];
                         $long  = $yearDetail['long_gain'];
-                        $fmt   = fn($v) => ($v >= 0 ? '+$' : '-$') . number_format(abs($v), 2);
+                        $fmt   = fn($v) => ($v >= 0 ? '+$' : '-$') . $demo->amt(abs($v));
                         $cls   = fn($v) => $v >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400';
                     @endphp
 
@@ -107,13 +107,13 @@
                                                         {{ $lot['holding_days'] }}
                                                     </td>
                                                     <td class="px-4 py-2.5 text-right text-gray-600 dark:text-gray-300 font-mono">
-                                                        ${{ number_format($lot['cost_basis'], 2) }}
+                                                        ${{ $demo->amt($lot['cost_basis']) }}
                                                     </td>
                                                     <td class="px-4 py-2.5 text-right text-gray-600 dark:text-gray-300 font-mono">
-                                                        ${{ number_format($lot['proceeds'], 2) }}
+                                                        ${{ $demo->amt($lot['proceeds']) }}
                                                     </td>
                                                     <td class="px-4 py-2.5 text-right font-mono font-semibold {{ $lot['gain'] >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
-                                                        {{ $lot['gain'] >= 0 ? '+' : '' }}${{ number_format($lot['gain'], 2) }}
+                                                        {{ $lot['gain'] >= 0 ? '+' : '' }}${{ $demo->amt($lot['gain']) }}
                                                     </td>
                                                 </tr>
                                             @endforeach

@@ -4,10 +4,11 @@ namespace App\Console\Commands;
 
 use App\Models\BenchmarkPrice;
 use App\Services\BenchmarkService;
+use App\Services\CoinGeckoClient;
+use App\Services\FinnhubClient;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class FetchBenchmarkPrices extends Command
@@ -19,6 +20,13 @@ class FetchBenchmarkPrices extends Command
     private const STOCK_BENCHMARKS = ['SPY'];
 
     private const CRYPTO_BENCHMARKS = ['BTC'];
+
+    public function __construct(
+        private readonly FinnhubClient $finnhub,
+        private readonly CoinGeckoClient $coinGecko,
+    ) {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -32,10 +40,8 @@ class FetchBenchmarkPrices extends Command
 
         $this->info("Fetching benchmark prices from {$from->toDateString()} to {$to->toDateString()}");
 
-        $apiKey = config('services.finnhub.key');
-
         foreach (self::STOCK_BENCHMARKS as $ticker) {
-            $this->fetchStockCandles($ticker, $from, $to, $apiKey);
+            $this->fetchStockCandles($ticker, $from, $to);
         }
 
         foreach (self::CRYPTO_BENCHMARKS as $ticker) {
@@ -49,9 +55,9 @@ class FetchBenchmarkPrices extends Command
         return self::SUCCESS;
     }
 
-    private function fetchStockCandles(string $ticker, Carbon $from, Carbon $to, ?string $apiKey): void
+    private function fetchStockCandles(string $ticker, Carbon $from, Carbon $to): void
     {
-        if (! $apiKey) {
+        if (! $this->finnhub->configured()) {
             $this->warn("FINNHUB_API_KEY not set — skipping {$ticker}");
 
             return;
@@ -59,13 +65,7 @@ class FetchBenchmarkPrices extends Command
 
         $this->line("Fetching {$ticker} (Finnhub)...");
 
-        $response = Http::timeout(30)->get('https://finnhub.io/api/v1/stock/candle', [
-            'symbol'     => $ticker,
-            'resolution' => 'D',
-            'from'       => $from->timestamp,
-            'to'         => $to->timestamp,
-            'token'      => $apiKey,
-        ]);
+        $response = $this->finnhub->dailyCandles($ticker, $from->timestamp, $to->timestamp);
 
         if (! $response->successful() || ($response->json('s') ?? 'no_data') === 'no_data') {
             $this->error("Failed to fetch {$ticker}: ".$response->status());
@@ -102,11 +102,7 @@ class FetchBenchmarkPrices extends Command
         $days = $from->diffInDays($to);
         $days = max(1, min($days, 3650));
 
-        $response = Http::timeout(30)->get("https://api.coingecko.com/api/v3/coins/{$coingeckoId}/market_chart", [
-            'vs_currency' => 'usd',
-            'days'        => $days,
-            'interval'    => 'daily',
-        ]);
+        $response = $this->coinGecko->marketChart($coingeckoId, $days);
 
         if (! $response->successful()) {
             $this->error("Failed to fetch {$ticker}: ".$response->status());

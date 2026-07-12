@@ -14,7 +14,7 @@ class BudgetRuleTest extends TestCase
 {
     public function test_index_requires_auth(): void
     {
-        $this->get(route('budget-rule'))->assertRedirect(route('login'));
+        $this->get(route('analysis', ['tab' => 'budget-rule']))->assertRedirect(route('login'));
     }
 
     public function test_shows_empty_state_when_no_income(): void
@@ -22,7 +22,7 @@ class BudgetRuleTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('budget-rule'))
+            ->get(route('analysis', ['tab' => 'budget-rule']))
             ->assertOk()
             ->assertSee('No income recorded');
     }

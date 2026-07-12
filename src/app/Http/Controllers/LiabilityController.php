@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ScheduledTransactionType;
 use App\Models\Envelope;
 use App\Models\Liability;
 use App\Models\ManualAsset;
@@ -152,7 +153,7 @@ class LiabilityController extends Controller
             ['liability_id' => $liability->id],
             [
                 'user_id'         => $liability->user_id,
-                'type'            => 'mortgage_payment',
+                'type'            => ScheduledTransactionType::MortgagePayment,
                 'description'     => $liability->name.' payment',
                 'amount'          => $liability->totalMonthlyPayment(),
                 'recurrence'      => 'monthly',

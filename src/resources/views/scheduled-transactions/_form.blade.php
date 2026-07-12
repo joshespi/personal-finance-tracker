@@ -1,10 +1,13 @@
-@php $s = $scheduledTransaction ?? null; @endphp
+@php
+    $s = $scheduledTransaction ?? null;
+    $currentType = old('type', $s?->type?->value ?? \App\Enums\ScheduledTransactionType::EnvelopeFund->value);
+@endphp
 
 <div x-data="{
-    type: '{{ old('type', $s?->type ?? 'envelope_fund') }}',
-    needsEnvelope()  { return ['envelope_fund','envelope_spend'].includes(this.type); },
-    needsCash()      { return ['cash_deposit','cash_withdrawal','envelope_fund','envelope_spend'].includes(this.type); },
-    cashRequired()   { return ['cash_deposit','cash_withdrawal','envelope_spend'].includes(this.type); },
+    type: '{{ $currentType }}',
+    needsEnvelope()  { return @js(\App\Enums\ScheduledTransactionType::envelopeValues()).includes(this.type); },
+    needsCash()      { return @js(\App\Enums\ScheduledTransactionType::cashAccountVisibleValues()).includes(this.type); },
+    cashRequired()   { return @js(\App\Enums\ScheduledTransactionType::cashAccountRequiredValues()).includes(this.type); },
 }" class="space-y-5">
 
     {{-- Description --}}
@@ -31,10 +34,10 @@
             <x-input-label for="type" value="Type" />
             <select id="type" name="type" x-model="type"
                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                <option value="envelope_fund">Fund envelope</option>
-                <option value="envelope_spend">Envelope spend</option>
-                <option value="cash_deposit">Cash deposit</option>
-                <option value="cash_withdrawal">Cash withdrawal</option>
+                @foreach (\App\Enums\ScheduledTransactionType::cases() as $type)
+                    @continue(! $type->userSelectable() && $type->value !== $currentType)
+                    <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                @endforeach
             </select>
             <x-input-error :messages="$errors->get('type')" class="mt-2" />
         </div>

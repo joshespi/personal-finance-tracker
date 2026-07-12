@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\FiltersTransactionQuery;
 use App\Enums\AssetType;
 use App\Enums\TransactionType;
 use App\Models\ActivityLog;
@@ -15,6 +16,8 @@ use Illuminate\View\View;
 
 class TransactionController extends Controller
 {
+    use FiltersTransactionQuery;
+
     public function index(Request $request, Portfolio $portfolio): View
     {
         $this->authorize('view', $portfolio);
@@ -25,35 +28,9 @@ class TransactionController extends Controller
             'linkedTo.portfolio',
         ]);
 
-        if ($search = $request->input('search')) {
-            $query->whereHas('asset', fn ($q) => $q->where('symbol', 'like', strtoupper($search).'%'));
-        }
+        $this->applyTransactionFilters($query, $request);
 
-        if ($type = $request->input('type')) {
-            $query->where('type', $type);
-        }
-
-        if ($from = $request->input('from')) {
-            $query->whereDate('transacted_at', '>=', $from);
-        }
-
-        if ($to = $request->input('to')) {
-            $query->whereDate('transacted_at', '<=', $to);
-        }
-
-        $sortCol = in_array($request->input('sort'), ['transacted_at', 'symbol', 'type', 'quantity'])
-            ? $request->input('sort')
-            : 'transacted_at';
-
-        $sortDir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
-
-        if ($sortCol === 'symbol') {
-            $query->join('assets', 'assets.id', '=', 'transactions.asset_id')
-                ->orderBy('assets.symbol', $sortDir)
-                ->select('transactions.*');
-        } else {
-            $query->orderBy($sortCol, $sortDir);
-        }
+        [$sortCol, $sortDir] = $this->applyTransactionSort($query, $request, ['transacted_at', 'symbol', 'type', 'quantity']);
 
         $transactions = $query->paginate(50)->withQueryString();
 

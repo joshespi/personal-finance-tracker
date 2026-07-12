@@ -68,24 +68,24 @@
 
                 {{-- Summary stats --}}
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Left over from {{ $month->copy()->subMonth()->format('M') }}</p>
+                    <x-stat-tile>
+                        <x-slot:label>Left over from {{ $month->copy()->subMonth()->format('M') }}</x-slot:label>
                         <p class="mt-1 text-xl font-semibold font-mono {{ $leftOverFromLastMonth >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400' }}">
                             {{ $leftOverFromLastMonth < 0 ? '−' : '' }}${{ $demo->amt(abs($leftOverFromLastMonth)) }}
                         </p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Assigned in {{ $month->format('M') }}</p>
+                    </x-stat-tile>
+                    <x-stat-tile>
+                        <x-slot:label>Assigned in {{ $month->format('M') }}</x-slot:label>
                         <p class="mt-1 text-xl font-semibold font-mono text-indigo-600 dark:text-indigo-400">+${{ $demo->amt($totalFundedMonth) }}</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Activity in {{ $month->format('M') }}</p>
+                    </x-stat-tile>
+                    <x-stat-tile>
+                        <x-slot:label>Activity in {{ $month->format('M') }}</x-slot:label>
                         <p class="mt-1 text-xl font-semibold font-mono text-red-600 dark:text-red-400">−${{ $demo->amt($totalSpentMonth) }}</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total available</p>
+                    </x-stat-tile>
+                    <x-stat-tile>
+                        <x-slot:label>Total available</x-slot:label>
                         <p class="mt-1 text-xl font-semibold font-mono {{ $totalBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400' }}">${{ $demo->amt($totalBalance) }}</p>
-                    </div>
+                    </x-stat-tile>
                 </div>
 
             @endif
@@ -200,8 +200,7 @@
                                                                @blur="onBlur({{ $e->id }}, $el)"
                                                                @keydown.arrow-down.prevent="navigate($el, 1)"
                                                                @keydown.arrow-up.prevent="navigate($el, -1)"
-                                                               @keydown.enter.prevent="onBlur({{ $e->id }}, $el)"
-                                                               @keydown.tab="onBlur({{ $e->id }}, $el)">
+                                                               @keydown.enter.prevent="onBlur({{ $e->id }}, $el)">
                                                     </div>
                                                 @else
                                                     <span class="text-sm font-mono text-gray-500 dark:text-gray-400">
@@ -310,7 +309,7 @@
     @endverbatim
 
     @php
-        $jsInputs    = $groups->flatten()->mapWithKeys(fn ($e) => [$e->id => (float) $e->monthly_target ?: (float) $e->funded_this_month]);
+        $jsInputs    = $groups->flatten()->mapWithKeys(fn ($e) => [$e->id => round((float) $e->funded_this_month, 2)]);
         $jsGroupData = $groups->map(fn ($g) => $g->map(fn ($e) => [
             'id'      => $e->id,
             'balance' => (float) $e->current_balance,
@@ -379,10 +378,12 @@
             },
 
             async onBlur(id, el) {
-                const current  = parseFloat(this.inputs[id]) || 0;
+                const current  = parseFloat(this.inputs[id]); // blank blur parses to NaN → no-op
                 const original = parseFloat(this.focusValues[id]) || 0;
-                if (current === original || current <= 0) return;
+                if (isNaN(current) || current < 0 || current === original) return;
 
+                // Commit optimistically so an Enter-then-blur can't double-submit the same edit.
+                this.focusValues[id] = current;
                 this.error = '';
                 try {
                     const res = await fetch('{{ route('envelopes.assign-one') }}', {
@@ -402,6 +403,7 @@
                     this.saved[id]       = true;
                     setTimeout(() => { this.saved[id] = false; }, 1500);
                 } catch {
+                    this.focusValues[id] = original; // roll back so a retry re-fires
                     this.error = 'Failed to save — check your connection.';
                 }
             },

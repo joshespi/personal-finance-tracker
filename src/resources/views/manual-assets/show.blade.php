@@ -51,7 +51,7 @@
                 <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 sm:rounded-lg p-4 text-sm">
                     <p class="font-medium text-indigo-700 dark:text-indigo-300">Proxy-tracked via {{ $manualAsset->proxyAsset?->symbol ?? '—' }}</p>
                     <p class="mt-1 text-indigo-600 dark:text-indigo-400">
-                        Anchor: {{ $manualAsset->anchor_value ? number_format((float) $manualAsset->anchor_value, 2) : '—' }}
+                        Anchor: {{ $manualAsset->anchor_value ? $demo->amt((float) $manualAsset->anchor_value) : '—' }}
                         on {{ $manualAsset->anchor_date?->format('M j, Y') ?? '—' }}
                         @if ($manualAsset->anchor_synthetic_shares)
                             &bull; {{ number_format((float) $manualAsset->anchor_synthetic_shares, 4) }} synthetic shares
@@ -74,20 +74,20 @@
                     <div>
                         <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Cost Basis</p>
                         <p class="mt-1 font-mono text-lg text-gray-900 dark:text-gray-100">
-                            {{ $cost !== null ? number_format($cost, 2) : '—' }}
+                            {{ $cost !== null ? $demo->amt($cost) : '—' }}
                         </p>
                     </div>
                     <div>
                         <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Current Value</p>
                         <p class="mt-1 font-mono text-lg text-gray-900 dark:text-gray-100">
-                            {{ $value !== null ? number_format($value, 2) : '—' }}
+                            {{ $value !== null ? $demo->amt($value) : '—' }}
                         </p>
                     </div>
                     <div>
                         <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Profit / Loss</p>
                         @if ($pl !== null)
                             <p class="mt-1 font-mono text-lg font-semibold {{ $pl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
-                                {{ $pl >= 0 ? '+' : '' }}{{ number_format($pl, 2) }}
+                                {{ $pl >= 0 ? '+' : '' }}{{ $demo->amt($pl) }}
                                 @if ($plPct !== null)
                                     <span class="text-xs">({{ $pl >= 0 ? '+' : '' }}{{ number_format($plPct, 2) }}%)</span>
                                 @endif
@@ -113,7 +113,7 @@
                             <div class="flex items-center justify-between text-sm">
                                 <a href="{{ route('liabilities.show', $liability) }}"
                                    class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $liability->name }}</a>
-                                <span class="font-mono text-gray-900 dark:text-gray-100">{{ number_format($liability->currentBalance(), 2) }}</span>
+                                <span class="font-mono text-gray-900 dark:text-gray-100">{{ $demo->amt($liability->currentBalance()) }}</span>
                             </div>
                         @endforeach
                     </div>
@@ -121,7 +121,7 @@
                         <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
                             <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Equity</span>
                             <span class="font-mono font-semibold {{ $equity >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
-                                {{ number_format((float) $equity, 2) }}
+                                {{ $demo->amt((float) $equity) }}
                             </span>
                         </div>
                     @endif
@@ -189,7 +189,7 @@
                                 @foreach ($manualAsset->valuations as $v)
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                         <td class="px-6 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ $v->valued_at->format('M j, Y') }}</td>
-                                        <td class="px-6 py-3 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">{{ number_format((float)$v->value, 2) }}</td>
+                                        <td class="px-6 py-3 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $demo->amt((float) $v->value) }}</td>
                                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $v->notes ?? '—' }}</td>
                                         <td class="px-6 py-3 text-right">
                                             <form method="POST" action="{{ route('valuations.destroy', $v) }}" class="inline"

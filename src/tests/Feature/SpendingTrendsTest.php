@@ -13,7 +13,7 @@ class SpendingTrendsTest extends TestCase
 {
     public function test_index_requires_auth(): void
     {
-        $this->get(route('spending-trends'))->assertRedirect(route('login'));
+        $this->get(route('analysis', ['tab' => 'trends']))->assertRedirect(route('login'));
     }
 
     public function test_shows_envelope_spend_for_current_user(): void
@@ -27,7 +27,7 @@ class SpendingTrendsTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('spending-trends'))
+            ->get(route('analysis', ['tab' => 'trends']))
             ->assertOk()
             ->assertSee('Groceries');
     }
@@ -44,7 +44,7 @@ class SpendingTrendsTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('spending-trends'))
+            ->get(route('analysis', ['tab' => 'trends']))
             ->assertOk()
             ->assertDontSee('Other Groceries');
     }
@@ -57,7 +57,7 @@ class SpendingTrendsTest extends TestCase
         EnvelopeTransaction::factory()->for($envelope)->fund()->create(['occurred_at' => now()->toDateString()]);
 
         $this->actingAs($user)
-            ->get(route('spending-trends'))
+            ->get(route('analysis', ['tab' => 'trends']))
             ->assertOk()
             ->assertSee('No envelope spending recorded');
     }
@@ -65,7 +65,7 @@ class SpendingTrendsTest extends TestCase
     public function test_months_param_accepted(): void
     {
         $this->actingAs(User::factory()->create())
-            ->get(route('spending-trends', ['months' => 12]))
+            ->get(route('analysis', ['tab' => 'trends', 'months' => 12]))
             ->assertOk();
     }
 
@@ -73,7 +73,7 @@ class SpendingTrendsTest extends TestCase
     {
         // months=999 should clamp to 12 — page still loads
         $this->actingAs(User::factory()->create())
-            ->get(route('spending-trends', ['months' => 999]))
+            ->get(route('analysis', ['tab' => 'trends', 'months' => 999]))
             ->assertOk();
     }
 
@@ -88,7 +88,7 @@ class SpendingTrendsTest extends TestCase
 
         // Rent envelope should not appear in datasets since it has no spend
         $response = $this->actingAs($user)
-            ->get(route('spending-trends'))
+            ->get(route('analysis', ['tab' => 'trends']))
             ->assertOk();
 
         // The "No spending recorded" message confirms no datasets were returned
@@ -107,7 +107,7 @@ class SpendingTrendsTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('spending-trends'))
+            ->get(route('analysis', ['tab' => 'trends']))
             ->assertOk()
             ->assertSee('No envelope spending recorded');
     }

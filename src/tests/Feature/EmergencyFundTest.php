@@ -14,7 +14,7 @@ class EmergencyFundTest extends TestCase
 {
     public function test_index_requires_auth(): void
     {
-        $this->get(route('emergency-fund'))->assertRedirect(route('login'));
+        $this->get(route('planning', ['tab' => 'emergency-fund']))->assertRedirect(route('login'));
     }
 
     public function test_shows_empty_state_when_no_mandatory_envelopes(): void
@@ -23,7 +23,7 @@ class EmergencyFundTest extends TestCase
         Envelope::factory()->for($user)->create(['is_mandatory' => false]);
 
         $this->actingAs($user)
-            ->get(route('emergency-fund'))
+            ->get(route('planning', ['tab' => 'emergency-fund']))
             ->assertOk()
             ->assertSee('No mandatory expenses configured');
     }
@@ -39,7 +39,7 @@ class EmergencyFundTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('emergency-fund'))
+            ->get(route('planning', ['tab' => 'emergency-fund']))
             ->assertOk()
             ->assertSee($envelope->name);
     }
@@ -55,7 +55,7 @@ class EmergencyFundTest extends TestCase
         CashTransaction::factory()->for($account)->spend($nonMandatory)->create(['amount' => 500, 'occurred_at' => now()->toDateString()]);
 
         $this->actingAs($user)
-            ->get(route('emergency-fund'))
+            ->get(route('planning', ['tab' => 'emergency-fund']))
             ->assertOk()
             ->assertSee('Rent')
             ->assertSee('1,000');  // baseline includes mandatory spend only, not the $500 Dining Out
@@ -72,7 +72,7 @@ class EmergencyFundTest extends TestCase
         CashTransaction::factory()->for($account)->spend($mandatory)->create(['amount' => 500, 'occurred_at' => now()->toDateString()]);
 
         $this->actingAs($user)
-            ->get(route('emergency-fund'))
+            ->get(route('planning', ['tab' => 'emergency-fund']))
             ->assertOk()
             ->assertSee('Emergency Savings')
             ->assertSee('3,000.00');
@@ -87,7 +87,7 @@ class EmergencyFundTest extends TestCase
         CashTransaction::factory()->for($account)->spend($env)->create(['amount' => 900, 'occurred_at' => now()->toDateString()]);
 
         $this->actingAs($user)
-            ->get(route('emergency-fund'))
+            ->get(route('planning', ['tab' => 'emergency-fund']))
             ->assertOk()
             ->assertDontSee('Other Rent');
     }
@@ -116,7 +116,7 @@ class EmergencyFundTest extends TestCase
 
         // Mandatory envelope with only fund transactions contributes $0 to baseline → empty state
         $this->actingAs($user)
-            ->get(route('emergency-fund'))
+            ->get(route('planning', ['tab' => 'emergency-fund']))
             ->assertOk()
             ->assertSee('No mandatory expenses configured');
     }
@@ -146,7 +146,7 @@ class EmergencyFundTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('emergency-fund'))
+            ->get(route('planning', ['tab' => 'emergency-fund']))
             ->assertOk()
             ->assertSee('No mandatory expenses configured');
     }
@@ -164,7 +164,7 @@ class EmergencyFundTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('emergency-fund'))
+            ->get(route('planning', ['tab' => 'emergency-fund']))
             ->assertOk()
             ->assertSee('100.00');
     }
@@ -190,7 +190,7 @@ class EmergencyFundTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('emergency-fund'))
+            ->get(route('planning', ['tab' => 'emergency-fund']))
             ->assertOk()
             ->assertSee('893.04')        // baseline uses full monthly value
             ->assertSee('2,679.12');     // 3-month target = 893.04 * 3
@@ -212,7 +212,7 @@ class EmergencyFundTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('emergency-fund'))
+            ->get(route('planning', ['tab' => 'emergency-fund']))
             ->assertOk()
             ->assertSee('Groceries')
             ->assertSee('100.00');  // 600 / 6 months
@@ -249,7 +249,7 @@ class EmergencyFundTest extends TestCase
 
         // Inactive schedule ignored → falls back to the $600/6 = $100 average.
         $this->actingAs($user)
-            ->get(route('emergency-fund'))
+            ->get(route('planning', ['tab' => 'emergency-fund']))
             ->assertOk()
             ->assertSee('100.00');
     }
