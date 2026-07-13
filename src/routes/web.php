@@ -174,6 +174,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile/targets', [ProfileController::class, 'updateTargets'])->name('profile.targets');
     Route::patch('/profile/notifications', [ProfileController::class, 'updateNotifications'])->name('profile.notifications');
     Route::patch('/profile/display', [ProfileController::class, 'updateDisplay'])->name('profile.display');
+    Route::patch('/profile/email-summary', [ProfileController::class, 'updateEmailSummary'])->name('profile.email-summary');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Stop impersonation — must be outside admin group so impersonated non-admin users can reach it

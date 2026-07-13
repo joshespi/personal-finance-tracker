@@ -186,6 +186,43 @@ class TransactionImportTest extends TestCase
             ->assertSessionHas('success', '1 transaction(s) imported successfully.');
     }
 
+    public function test_duplicate_header_name_is_rejected(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+
+        // 'currency' appears twice, 'fees' is missing — array_combine would otherwise
+        // silently drop a column and shift every field after it.
+        $csv = $this->makeCsv(
+            "2024-01-15,BTC,crypto,buy,0.5,40000,1.99,USD,note\n",
+            "date,symbol,asset_type,type,quantity,price_per_unit,currency,currency,notes\n"
+        );
+
+        $this->actingAs($portfolio->user)
+            ->post(route('portfolios.transactions.import', $portfolio), $this->csvFile($csv))
+            ->assertSessionHasErrors('csv_file');
+
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_error_row_number_accounts_for_blank_lines(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+
+        // Blank line on file line 2, bad date on file line 3 — the error must say
+        // "Row 3", not "Row 2" (which is what a post-filter array index would give).
+        $csv = $this->makeCsv(
+            "\n"
+            ."15/01/2024,BTC,crypto,buy,1,40000,0,USD,\n"
+        );
+
+        $response = $this->actingAs($portfolio->user)
+            ->post(route('portfolios.transactions.import', $portfolio), $this->csvFile($csv));
+
+        $response->assertSessionHasErrors('csv_file');
+        $errors = $response->getSession()->get('errors')->get('csv_file');
+        $this->assertStringStartsWith('Row 3:', $errors[0]);
+    }
+
     public function test_all_supported_transaction_types_accepted(): void
     {
         $portfolio = Portfolio::factory()->create();

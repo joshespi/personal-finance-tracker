@@ -4,6 +4,22 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] - 2026-07-12
+
+### Added
+
+- **Account summary email** — opt-in periodic email covering account activity, configurable per user on `/profile`. Frequency (Daily / Weekly / Monthly) and content sections (Budgeting, Investing, Net Worth, Upcoming Scheduled Transactions, Category % Changes, Warnings) are each independently multi-selectable. Sent by a new `email:send-summaries` command, scheduled daily at 06:00 (after the nightly snapshot/materialize jobs) — daily always, weekly on Mondays, monthly on the 1st.
+
+### Changed
+- Manual transaction and CSV-import validation rules consolidated into `Transaction::fieldRules()`, shared by the store/update controller actions and `TransactionCsvImportService`, so the three no longer drift independently.
+- CSV importer now detects duplicate header names up front (previously a duplicate header would silently misalign every field after it) and reports accurate physical file line numbers for row errors even when blank lines were skipped.
+- Forecast page's demo-mode figure masking extracted into a reusable `<x-masked-money-input>` component.
+- `PortfolioSliceController` now raises a `ValidationException` for an unknown symbol instead of an ad-hoc redirect, matching every other "entity must exist" endpoint.
+- `Liability::isRevolvingType()` extracted as a static helper so the escrow-clearing rule can be checked before a model is persisted.
+
+### Fixed
+- Liability scheduled payments no longer floor principal at zero when a payment doesn't cover the interest due — the balance now grows (negative amortization) instead of silently freezing, which matters now that any liability type (not just mortgages) can be scheduled.
+
 ## [1.8.2] - 2026-07-12
 
 ### Changed
@@ -16,6 +32,81 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 - Liability escrow amount is now cleared server-side when a liability's type isn't "mortgage" (previously a hidden form field could resubmit a stale escrow value after switching a mortgage to another liability type).
 - Portfolio slice form now accepts lowercase/mixed-case ticker symbols.
 - Forecast page dollar figures now respect demo mode.
+
+## [1.8.1] - 2026-07-12
+
+### Added
+- **Cash-account-to-cash-account transfers** — a new `/cash-transfers` flow creates a linked withdrawal/deposit pair between a user's own cash accounts, shown together in transaction lists.
+
+## [1.8.0] - 2026-07-11
+
+### Changed
+- Six standalone planning/analysis pages (cashflow, spending-trends, budget-rule, debt-payoff, allocator, emergency-fund) consolidated into tabs under `/analysis` and `/planning`; old URLs redirect with query params preserved.
+- Dashboard/forecast/retirement logic extracted into `NetWorthService`, `ForecastService`, and `RetirementProjectionService`; Finnhub and CoinGecko HTTP calls moved into dedicated `FinnhubClient`/`CoinGeckoClient` classes; scheduled-transaction type strings replaced with a `ScheduledTransactionType` enum; the two cash-ledger Livewire components now share a `ManagesCashTransactionForm` trait.
+- Envelope "assign" changed from incrementing to setting the month's total, with delta recording, rejection of future months, and stricter `Y-m` month parsing.
+- Chart.js removed from the global JS bundle and split into per-page bundles (~79 KB gz saved on non-chart pages).
+
+### Fixed
+- Dual Alpine.js instances (the app bundle's own import racing Livewire's bundled one) were breaking all `wire:*` bindings app-wide; Livewire's bundle is now the sole Alpine instance.
+- A user-submitted `mortgage_payment` schedule (system-managed only) could crash daily transaction materialization via a null cash account; now rejected.
+
+## [1.7.0] - 2026-07-10
+
+### Added
+- Admin: action to manually mark a user's email as verified.
+
+### Changed
+- Laravel's scheduler now runs as its own `scheduler` docker-compose service (`php artisan schedule:work`) instead of depending on a host crontab, which had silently stopped running.
+- Portfolio CSV import batches asset lookups instead of one query per row; `FetchBenchmarkPrices` and `PortfolioSnapshotBackfillService` batch-write via `upsert()` instead of per-row `updateOrCreate`; `BenchmarkService::all()` is now cached for an hour.
+
+### Fixed
+- Dashboard and portfolio-show pages computed portfolio value with different rules; both now go through one shared `Portfolio::summarizeHoldings()` method.
+
+### Removed
+- Watchlist feature.
+
+## [1.6.2] - 2026-07-09
+
+### Added
+- **Pension tracking** — new pension model with full CRUD, computing accrued/projected annual benefit, present value (COLA'd real annuity, deferred to draw age), marginal value per extra year of service, and a retirement "income floor" (pension + portfolio at a safe withdrawal rate vs. target expenses). Optionally folded into dashboard net worth; included in full-backup export.
+- Desktop navigation rebuilt as a collapsible left sidebar with accordion sections (Budget/Accounts/Invest/Plan) and inline per-account balances, replacing the old dropdown nav; mobile nav polished for safe-area insets and body-scroll locking while open.
+- Dashboard "display options" — every dashboard section/stat tile can now be individually toggled on the profile screen (all visible by default).
+- Dashboard calendar heatmap of day-over-day portfolio $/% change (GitHub-contributions style), paged month by month.
+- Portfolio-snapshot backfill made resumable: when historical price fetching hits a provider rate limit, remaining work queues as a `BackfillRequest` and drains in batches via a new hourly `assets:process-backfill-queue` command (later extended to the snapshot-writing pass too, via a chunked write cursor) instead of blocking or failing the admin backfill tool outright.
+
+## [1.5.7] - 2026-06-21
+
+### Added
+- Consolidated **"All Transactions"** ledger page showing every cash account's activity plus upcoming scheduled entries in one place, replacing the standalone Scheduled Transactions index; supports a pending/cleared status filter and separate Outflow/Inflow columns.
+- Recurring/scheduled transactions gained **Quarterly** and **Yearly** cadences alongside Monthly/Weekly/Biweekly.
+- Generic, configurable **CSV importer** with column-mapping presets and selectable date formats replaces the YNAB-only importer (YNAB is now just one preset).
+- Envelope setting **"include in emergency fund"** — lets a non-mandatory essential (groceries, fuel, etc.) count toward the emergency-fund target without being reclassified as a "Need".
+
+### Changed
+- Emergency Fund monthly baseline now uses the larger of the 6-month historical average or the active scheduled recurring amount per envelope, so one recorded large payment isn't diluted across the window; the 50/30/20 Budget Rule page reuses the same calculation.
+- Docker entrypoint installs Composer dev dependencies on every restart unless `APP_ENV=production` (previously always `--no-dev`), so tests/lint survive local container restarts without a manual reinstall.
+- Business logic extracted from controllers into `AllocatorService`, `CashflowService`, `EmergencyFundService`, `SpendingTrendsService`; investment transaction types and dashboard allocation buckets moved to enums.
+
+### Fixed
+- Transaction row delete button was invisible until hover; now shown as muted gray.
+- Livewire inline-edit table rows were missing `wire:key`, which could attach edit state to the wrong row after a DOM diff.
+
+## [1.4.0] - 2026-06-16
+
+### Added
+- **50/30/20 quick calculator** on the Budget Rule page — type any monthly income and see the Necessities/Wants/Savings split instantly.
+- **Enter now / skip** actions for scheduled transactions, plus pagination and text/amount filtering on the transaction list.
+- **Cleared/pending transaction status** — cash transactions can be marked cleared or pending; account balances split into working/cleared/uncleared totals.
+- **Income categories** — full CRUD, assignable to deposits/income, included in CSV and full-backup exports.
+
+### Changed
+- Envelope "mandatory" flag relabeled "Necessity" with clearer help text distinguishing it from the emergency-fund and wealth-building checkboxes.
+- Money nav menu rebuilt as a single data-driven list shared between desktop and mobile.
+- 50/30/20 "mandatory" spend now measured by envelope funding amounts rather than actual cash withdrawals, aligning it with how savings is measured.
+- Widened the main content container across most pages for a more spacious layout.
+
+### Fixed
+- Backfilled portfolio snapshots could treat a manual asset as zero shares when its synthetic share count wasn't computed at save time; the backfill now derives it from the anchor-date price.
 
 ## [1.3.0] - 2026-06-04
 
@@ -59,7 +150,7 @@ See git tag `1.1.0`.
 
 Initial tagged release. See git tag `1.0.0`.
 
-[1.3.0]: https://github.com/joshespi/portfolio-tracker/compare/1.2.0...HEAD
+[1.9.0]: https://github.com/joshespi/portfolio-tracker/compare/1.2.0...HEAD
 [1.2.0]: https://github.com/joshespi/portfolio-tracker/releases/tag/1.2.0
 [1.1.0]: https://github.com/joshespi/portfolio-tracker/releases/tag/1.1.0
 [1.0.0]: https://github.com/joshespi/portfolio-tracker/releases/tag/1.0.0

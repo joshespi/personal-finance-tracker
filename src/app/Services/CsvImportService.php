@@ -203,8 +203,11 @@ class CsvImportService
     /**
      * Generic CSV reader: strips a UTF-8 BOM, skips blank rows, trims cells, and
      * normalises each row to the header width. Also used by {@see TransactionCsvImportService}.
+     * `lineNumbers[$i]` is the 1-based physical file line that `rows[$i]` came from
+     * (blank lines are dropped from `rows` but still counted), so callers reporting
+     * per-row errors don't have to re-derive it from the filtered array index.
      *
-     * @return array{headers: list<string>, rows: list<array<string,string>>}
+     * @return array{headers: list<string>, rows: list<array<string,string>>, lineNumbers: list<int>}
      */
     public function parseCsv(string $path): array
     {
@@ -215,10 +218,14 @@ class CsvImportService
             fseek($handle, 0);
         }
 
-        $headers = null;
-        $rows    = [];
+        $headers      = null;
+        $rows         = [];
+        $lineNumbers  = [];
+        $physicalLine = 0;
 
         while (($line = fgetcsv($handle)) !== false) {
+            $physicalLine++;
+
             if (array_filter($line) === []) {
                 continue;
             }
@@ -233,11 +240,12 @@ class CsvImportService
             $width = count($headers);
             $line  = array_pad(array_slice($line, 0, $width), $width, '');
 
-            $rows[] = array_combine($headers, array_map('trim', $line));
+            $rows[]        = array_combine($headers, array_map('trim', $line));
+            $lineNumbers[] = $physicalLine;
         }
 
         fclose($handle);
 
-        return ['headers' => $headers ?? [], 'rows' => $rows];
+        return ['headers' => $headers ?? [], 'rows' => $rows, 'lineNumbers' => $lineNumbers];
     }
 }

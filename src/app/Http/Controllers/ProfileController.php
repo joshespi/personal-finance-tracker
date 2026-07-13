@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Enums\AssetType;
 use App\Enums\DashboardWidget;
+use App\Enums\EmailSummaryFrequency;
+use App\Enums\EmailSummarySection;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -86,6 +89,25 @@ class ProfileController extends Controller
         $request->user()->update(['dashboard_preferences' => $prefs]);
 
         return Redirect::route('profile.edit')->with('status', 'display-updated');
+    }
+
+    public function updateEmailSummary(Request $request): RedirectResponse
+    {
+        // Same "explicit checked-list, ignore unknown values" pattern as updateDisplay():
+        // validate against the enum, then store only values Rule::in already accepted.
+        $validated = $request->validate([
+            'frequencies'   => ['nullable', 'array'],
+            'frequencies.*' => ['string', Rule::in(EmailSummaryFrequency::values())],
+            'sections'      => ['nullable', 'array'],
+            'sections.*'    => ['string', Rule::in(EmailSummarySection::values())],
+        ]);
+
+        $request->user()->update([
+            'email_summary_frequencies' => array_values($validated['frequencies'] ?? []),
+            'email_summary_sections'    => array_values($validated['sections'] ?? []),
+        ]);
+
+        return Redirect::route('profile.edit')->with('status', 'email-summary-updated');
     }
 
     /**

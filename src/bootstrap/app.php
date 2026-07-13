@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('assets:process-backfill-queue')->hourly()->withoutOverlapping();
         $schedule->command('portfolios:snapshot')->dailyAt('00:05');
         $schedule->command('transactions:materialize')->dailyAt('00:10');
+        // After the snapshot/materialize jobs above so the summary reflects that day's data.
+        $schedule->command('email:send-summaries')->dailyAt('06:00');
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: env('TRUSTED_PROXIES', null));

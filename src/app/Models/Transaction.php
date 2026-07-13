@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Enums\AssetType;
 use App\Enums\TransactionType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 
 class Transaction extends Model
 {
@@ -27,6 +29,23 @@ class Transaction extends Model
         'fees'           => 'decimal:8',
         'fee_in_asset'   => 'boolean',
     ];
+
+    /**
+     * Shared field-validation rules used by the manual transaction form (store/update)
+     * and the CSV importer — keeps the three call sites from drifting independently.
+     */
+    public static function fieldRules(): array
+    {
+        return [
+            'symbol'         => ['required', 'string', 'max:20'],
+            'asset_type'     => ['required', Rule::enum(AssetType::class)],
+            'type'           => ['required', Rule::enum(TransactionType::class)],
+            'quantity'       => ['required', 'numeric', 'gt:0'],
+            'price_per_unit' => ['required', 'numeric', 'gte:0'],
+            'fees'           => ['nullable', 'numeric', 'gte:0'],
+            'currency'       => ['required', 'string', 'size:3'],
+        ];
+    }
 
     public function portfolio(): BelongsTo
     {

@@ -11,7 +11,7 @@ use App\Models\Transaction;
 use App\Services\AssetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Arr;
 use Illuminate\View\View;
 
 class TransactionController extends Controller
@@ -58,19 +58,12 @@ class TransactionController extends Controller
                 ->with('error', 'This portfolio is closed. Reopen it to add transactions.');
         }
 
-        $validated = $request->validate([
-            'symbol'         => ['required', 'string', 'max:20'],
-            'asset_type'     => ['required', Rule::enum(AssetType::class)],
-            'type'           => ['required', Rule::enum(TransactionType::class)],
-            'quantity'       => ['required', 'numeric', 'gt:0'],
-            'price_per_unit' => ['required', 'numeric', 'gte:0'],
-            'fees'           => ['nullable', 'numeric', 'gte:0'],
-            'currency'       => ['required', 'string', 'size:3'],
-            'transacted_at'  => ['required', 'date'],
-            'notes'          => ['nullable', 'string', 'max:1000'],
+        $validated = $request->validate(Transaction::fieldRules() + [
+            'transacted_at' => ['required', 'date'],
+            'notes'         => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $symbol = strtoupper(trim($validated['symbol']));
+        $symbol = AssetService::normalizeSymbol($validated['symbol']);
         $asset  = AssetService::findOrCreateBySymbol($symbol, $validated['asset_type']);
 
         $portfolio->transactions()->create([
@@ -110,16 +103,14 @@ class TransactionController extends Controller
     {
         $this->authorize('update', $transaction);
 
-        $validated = $request->validate([
-            'type'           => ['required', Rule::enum(TransactionType::class)],
-            'quantity'       => ['required', 'numeric', 'gt:0'],
-            'price_per_unit' => ['required', 'numeric', 'gte:0'],
-            'fees'           => ['nullable', 'numeric', 'gte:0'],
-            'fee_in_asset'   => ['nullable', 'boolean'],
-            'currency'       => ['required', 'string', 'size:3'],
-            'transacted_at'  => ['required', 'date'],
-            'notes'          => ['nullable', 'string', 'max:1000'],
-        ]);
+        $validated = $request->validate(
+            Arr::only(Transaction::fieldRules(), ['type', 'quantity', 'price_per_unit', 'fees', 'currency'])
+            + [
+                'fee_in_asset'  => ['nullable', 'boolean'],
+                'transacted_at' => ['required', 'date'],
+                'notes'         => ['nullable', 'string', 'max:1000'],
+            ]
+        );
 
         $type       = TransactionType::from($validated['type']);
         $feeInAsset = $type->isTransfer() && ($validated['fee_in_asset'] ?? false);

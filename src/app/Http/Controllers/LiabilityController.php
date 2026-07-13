@@ -134,7 +134,7 @@ class LiabilityController extends Controller
         // Escrow only applies to mortgages. The form hides the field for other types,
         // but an x-show'd input still submits, so a stale value (e.g. after switching
         // a mortgage to credit_card) would silently inflate totalMonthlyPayment().
-        if ($validated['liability_type'] !== 'mortgage') {
+        if (Liability::isRevolvingType($validated['liability_type'])) {
             $validated['escrow_amount'] = null;
         }
 

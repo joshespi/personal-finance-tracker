@@ -25,8 +25,7 @@
                         </label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 dark:text-gray-400 text-sm">$</span>
-                            <input type="number" name="starting_nw" value="{{ $startingNw }}" step="any"
-                                   class="pl-7 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                            <x-masked-money-input name="starting_nw" :value="$startingNw" :masked="$demo->isActive()" step="any" />
                         </div>
                     </div>
 
@@ -39,8 +38,7 @@
                         </label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 dark:text-gray-400 text-sm">$</span>
-                            <input type="number" name="monthly_savings" value="{{ $monthlySavings }}" step="any" min="0"
-                                   class="pl-7 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                            <x-masked-money-input name="monthly_savings" :value="$monthlySavings" :masked="$demo->isActive()" step="any" min="0" />
                         </div>
                     </div>
 
@@ -48,8 +46,7 @@
                         <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">FIRE Target <span class="text-gray-400 font-normal">(optional)</span></label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 dark:text-gray-400 text-sm">$</span>
-                            <input type="number" name="fire_target" value="{{ $fireTarget ?? '' }}" step="any" min="0" placeholder="1000000"
-                                   class="pl-7 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                            <x-masked-money-input name="fire_target" :value="$fireTarget ?? ''" :masked="$demo->isActive() && $fireTarget !== null" step="any" min="0" placeholder="1000000" />
                         </div>
                     </div>
 

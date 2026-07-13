@@ -67,7 +67,13 @@ class Liability extends Model
 
     public function isRevolving(): bool
     {
-        return $this->liability_type !== 'mortgage';
+        return self::isRevolvingType($this->liability_type);
+    }
+
+    /** Same rule as isRevolving(), usable before a model instance exists (e.g. on a not-yet-persisted validated payload). */
+    public static function isRevolvingType(string $liabilityType): bool
+    {
+        return $liabilityType !== 'mortgage';
     }
 
     public function currentBalance(): float

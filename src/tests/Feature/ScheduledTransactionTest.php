@@ -398,6 +398,34 @@ class ScheduledTransactionTest extends TestCase
         $this->assertDatabaseCount('liability_balances', 2);
     }
 
+    public function test_materialize_liability_payment_grows_balance_when_payment_below_interest(): void
+    {
+        $user      = User::factory()->create();
+        $account   = CashAccount::factory()->for($user)->create();
+        $liability = Liability::factory()->for($user)->create([
+            'liability_type'  => 'credit_card',
+            'interest_rate'   => 24,
+            'minimum_payment' => 75,
+        ]);
+        LiabilityBalance::factory()->for($liability)->create([
+            'balance'     => 10000,
+            'recorded_at' => today()->subMonth(),
+        ]);
+        ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->for($liability, 'liability')->pastDue()->create([
+            'type'   => 'mortgage_payment',
+            'amount' => 75,
+        ]);
+
+        app(ScheduledTransactionService::class)->materializeForUser($user);
+
+        // interest = 10000 * 24% / 12 = 200; payment (75) doesn't cover it, so the
+        // balance must grow by the shortfall (125), not stay frozen at 10000.
+        $this->assertDatabaseHas('liability_balances', [
+            'liability_id' => $liability->id,
+            'balance'      => 10125,
+        ]);
+    }
+
     public function test_materialize_mortgage_payment_skips_paydown_when_liability_missing(): void
     {
         $user    = User::factory()->create();

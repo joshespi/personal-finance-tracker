@@ -131,11 +131,13 @@ class ScheduledTransactionService
         $this->cashEntry($s, $date, $cleared, 'withdrawal', $s->envelope_id);
 
         if ($s->liability) {
-            $liability  = $s->liability;
-            $balance    = $liability->currentBalance();
-            $piPayment  = (float) ($liability->minimum_payment ?? 0);
-            $interest   = round($liability->monthlyInterest(), 2);
-            $principal  = max(0.0, round($piPayment - $interest, 2));
+            $liability = $s->liability;
+            $balance   = $liability->currentBalance();
+            $piPayment = (float) ($liability->minimum_payment ?? 0);
+            $interest  = round($liability->monthlyInterest(), 2);
+            // Negative when the payment doesn't cover interest — balance grows (negative amortization)
+            // instead of silently freezing, which matters once any liability type can be scheduled here.
+            $principal  = round($piPayment - $interest, 2);
             $newBalance = round(max(0.0, $balance - $principal), 2);
 
             LiabilityBalance::create([

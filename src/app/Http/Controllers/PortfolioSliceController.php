@@ -8,6 +8,7 @@ use App\Models\PortfolioSlice;
 use App\Services\AssetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class PortfolioSliceController extends Controller
 {
@@ -25,7 +26,10 @@ class PortfolioSliceController extends Controller
         $asset = Asset::where('symbol', $data['symbol'])->first();
 
         if (! $asset) {
-            return back()->withErrors(['symbol' => 'The selected symbol is invalid.'])->withInput();
+            // Fetch-then-check instead of Rule::exists so this stays one query, while
+            // still throwing a real ValidationException (422/session-errors, matching
+            // every other "entity must exist" endpoint) instead of a bare redirect.
+            throw ValidationException::withMessages(['symbol' => 'The selected symbol is invalid.']);
         }
 
         $portfolio->slices()->updateOrCreate(

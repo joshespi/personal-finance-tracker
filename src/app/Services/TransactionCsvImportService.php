@@ -2,12 +2,10 @@
 
 namespace App\Services;
 
-use App\Enums\AssetType;
-use App\Enums\TransactionType;
 use App\Models\Asset;
 use App\Models\Portfolio;
+use App\Models\Transaction;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 
 /** Per-portfolio transactions CSV importer (see routes/web.php's portfolios.transactions.import). */
 class TransactionCsvImportService
@@ -24,46 +22,41 @@ class TransactionCsvImportService
      */
     public function parse(string $path): array
     {
-        ['headers' => $headers, 'rows' => $raw] = $this->csv->parseCsv($path);
+        ['headers' => $headers, 'rows' => $raw, 'lineNumbers' => $lineNumbers] = $this->csv->parseCsv($path);
 
-        // The trailing notes column is optional.
-        if (count($headers) < count(self::COLUMNS) - 1) {
+        // 'notes' is the only optional column. A duplicate header name would make
+        // array_combine silently drop a column and misalign every field after it,
+        // so reject that up front rather than importing shifted data.
+        $requiredHeaders = array_slice(self::COLUMNS, 0, -1);
+        $hasDuplicates   = count($headers) !== count(array_unique($headers));
+        if ($hasDuplicates || array_diff($requiredHeaders, $headers) !== []) {
             return ['rows' => [], 'errors' => ['Invalid CSV format. Please use the provided template.']];
         }
 
         $rows   = [];
         $errors = [];
 
-        foreach ($raw as $i => $row) {
-            // Duplicate header names collapse keys in parseCsv's array_combine —
-            // pad so a malformed file yields row errors instead of a 500.
-            $cells = array_pad(array_values($row), count(self::COLUMNS) - 1, '');
+        $rules = Transaction::fieldRules() + [
+            'date' => ['required', 'date_format:Y-m-d'],
+        ];
 
+        foreach ($raw as $i => $row) {
             $data = [
-                'date'           => $cells[0],
-                'symbol'         => AssetService::normalizeSymbol($cells[1]),
-                'asset_type'     => $cells[2],
-                'type'           => $cells[3],
-                'quantity'       => $cells[4],
-                'price_per_unit' => $cells[5],
-                'fees'           => $cells[6] ?: '0',
-                'currency'       => strtoupper($cells[7]),
-                'notes'          => $cells[8] ?? '',
+                'date'           => $row['date'],
+                'symbol'         => AssetService::normalizeSymbol($row['symbol']),
+                'asset_type'     => $row['asset_type'],
+                'type'           => $row['type'],
+                'quantity'       => $row['quantity'],
+                'price_per_unit' => $row['price_per_unit'],
+                'fees'           => $row['fees'] ?: '0',
+                'currency'       => strtoupper($row['currency']),
+                'notes'          => $row['notes'] ?? '',
             ];
 
-            $v = Validator::make($data, [
-                'date'           => ['required', 'date_format:Y-m-d'],
-                'symbol'         => ['required', 'string', 'max:20'],
-                'asset_type'     => ['required', Rule::enum(AssetType::class)],
-                'type'           => ['required', Rule::enum(TransactionType::class)],
-                'quantity'       => ['required', 'numeric', 'gt:0'],
-                'price_per_unit' => ['required', 'numeric', 'gte:0'],
-                'fees'           => ['numeric', 'gte:0'],
-                'currency'       => ['required', 'string', 'size:3'],
-            ]);
+            $v = Validator::make($data, $rules);
 
             if ($v->fails()) {
-                $lineNum = $i + 2; // data rows start on line 2, after the header
+                $lineNum = $lineNumbers[$i];
                 foreach ($v->errors()->all() as $msg) {
                     $errors[] = "Row {$lineNum}: {$msg}";
                 }
@@ -95,7 +88,9 @@ class TransactionCsvImportService
         foreach ($rows as $row) {
             $asset = $assets->get($row['symbol']);
             if (! $asset) {
-                $asset = AssetService::findOrCreateBySymbol($row['symbol'], $row['asset_type']);
+                // The lookup above already proved this symbol is absent, so create directly
+                // rather than findOrCreateBySymbol()'s redundant existence-check SELECT.
+                $asset = AssetService::createBySymbol($row['symbol'], $row['asset_type']);
                 $assets->put($row['symbol'], $asset);
             }
 

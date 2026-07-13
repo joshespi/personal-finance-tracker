@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\DashboardWidget;
+use App\Enums\EmailSummaryFrequency;
+use App\Enums\EmailSummarySection;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -14,7 +16,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 
-#[Fillable(['name', 'email', 'password', 'is_admin', 'emergency_fund_target_months', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'notify_scheduled_transactions', 'dashboard_preferences'])]
+#[Fillable(['name', 'email', 'password', 'is_admin', 'emergency_fund_target_months', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'notify_scheduled_transactions', 'dashboard_preferences', 'email_summary_frequencies', 'email_summary_sections', 'last_email_summary_sent_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -34,6 +36,9 @@ class User extends Authenticatable implements MustVerifyEmail
             'target_bond_pct'               => 'decimal:2',
             'notify_scheduled_transactions' => 'boolean',
             'dashboard_preferences'         => 'array',
+            'email_summary_frequencies'     => 'array',
+            'email_summary_sections'        => 'array',
+            'last_email_summary_sent_at'    => 'datetime',
         ];
     }
 
@@ -47,6 +52,22 @@ class User extends Authenticatable implements MustVerifyEmail
         $key = $widget instanceof DashboardWidget ? $widget->value : $widget;
 
         return (bool) ($this->dashboard_preferences[$key] ?? true);
+    }
+
+    /** Whether this user opted into a given email-summary cadence. Off by default (opt-in). */
+    public function wantsEmailFrequency(EmailSummaryFrequency|string $frequency): bool
+    {
+        $value = $frequency instanceof EmailSummaryFrequency ? $frequency->value : $frequency;
+
+        return in_array($value, $this->email_summary_frequencies ?? [], true);
+    }
+
+    /** Whether this user opted into a given email-summary content section. Off by default (opt-in). */
+    public function wantsEmailSummarySection(EmailSummarySection|string $section): bool
+    {
+        $value = $section instanceof EmailSummarySection ? $section->value : $section;
+
+        return in_array($value, $this->email_summary_sections ?? [], true);
     }
 
     public function portfolios(): HasMany

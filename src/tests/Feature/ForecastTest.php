@@ -134,6 +134,22 @@ class ForecastTest extends TestCase
             ->assertDontSee('1,000,000');
     }
 
+    public function test_demo_mode_keeps_real_value_in_hidden_input_for_resubmission(): void
+    {
+        $user = User::factory()->create();
+
+        // The visible input must not carry the real number (it's disabled/masked),
+        // but a hidden input must, so clicking a Time Horizon button recomputes
+        // from the true starting_nw instead of compounding the demo-mode scale factor.
+        $response = $this->actingAs($user)
+            ->withSession(['demo_mode' => true])
+            ->get(route('forecast', ['starting_nw' => 950000, 'years' => 30]));
+
+        $response->assertOk()
+            ->assertSee('<input type="hidden" name="starting_nw" value="950000" />', false)
+            ->assertDontSee('value="950000" step="any"', false);
+    }
+
     public function test_milestone_hit_at_year_zero_when_already_above_threshold(): void
     {
         $user = User::factory()->create();
