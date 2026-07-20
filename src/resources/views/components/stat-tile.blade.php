@@ -5,7 +5,7 @@
             {{ $label }}
         </p>
     @endisset
-    <div class="[&>p]:!text-[clamp(0.85rem,2vw,1.5rem)]">
+    <div class="[&>p:first-of-type]:!text-[clamp(0.8rem,1.35vw,1.25rem)]">
         {{ $slot }}
     </div>
     @isset($caption)
