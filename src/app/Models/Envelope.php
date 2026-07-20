@@ -2,21 +2,20 @@
 
 namespace App\Models;
 
+use App\Concerns\HasOwnershipRule;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Exists;
 
 class Envelope extends Model
 {
-    use HasFactory;
+    use HasFactory, HasOwnershipRule;
 
     public const CATEGORY_ORDER = ['Emergency Fund', 'Mandatory', 'Wealth Building', 'Spending'];
 
-    protected $fillable = ['user_id', 'name', 'monthly_target', 'goal_amount', 'goal_date', 'color', 'sort_order', 'notes', 'is_mandatory', 'include_in_emergency_fund', 'is_emergency_fund', 'is_savings'];
+    protected $fillable = ['user_id', 'cash_account_id', 'name', 'monthly_target', 'goal_amount', 'goal_date', 'color', 'sort_order', 'notes', 'is_mandatory', 'include_in_emergency_fund', 'is_emergency_fund', 'is_savings'];
 
     public function category(): string
     {
@@ -38,15 +37,15 @@ class Envelope extends Model
         'is_savings'                => 'boolean',
     ];
 
-    /** Validation rule asserting an envelope_id belongs to the given user. */
-    public static function ownershipRule(int $userId): Exists
-    {
-        return Rule::exists('envelopes', 'id')->where('user_id', $userId);
-    }
-
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** The physical account this envelope's balance is meant to live in (optional). */
+    public function cashAccount(): BelongsTo
+    {
+        return $this->belongsTo(CashAccount::class);
     }
 
     public function transactions(): HasMany

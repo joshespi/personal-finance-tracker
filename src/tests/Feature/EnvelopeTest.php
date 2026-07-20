@@ -433,6 +433,58 @@ class EnvelopeTest extends TestCase
             ->assertSee('goal $2,500.00 / $10,000.00');
     }
 
+    public function test_create_envelope_linked_to_savings_account(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create(['account_type' => 'savings']);
+
+        $this->actingAs($user)
+            ->post(route('envelopes.store'), [
+                'name'            => 'Emergency Fund',
+                'color'           => '#10b981',
+                'cash_account_id' => $account->id,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('envelopes', [
+            'user_id'         => $user->id,
+            'name'            => 'Emergency Fund',
+            'cash_account_id' => $account->id,
+        ]);
+    }
+
+    public function test_cannot_link_envelope_to_non_savings_account_type(): void
+    {
+        $user     = User::factory()->create();
+        $checking = CashAccount::factory()->for($user)->create(['account_type' => 'checking']);
+
+        $this->actingAs($user)
+            ->post(route('envelopes.store'), [
+                'name'            => 'Emergency Fund',
+                'color'           => '#10b981',
+                'cash_account_id' => $checking->id,
+            ])
+            ->assertSessionHasErrors('cash_account_id');
+
+        $this->assertDatabaseMissing('envelopes', ['name' => 'Emergency Fund']);
+    }
+
+    public function test_cannot_link_envelope_to_other_users_cash_account(): void
+    {
+        $user         = User::factory()->create();
+        $otherAccount = CashAccount::factory()->create(['account_type' => 'savings']);
+
+        $this->actingAs($user)
+            ->post(route('envelopes.store'), [
+                'name'            => 'Emergency Fund',
+                'color'           => '#10b981',
+                'cash_account_id' => $otherAccount->id,
+            ])
+            ->assertSessionHasErrors('cash_account_id');
+
+        $this->assertDatabaseMissing('envelopes', ['name' => 'Emergency Fund']);
+    }
+
     public function test_goal_without_date_is_valid(): void
     {
         $user = User::factory()->create();

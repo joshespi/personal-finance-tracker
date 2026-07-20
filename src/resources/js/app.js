@@ -2,6 +2,15 @@ import './bootstrap';
 import './ticker-search';
 import { DEMO_MASK, fmtFull, fmtSigned } from './format-utils';
 
+// Whole-dollar display for interactive "type any number and see the split" widgets —
+// deliberately not demo-masked, since the figure being shown is whatever the visitor
+// just typed (not real account data), so masking it would defeat the widget's purpose.
+function fmtWhole(v) {
+    // A cleared or unparseable number input yields '' / NaN — show $0 rather than '$NaN'.
+    const n = Number(v);
+    return '$' + (Number.isFinite(n) ? Math.round(n) : 0).toLocaleString();
+}
+
 // Livewire bundles and starts its own Alpine instance (@livewireScripts in
 // layouts/app.blade.php loads it on every page, not just Livewire ones) — importing
 // a second copy here would race it and produce two competing Alpine instances, which
@@ -9,6 +18,17 @@ import { DEMO_MASK, fmtFull, fmtSigned } from './format-utils';
 // 'alpine:init' instead, which Alpine dispatches before it walks the DOM.
 
 document.addEventListener('alpine:init', () => {
+    window.Alpine.data('budgetCalculator', (income, mandatoryPct, discretionaryPct, savingsPct) => ({
+        income,
+        mandatoryPct,
+        discretionaryPct,
+        savingsPct,
+        fmt: fmtWhole,
+        get needs() { return this.income * this.mandatoryPct / 100; },
+        get wants() { return this.income * this.discretionaryPct / 100; },
+        get savings() { return this.income * this.savingsPct / 100; },
+    }));
+
     window.Alpine.data('holdingsSort', (rows) => {
         const demo = window.__demoMode ?? false;
         return {

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -89,7 +91,9 @@ class EnvelopeController extends Controller
 
     public function create(): View
     {
-        return view('envelopes.create');
+        return view('envelopes.create', [
+            'savingsAccounts' => $this->savingsAccounts(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -112,6 +116,7 @@ class EnvelopeController extends Controller
         $envelope->load([
             'transactions'      => fn ($q) => $q->where('type', 'fund')->orderByDesc('occurred_at')->orderByDesc('id'),
             'spendTransactions' => fn ($q) => $q->with('cashAccount:id,name')->orderByDesc('occurred_at')->orderByDesc('id'),
+            'cashAccount:id,name',
         ]);
         $envelope->current_balance  = $envelope->balance();
         $envelope->spent_this_month = $envelope->spentInMonth();
@@ -125,7 +130,10 @@ class EnvelopeController extends Controller
     {
         $this->authorize('update', $envelope);
 
-        return view('envelopes.edit', compact('envelope'));
+        return view('envelopes.edit', [
+            'envelope'        => $envelope,
+            'savingsAccounts' => $this->savingsAccounts(),
+        ]);
     }
 
     public function update(Request $request, Envelope $envelope): RedirectResponse
@@ -220,10 +228,24 @@ class EnvelopeController extends Controller
             ->update(['is_emergency_fund' => false]);
     }
 
+    /** Accounts eligible to hold this envelope's balance (see CashAccount::SAVINGS_TYPES). */
+    private function savingsAccounts(): Collection
+    {
+        return auth()->user()
+            ->cashAccounts()
+            ->whereIn('account_type', CashAccount::SAVINGS_TYPES)
+            ->orderBy('name')
+            ->get(['id', 'name', 'account_type']);
+    }
+
     private function validatePayload(Request $request): array
     {
         $validated = $request->validate([
-            'name'           => ['required', 'string', 'max:200'],
+            'name' => ['required', 'string', 'max:200'],
+            // Ownership *and* type: the picker only offers savings-type accounts, so accepting
+            // a checking account here would create a link the UI can neither show nor clear.
+            'cash_account_id' => ['nullable', 'integer', CashAccount::ownershipRule($request->user()->id)
+                ->whereIn('account_type', CashAccount::SAVINGS_TYPES)],
             'monthly_target' => ['nullable', 'numeric', 'gte:0'],
             'goal_amount'    => ['nullable', 'numeric', 'gte:0'],
             'goal_date'      => ['nullable', 'date'],

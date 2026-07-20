@@ -268,6 +268,58 @@
                 </p>
             </div>
 
+            @php
+                // Seed from real income normally; in demo mode use a round placeholder, since the
+                // seed lands in the DOM unmasked (everything typed after is the visitor's own number).
+                $seedIncome = $demo->isActive() ? 5000.0 : (float) ($data['monthly_income'] ?? 0);
+                $seedSplit  = fn ($pct) => '$'.number_format(round($seedIncome * $pct / 100));
+            @endphp
+            <div
+                x-data="budgetCalculator(
+                    {{ $seedIncome }},
+                    {{ (float) $targets['mandatory'] }},
+                    {{ (float) $targets['discretionary'] }},
+                    {{ (float) $targets['savings'] }}
+                )"
+                class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5 space-y-4"
+            >
+                <div>
+                    <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Try any amount</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        Not your real numbers — just applies the 50/30/20 split to whatever you type in.
+                    </p>
+                </div>
+
+                <div class="max-w-xs">
+                    <label for="manual-income" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly income</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-3 flex items-center text-gray-500 dark:text-gray-400 pointer-events-none">$</span>
+                        <input id="manual-income" type="number" min="0" step="0.01" x-model.number="income"
+                               class="block w-full pl-7 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {{-- Tiles are pre-rendered with the seeded split so they read correctly before
+                         Alpine hydrates; x-text overwrites them on init and on every keystroke. --}}
+                    <x-stat-tile>
+                        <x-slot:label>Needs</x-slot:label>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-indigo-600 dark:text-indigo-400" x-text="fmt(needs)">{{ $seedSplit($targets['mandatory']) }}</p>
+                        <x-slot:caption><span x-text="mandatoryPct">{{ $targets['mandatory'] }}</span>%</x-slot:caption>
+                    </x-stat-tile>
+                    <x-stat-tile>
+                        <x-slot:label>Wants</x-slot:label>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-sky-600 dark:text-sky-400" x-text="fmt(wants)">{{ $seedSplit($targets['discretionary']) }}</p>
+                        <x-slot:caption><span x-text="discretionaryPct">{{ $targets['discretionary'] }}</span>%</x-slot:caption>
+                    </x-stat-tile>
+                    <x-stat-tile>
+                        <x-slot:label>Wealth Building</x-slot:label>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-emerald-600 dark:text-emerald-400" x-text="fmt(savings)">{{ $seedSplit($targets['savings']) }}</p>
+                        <x-slot:caption><span x-text="savingsPct">{{ $targets['savings'] }}</span>%</x-slot:caption>
+                    </x-stat-tile>
+                </div>
+            </div>
+
             @if (! $hasData)
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-sm text-gray-600 dark:text-gray-400 space-y-2">
                     <p class="font-semibold text-gray-800 dark:text-gray-200">No income recorded in the last 6 months.</p>

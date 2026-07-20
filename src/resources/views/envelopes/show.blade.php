@@ -9,6 +9,11 @@
                     <span class="inline-block w-3 h-3 rounded-full" style="background-color: {{ $envelope->color }}"></span>
                     <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">{{ $envelope->name }}</h2>
                 </div>
+                @if ($envelope->cashAccount)
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        Lives in <a href="{{ route('cash-accounts.show', $envelope->cashAccount) }}" class="hover:underline">{{ $envelope->cashAccount->name }}</a>
+                    </p>
+                @endif
             </div>
             <div class="flex items-center gap-2">
                 <a href="{{ route('envelopes.edit', $envelope) }}"

@@ -75,6 +75,72 @@
                 </div>
             @endif
 
+            @if (! is_null($savingsEnvelopes))
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Savings Reconciliation</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">What this account should hold vs. what it actually holds, based on the envelopes linked to it.</p>
+                    </div>
+
+                    @if ($savingsEnvelopes->isEmpty())
+                        <div class="p-6 text-sm text-gray-500 dark:text-gray-400">
+                            No envelopes are linked to this account yet. Set an envelope's "Lives in account" field to track an emergency fund or savings goal here.
+                        </div>
+                    @else
+                        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach ($savingsEnvelopes as $e)
+                                <div class="px-6 py-3 flex items-center justify-between text-sm">
+                                    <a href="{{ route('envelopes.show', $e) }}" class="flex items-center gap-2 hover:underline">
+                                        <span class="inline-block w-2.5 h-2.5 rounded-full" style="background-color: {{ $e->color }}"></span>
+                                        <span class="text-gray-700 dark:text-gray-300">{{ $e->name }}</span>
+                                    </a>
+                                    <span class="font-mono text-gray-900 dark:text-gray-100">${{ $demo->amt($e->current_balance) }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Should hold</p>
+                                <p class="mt-0.5 font-mono font-semibold text-gray-900 dark:text-gray-100">${{ $demo->amt($expectedTotal) }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Actually holds</p>
+                                <p class="mt-0.5 font-mono font-semibold text-gray-900 dark:text-gray-100">${{ $demo->amt($account->current_balance) }}</p>
+                                @php($uncleared = round($account->current_balance - $account->cleared_balance, 2))
+                                @if ($uncleared != 0.0)
+                                    {{-- Working balance, so uncleared activity is already counted — say so, otherwise
+                                         the difference below looks wrong against what the bank currently reports. --}}
+                                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">includes ${{ $demo->amt($uncleared) }} uncleared</p>
+                                @endif
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Difference</p>
+                                <p class="mt-0.5 font-mono font-semibold {{ match ($deltaStatus) { 'short' => 'text-red-600 dark:text-red-400', 'over' => 'text-green-600 dark:text-green-400', default => 'text-gray-900 dark:text-gray-100' } }}">
+                                    {{ match ($deltaStatus) { 'short' => '−', 'over' => '+', default => '' } }}${{ $demo->amt(abs($delta)) }}
+                                </p>
+                            </div>
+                        </div>
+
+                        @if ($deltaStatus === 'short')
+                            <div class="mx-6 mb-4 rounded-md px-3 py-2 text-sm bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                                This account holds less than its linked envelopes expect — move money in from checking, or double-check recent spend.
+                            </div>
+                        @elseif ($deltaStatus === 'over')
+                            <div class="mx-6 mb-4 rounded-md px-3 py-2 text-sm bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                                This account holds more than its linked envelopes expect — available to assign to a goal or move to checking.
+                            </div>
+                        @endif
+
+                        @if ($untaggedThisMonth > 0)
+                            <div class="mx-6 mb-4 rounded-md px-3 py-2 text-xs bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+                                {{ $untaggedThisMonth }} withdrawal{{ $untaggedThisMonth === 1 ? '' : 's' }} from this account this month {{ $untaggedThisMonth === 1 ? "wasn't" : "weren't" }} tagged to an envelope.
+                            </div>
+                        @endif
+                    @endif
+                </div>
+            @endif
+
             <livewire:transaction-list :account="$account" />
 
         </div>

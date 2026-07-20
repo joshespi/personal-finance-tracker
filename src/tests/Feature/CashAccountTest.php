@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Livewire\TransactionList;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
+use App\Models\Envelope;
+use App\Models\EnvelopeTransaction;
 use App\Models\Liability;
 use App\Models\LiabilityBalance;
 use App\Models\Portfolio;
@@ -379,6 +381,81 @@ class CashAccountTest extends TestCase
         $response->assertSee('45.32')
             ->assertSee('Whole Foods')
             ->assertSee('wire:model', false);
+    }
+
+    public function test_show_displays_savings_reconciliation_surplus(): void
+    {
+        $account  = CashAccount::factory()->create(['account_type' => 'savings']);
+        $envelope = Envelope::factory()->for($account->user)->create(['cash_account_id' => $account->id, 'name' => 'Emergency Fund']);
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 3000]);
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create(['amount' => 5000]);
+
+        $this->actingAs($account->user)
+            ->get(route('cash-accounts.show', $account))
+            ->assertOk()
+            ->assertSee('Savings Reconciliation')
+            ->assertSee('Emergency Fund')
+            ->assertSee('holds more than its linked envelopes expect');
+    }
+
+    public function test_show_flags_shortfall_when_account_below_envelope_expectations(): void
+    {
+        $account  = CashAccount::factory()->create(['account_type' => 'savings']);
+        $envelope = Envelope::factory()->for($account->user)->create(['cash_account_id' => $account->id, 'name' => 'Down Payment']);
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 5000]);
+        CashTransaction::factory()->for($account, 'cashAccount')->deposit()->create(['amount' => 3000]);
+
+        $this->actingAs($account->user)
+            ->get(route('cash-accounts.show', $account))
+            ->assertOk()
+            ->assertSee('holds less than its linked envelopes expect');
+    }
+
+    public function test_show_hides_reconciliation_section_for_non_savings_account(): void
+    {
+        $account = CashAccount::factory()->create(['account_type' => 'checking']);
+
+        $this->actingAs($account->user)
+            ->get(route('cash-accounts.show', $account))
+            ->assertOk()
+            ->assertDontSee('Savings Reconciliation');
+    }
+
+    public function test_show_flags_untagged_withdrawals_this_month(): void
+    {
+        $account = CashAccount::factory()->create(['account_type' => 'savings']);
+        Envelope::factory()->for($account->user)->create(['cash_account_id' => $account->id]);
+        CashTransaction::factory()->for($account, 'cashAccount')->withdrawal()->create([
+            'amount'      => 100,
+            'occurred_at' => now(),
+        ]);
+
+        $this->actingAs($account->user)
+            ->get(route('cash-accounts.show', $account))
+            ->assertOk()
+            ->assertSee("1 withdrawal from this account this month wasn't tagged to an envelope.");
+    }
+
+    public function test_transfers_out_are_not_counted_as_untagged_withdrawals(): void
+    {
+        $account = CashAccount::factory()->create(['account_type' => 'savings']);
+        $other   = CashAccount::factory()->for($account->user)->create(['account_type' => 'checking']);
+        Envelope::factory()->for($account->user)->create(['cash_account_id' => $account->id]);
+
+        $in = CashTransaction::factory()->for($other, 'cashAccount')->deposit()->create([
+            'amount'      => 100,
+            'occurred_at' => now(),
+        ]);
+        CashTransaction::factory()->for($account, 'cashAccount')->withdrawal()->create([
+            'amount'                => 100,
+            'occurred_at'           => now(),
+            'linked_transaction_id' => $in->id,
+        ]);
+
+        $this->actingAs($account->user)
+            ->get(route('cash-accounts.show', $account))
+            ->assertOk()
+            ->assertDontSee('tagged to an envelope');
     }
 
     public function test_dashboard_includes_cash_in_net_worth(): void

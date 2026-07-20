@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CashAccount;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -72,6 +73,7 @@ class CashAccountController extends Controller
         return view('cash-accounts.show', [
             'account'      => $cashAccount,
             'accountTypes' => self::ACCOUNT_TYPES,
+            ...$this->reconciliation($cashAccount),
         ]);
     }
 
@@ -136,6 +138,58 @@ class CashAccountController extends Controller
 
         return redirect()->route('cash-accounts.show', $cashAccount)
             ->with('success', "Reconciled — {$sign}\${$amt} adjustment recorded.");
+    }
+
+    /**
+     * "Should hold vs. actually holds" for a savings-type account, derived from the
+     * envelopes linked to it. Non-savings accounts get a null envelope collection so
+     * the view can skip the whole panel.
+     *
+     * @return array{savingsEnvelopes: ?Collection, expectedTotal: float, delta: float, deltaStatus: string, untaggedThisMonth: int}
+     */
+    private function reconciliation(CashAccount $cashAccount): array
+    {
+        $empty = [
+            'savingsEnvelopes'  => null,
+            'expectedTotal'     => 0.0,
+            'delta'             => 0.0,
+            'deltaStatus'       => 'even',
+            'untaggedThisMonth' => 0,
+        ];
+
+        if (! $cashAccount->isSavingsType()) {
+            return $empty;
+        }
+
+        $envelopes = $cashAccount->envelopes()
+            ->withBalanceTotals()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->each(fn ($e) => $e->current_balance = $e->balance());
+
+        $expectedTotal = round($envelopes->sum('current_balance'), 2);
+        $delta         = round($cashAccount->current_balance - $expectedTotal, 2);
+
+        // Withdrawals not tagged to an envelope this month — a nudge that spend may have
+        // come straight out of savings without being reconciled against a goal. Transfer
+        // legs carry a linked_transaction_id and are excluded: moving money to another
+        // account of your own isn't untracked spend.
+        $untagged = $cashAccount->transactions()
+            ->withdrawals()
+            ->whereNull('envelope_id')
+            ->whereNull('linked_transaction_id')
+            ->whereBetween('occurred_at', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
+            ->count();
+
+        return [
+            ...$empty,
+            'savingsEnvelopes'  => $envelopes,
+            'expectedTotal'     => $expectedTotal,
+            'delta'             => $delta,
+            'deltaStatus'       => $delta < -0.005 ? 'short' : ($delta > 0.005 ? 'over' : 'even'),
+            'untaggedThisMonth' => $untagged,
+        ];
     }
 
     private function validatePayload(Request $request): array

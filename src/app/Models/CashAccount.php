@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\HasOwnershipRule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CashAccount extends Model
 {
-    use HasFactory;
+    use HasFactory, HasOwnershipRule;
+
+    /** account_type values eligible to hold envelope-linked savings balances (see `envelopes()`). */
+    public const SAVINGS_TYPES = ['savings', 'money_market', 'cd'];
 
     protected $fillable = ['user_id', 'name', 'account_type', 'currency', 'notes', 'interest_rate', 'billing_day'];
 
@@ -18,6 +22,11 @@ class CashAccount extends Model
         'interest_rate' => 'decimal:2',
         'billing_day'   => 'integer',
     ];
+
+    public function isSavingsType(): bool
+    {
+        return in_array($this->account_type, self::SAVINGS_TYPES, true);
+    }
 
     public function user(): BelongsTo
     {
@@ -32,6 +41,12 @@ class CashAccount extends Model
     public function scheduledTransactions(): HasMany
     {
         return $this->hasMany(ScheduledTransaction::class);
+    }
+
+    /** Envelopes whose balance is meant to live in this account (emergency fund, savings goals). */
+    public function envelopes(): HasMany
+    {
+        return $this->hasMany(Envelope::class);
     }
 
     /**

@@ -37,6 +37,28 @@
     </div>
 
     <div>
+        <x-input-label for="cash_account_id" value="Lives in account (optional)" />
+        {{-- Rendered even with no eligible accounts (disabled, so it submits nothing and leaves any
+             existing link untouched) — hiding it outright made an already-linked envelope look
+             unlinked with no way to change it. --}}
+        <select id="cash_account_id" name="cash_account_id" @disabled($savingsAccounts->isEmpty())
+                class="mt-1 block w-48 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm disabled:opacity-50">
+            <option value="">— None —</option>
+            @foreach ($savingsAccounts as $ca)
+                <option value="{{ $ca->id }}" @selected((string) old('cash_account_id', $e?->cash_account_id) === (string) $ca->id)>{{ $ca->name }}</option>
+            @endforeach
+        </select>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            @if ($savingsAccounts->isEmpty())
+                Add a savings, money market, or CD account first to link this envelope to one
+            @else
+                Which savings account this balance should sit in — lets that account's page show whether it actually holds it
+            @endif
+        </p>
+        <x-input-error :messages="$errors->get('cash_account_id')" class="mt-2" />
+    </div>
+
+    <div>
         <x-input-label for="color" value="Color" />
         <input id="color" name="color" type="color"
                value="{{ old('color', $e?->color ?? '#6366f1') }}"
