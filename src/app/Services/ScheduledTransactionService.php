@@ -23,6 +23,10 @@ class ScheduledTransactionService
             ->with(['envelope', 'cashAccount', 'liability.latestBalance'])
             ->get();
 
+        if ($due->isEmpty()) {
+            return $due;
+        }
+
         DB::transaction(function () use ($due) {
             foreach ($due as $scheduled) {
                 $this->materializeOne($scheduled);

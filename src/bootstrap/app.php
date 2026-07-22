@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\HandleImpersonation;
+use App\Http\Middleware\MaterializeDueScheduledTransactions;
 use App\Http\Middleware\ShareDemoMode;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias(['admin' => EnsureUserIsAdmin::class]);
         $middleware->appendToGroup('web', HandleImpersonation::class);
         $middleware->appendToGroup('web', ShareDemoMode::class);
+        $middleware->appendToGroup('web', MaterializeDueScheduledTransactions::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -2,18 +2,16 @@
 
 namespace App\Policies;
 
-use App\Models\Transaction;
-use App\Models\User;
+use App\Concerns\AuthorizesOwnerDelete;
+use App\Concerns\AuthorizesOwnerUpdate;
+use Illuminate\Database\Eloquent\Model;
 
 class TransactionPolicy
 {
-    public function update(User $user, Transaction $transaction): bool
-    {
-        return $user->id === $transaction->portfolio->user_id;
-    }
+    use AuthorizesOwnerDelete, AuthorizesOwnerUpdate;
 
-    public function delete(User $user, Transaction $transaction): bool
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $transaction->portfolio->user_id;
+        return $model->portfolio->user_id;
     }
 }

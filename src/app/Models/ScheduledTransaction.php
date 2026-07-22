@@ -73,4 +73,16 @@ class ScheduledTransaction extends Model
     {
         return ($this->recurrence ?? Recurrence::Monthly)->label();
     }
+
+    public function toBackupArray(): array
+    {
+        return [
+            'description' => $this->description,
+            'amount'      => (float) $this->amount,
+            'type'        => $this->type,
+            'recurrence'  => $this->recurrence?->value,
+            'next_due_at' => $this->next_due_at?->toDateString(),
+            'is_active'   => (bool) $this->is_active,
+        ];
+    }
 }

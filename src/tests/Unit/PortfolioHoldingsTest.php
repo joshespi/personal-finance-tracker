@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\AssetPrice;
 use App\Models\Portfolio;
 use App\Models\Transaction;
+use App\Services\RealizedGainService;
 use Tests\TestCase;
 
 class PortfolioHoldingsTest extends TestCase
@@ -121,7 +122,13 @@ class PortfolioHoldingsTest extends TestCase
         $this->assertNull($h['unrealized_gain']);
     }
 
-    public function test_multiple_buys_average_cost(): void
+    /**
+     * With no sell yet, every buy is still a fully open FIFO lot — so summed cost and
+     * average cost are the same whether you get there by FIFO or by weighted-average.
+     * This case can't distinguish the two conventions; see
+     * test_partial_sell_after_multiple_buys_uses_fifo_not_average() for one that can.
+     */
+    public function test_multiple_buys_sums_cost_across_open_lots(): void
     {
         $portfolio = Portfolio::factory()->create();
         $asset     = $this->pricedAsset('BTC', 60000.0);
@@ -138,6 +145,67 @@ class PortfolioHoldingsTest extends TestCase
         $this->assertEquals(40000.0, $h['avg_cost']);
         $this->assertEquals(120000.0, $h['current_value']);
         $this->assertEquals(40000.0, $h['unrealized_gain']);
+    }
+
+    /**
+     * Two buys at different prices, then a partial sell — this is the case that
+     * actually distinguishes FIFO from weighted-average. FIFO consumes the older
+     * (cheaper) lot first, leaving the newer, pricier lot as the remaining cost basis;
+     * weighted-average would instead deduct a blended $40,000/unit and leave
+     * total_cost=$40,000. Locks in the FIFO convention computeHoldings() now uses,
+     * matching RealizedGainService's realized-gain lots (see reconciliation test below).
+     */
+    public function test_partial_sell_after_multiple_buys_uses_fifo_not_average(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = $this->pricedAsset('BTC', 60000.0);
+
+        Transaction::factory()->for($portfolio)->for($asset)->buy()
+            ->create(['quantity' => 1.0, 'price_per_unit' => 30000.0, 'transacted_at' => '2024-01-01']);
+        Transaction::factory()->for($portfolio)->for($asset)->buy()
+            ->create(['quantity' => 1.0, 'price_per_unit' => 50000.0, 'transacted_at' => '2024-06-01']);
+        Transaction::factory()->for($portfolio)->for($asset)->sell()
+            ->create(['quantity' => 1.0, 'price_per_unit' => 45000.0, 'transacted_at' => '2024-09-01']);
+
+        $h = $this->loadHoldings($portfolio)->first();
+
+        $this->assertEquals(1.0, $h['quantity']);
+        // FIFO: the $30,000 lot was consumed by the sale; the $50,000 lot remains.
+        $this->assertEquals(50000.0, $h['total_cost']);
+        $this->assertEquals(50000.0, $h['avg_cost']);
+        $this->assertEquals(60000.0, $h['current_value']);
+        $this->assertEquals(10000.0, $h['unrealized_gain']);
+    }
+
+    /**
+     * The reconciliation guarantee FIFO cost basis buys: a position's unrealized gain
+     * (from computeHoldings, on the still-open lot) plus its already-booked realized
+     * gain (from RealizedGainService, FIFO'd off the same lots) must equal the total
+     * economic gain of buying both lots and eventually selling everything at the
+     * current price. Under the old weighted-average cost basis this did not hold.
+     */
+    public function test_unrealized_plus_realized_gain_reconciles_with_fifo(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = $this->pricedAsset('BTC', 60000.0);
+
+        Transaction::factory()->for($portfolio)->for($asset)->buy()
+            ->create(['quantity' => 1.0, 'price_per_unit' => 30000.0, 'transacted_at' => '2024-01-01']);
+        Transaction::factory()->for($portfolio)->for($asset)->buy()
+            ->create(['quantity' => 1.0, 'price_per_unit' => 50000.0, 'transacted_at' => '2024-06-01']);
+        Transaction::factory()->for($portfolio)->for($asset)->sell()
+            ->create(['quantity' => 1.0, 'price_per_unit' => 45000.0, 'transacted_at' => '2024-09-01']);
+
+        $h = $this->loadHoldings($portfolio)->first();
+
+        $portfolio->load('transactions.asset');
+        $realized = (new RealizedGainService)->compute($portfolio);
+
+        // Total economic gain: bought $30k + $50k = $80k, sold one lot for $45k and the
+        // other (marked-to-market) for $60k = $105k proceeds. $105k - $80k = $25k.
+        $totalGain = $realized['totalGain'] + $h['unrealized_gain'];
+        $this->assertEquals(25000.0, $totalGain);
+        $this->assertEquals(15000.0, $realized['totalGain']); // 45000 - 30000 (FIFO: the cheap lot was sold)
     }
 
     public function test_fees_included_in_cost_basis(): void

@@ -1,6 +1,6 @@
 <x-app-layout>
     @push('head-vite')
-        @vite(['resources/js/chartjs.js'])
+        @vite(['resources/js/chartjs.js', 'resources/js/dividends-charts.js'])
     @endpush
 
     <x-slot name="header">
@@ -104,48 +104,8 @@
     </div>
 
     @push('scripts')
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const ctx = document.getElementById('dividendChart');
-        if (!ctx) return; // no chart to draw in the "no dividends yet" empty state
-
-        const monthData = @json(array_values($byMonth));
-        const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        const { gridColor, labelColor: textColor } = window.themeColors();
-
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Dividends',
-                    data: monthData,
-                    backgroundColor: 'rgba(99,102,241,0.7)',
-                    borderRadius: 4,
-                }],
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) },
-                    },
-                },
-                scales: {
-                    x: { grid: { color: gridColor }, ticks: { color: textColor } },
-                    y: {
-                        grid: { color: gridColor },
-                        ticks: {
-                            color: textColor,
-                            callback: v => '$' + v.toFixed(0),
-                        },
-                        beginAtZero: true,
-                    },
-                },
-            },
-        });
-    });
-    </script>
+    {{-- Chart data only — dividends-charts.js (pushed to head-vite above) owns all
+         Chart.js setup and reads this blob on DOMContentLoaded. --}}
+    <script>window.__dividendsChart = @json(['byMonth' => array_values($byMonth)]);</script>
     @endpush
 </x-app-layout>

@@ -81,9 +81,32 @@ class Liability extends Model
         return $this->latestBalance ? (float) $this->latestBalance->balance : 0.0;
     }
 
-    /** Unrounded monthly interest accrual on the current balance at the stored APR. */
+    /**
+     * Unrounded monthly interest accrual on the current balance at the stored APR.
+     *
+     * FLAGGED, not fixed: a credit-card CashAccount computes the identical formula
+     * independently in resources/views/cash-accounts/show.blade.php (it isn't a
+     * Liability row, so it can't call this method) — the debt-payoff/allocator
+     * calculators only ever see Liability, so a credit card tracked purely as a
+     * CashAccount is invisible to them. Reconciling the two "debt with an APR" models
+     * is a product decision (e.g. should every credit-card CashAccount imply a
+     * shadow Liability?), not a mechanical dedup — left as-is pending that decision.
+     */
     public function monthlyInterest(): float
     {
         return $this->currentBalance() * ((float) ($this->interest_rate ?? 0) / 100 / 12);
+    }
+
+    public function toBackupArray(): array
+    {
+        return [
+            'name'            => $this->name,
+            'liability_type'  => $this->liability_type,
+            'interest_rate'   => $this->interest_rate !== null ? (float) $this->interest_rate : null,
+            'minimum_payment' => $this->minimum_payment !== null ? (float) $this->minimum_payment : null,
+            'currency'        => $this->currency,
+            'notes'           => $this->notes,
+            'balances'        => $this->balances->map(fn ($b) => $b->toBackupArray())->values(),
+        ];
     }
 }

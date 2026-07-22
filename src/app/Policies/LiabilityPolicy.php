@@ -2,23 +2,15 @@
 
 namespace App\Policies;
 
-use App\Models\Liability;
-use App\Models\User;
+use App\Concerns\AuthorizesOwner;
+use Illuminate\Database\Eloquent\Model;
 
 class LiabilityPolicy
 {
-    public function view(User $user, Liability $liability): bool
-    {
-        return $user->id === $liability->user_id;
-    }
+    use AuthorizesOwner;
 
-    public function update(User $user, Liability $liability): bool
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $liability->user_id;
-    }
-
-    public function delete(User $user, Liability $liability): bool
-    {
-        return $user->id === $liability->user_id;
+        return $model->user_id;
     }
 }

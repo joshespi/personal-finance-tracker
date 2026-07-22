@@ -82,13 +82,43 @@ class ManualAsset extends Model
     {
         if ($this->isProxyTracked()) {
             $price = $this->proxyAsset?->latestPrice?->price;
-            if ($price !== null && $this->anchor_synthetic_shares !== null) {
-                return round((float) $this->anchor_synthetic_shares * (float) $price, 2);
-            }
 
-            return (float) ($this->anchor_value ?? 0.0);
+            return $this->proxyValueAt(
+                $price !== null ? (float) $price : null,
+                $this->anchor_synthetic_shares !== null ? (float) $this->anchor_synthetic_shares : null,
+            );
         }
 
         return $this->latestValuation ? (float) $this->latestValuation->value : 0.0;
+    }
+
+    /**
+     * Value of a proxy-tracked asset given an already-resolved price and share count —
+     * shared by the live currentValue() above (latest price, stored share count) and
+     * PortfolioSnapshotBackfillService's historical path (as-of-date price, a share count
+     * that's sometimes derived rather than stored), which differ only in how those two
+     * inputs get resolved. Falls back to the stored anchor snapshot when either is
+     * unavailable, or when shares resolve to zero.
+     */
+    public function proxyValueAt(?float $price, ?float $shares): float
+    {
+        if ($price !== null && $shares !== null && $shares > 0) {
+            return round($shares * $price, 2);
+        }
+
+        return (float) ($this->anchor_value ?? 0.0);
+    }
+
+    public function toBackupArray(): array
+    {
+        return [
+            'name'            => $this->name,
+            'asset_class'     => $this->asset_class,
+            'cost_basis'      => $this->cost_basis !== null ? (float) $this->cost_basis : null,
+            'currency'        => $this->currency,
+            'tracking_method' => $this->tracking_method,
+            'description'     => $this->description,
+            'valuations'      => $this->valuations->map(fn ($v) => $v->toBackupArray())->values(),
+        ];
     }
 }

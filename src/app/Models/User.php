@@ -75,11 +75,6 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Portfolio::class);
     }
 
-    public function watchlistItems(): HasMany
-    {
-        return $this->hasMany(WatchlistItem::class);
-    }
-
     public function assetClassifications(): HasMany
     {
         return $this->hasMany(UserAssetClassification::class);
@@ -138,11 +133,6 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(ScheduledTransaction::class);
     }
 
-    public function incomeEntries(): HasMany
-    {
-        return $this->hasMany(IncomeEntry::class);
-    }
-
     public function incomeCategories(): HasMany
     {
         return $this->hasMany(IncomeCategory::class);
@@ -165,6 +155,25 @@ class User extends Authenticatable implements MustVerifyEmail
     public function incomeForTrailingMonths(int $months): float
     {
         return (float) $this->cashDeposits()
+            ->whereBetween('cash_transactions.occurred_at', [
+                now()->subMonths($months)->startOfMonth(),
+                now()->subMonth()->endOfMonth(),
+            ])
+            ->sum('cash_transactions.amount');
+    }
+
+    /**
+     * The spend-side mirror of incomeForTrailingMonths() — total envelope-tagged
+     * withdrawals over the last $months *complete* calendar months, same
+     * complete-months convention, so "monthly income" and "monthly spend" stay
+     * comparable wherever both are used together (e.g. a savings-rate calculation).
+     */
+    public function spendForTrailingMonths(int $months): float
+    {
+        return (float) CashTransaction::query()
+            ->join('envelopes', 'envelopes.id', '=', 'cash_transactions.envelope_id')
+            ->where('envelopes.user_id', $this->id)
+            ->where('cash_transactions.type', 'withdrawal')
             ->whereBetween('cash_transactions.occurred_at', [
                 now()->subMonths($months)->startOfMonth(),
                 now()->subMonth()->endOfMonth(),

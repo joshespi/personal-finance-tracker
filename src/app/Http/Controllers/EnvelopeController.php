@@ -77,7 +77,7 @@ class EnvelopeController extends Controller
             2
         );
 
-        $readyToAssign = round($request->user()->totalCash() - $totalBalance, 2);
+        $readyToAssign = $request->user()->readyToAssign();
 
         ['prevMonth' => $prevMonth, 'nextMonth' => $nextMonth, 'isCurrentMonth' => $isCurrentMonth] = $this->monthNav($month);
 

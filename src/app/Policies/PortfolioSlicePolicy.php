@@ -2,13 +2,15 @@
 
 namespace App\Policies;
 
-use App\Models\PortfolioSlice;
-use App\Models\User;
+use App\Concerns\AuthorizesOwnerDelete;
+use Illuminate\Database\Eloquent\Model;
 
 class PortfolioSlicePolicy
 {
-    public function delete(User $user, PortfolioSlice $portfolioSlice): bool
+    use AuthorizesOwnerDelete;
+
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $portfolioSlice->portfolio->user_id;
+        return $model->portfolio->user_id;
     }
 }

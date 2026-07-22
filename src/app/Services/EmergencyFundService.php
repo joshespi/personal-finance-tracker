@@ -24,19 +24,11 @@ class EmergencyFundService
      */
     public function compute(User $user): array
     {
-        $envelopes = $user->envelopes()
-            ->where(fn ($q) => $q->where('is_emergency_fund', true)
-                ->orWhere('is_mandatory', true)
-                ->orWhere('include_in_emergency_fund', true))
-            ->orderBy('sort_order')
-            ->get();
-
+        $envelopes         = $this->emergencyFundRelevantEnvelopes($user);
         $emergencyEnvelope = $envelopes->firstWhere('is_emergency_fund', true);
         // Necessities are always part of the target; the opt-in flag adds non-mandatory
         // essentials (e.g. groceries, fuel) without reclassifying them as a 50% Need.
-        $mandatoryEnvelopes = $envelopes
-            ->filter(fn ($e) => $e->is_mandatory || $e->include_in_emergency_fund)
-            ->values();
+        $mandatoryEnvelopes = $this->filterMandatory($envelopes);
 
         $monthlyBreakdown = $this->mandatorySpendBreakdown($user, $mandatoryEnvelopes);
         $monthlyBaseline  = round($monthlyBreakdown->sum('avg'), 2);
@@ -69,12 +61,26 @@ class EmergencyFundService
      */
     public function monthlyBaseline(User $user): float
     {
-        $mandatoryEnvelopes = $user->envelopes()
-            ->where(fn ($q) => $q->where('is_mandatory', true)
-                ->orWhere('include_in_emergency_fund', true))
-            ->get();
+        $mandatoryEnvelopes = $this->filterMandatory($this->emergencyFundRelevantEnvelopes($user));
 
         return round($this->mandatorySpendBreakdown($user, $mandatoryEnvelopes)->sum('avg'), 2);
+    }
+
+    /** Envelopes relevant to the emergency-fund calculation: the fund itself, plus mandatory/included spend envelopes. */
+    private function emergencyFundRelevantEnvelopes(User $user): Collection
+    {
+        return $user->envelopes()
+            ->where(fn ($q) => $q->where('is_emergency_fund', true)
+                ->orWhere('is_mandatory', true)
+                ->orWhere('include_in_emergency_fund', true))
+            ->orderBy('sort_order')
+            ->get();
+    }
+
+    /** Necessities are always part of the target; the opt-in flag adds non-mandatory essentials without reclassifying them as a 50% Need. */
+    private function filterMandatory(Collection $envelopes): Collection
+    {
+        return $envelopes->filter(fn ($e) => $e->is_mandatory || $e->include_in_emergency_fund)->values();
     }
 
     /**

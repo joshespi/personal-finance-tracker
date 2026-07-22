@@ -91,7 +91,7 @@ class EmailSummaryService
 
         $buys  = (float) $rows->filter(fn ($t) => $t->type->isInflow())->sum(fn ($t) => $t->totalCost());
         $sells = (float) $rows->filter(fn ($t) => $t->type->isOutflow())->sum(fn ($t) => $t->dividendValue());
-        $fees  = (float) $rows->sum(fn ($t) => $t->fee_in_asset ? 0.0 : (float) $t->fees);
+        $fees  = (float) $rows->sum(fn ($t) => $t->usdFee());
 
         return [
             'buys'             => round($buys, 2),
@@ -243,7 +243,7 @@ class EmailSummaryService
         // withCurrentBalance() aggregates deposits/withdrawals for every account in one
         // query (same helper CashAccountController uses) instead of balance() per account.
         $lowBalance = $user->cashAccounts()->withCurrentBalance()->get()
-            ->map(fn ($a) => ['account' => $a->name, 'balance' => round((float) ($a->deposits_total ?? 0) - (float) ($a->withdrawals_total ?? 0), 2)])
+            ->map(fn ($a) => ['account' => $a->name, 'balance' => round($a->currentBalanceFromSums(), 2)])
             ->filter(fn ($row) => $row['balance'] < 0)
             ->values();
 

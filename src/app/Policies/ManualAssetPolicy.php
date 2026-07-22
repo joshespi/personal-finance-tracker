@@ -2,23 +2,15 @@
 
 namespace App\Policies;
 
-use App\Models\ManualAsset;
-use App\Models\User;
+use App\Concerns\AuthorizesOwner;
+use Illuminate\Database\Eloquent\Model;
 
 class ManualAssetPolicy
 {
-    public function view(User $user, ManualAsset $manualAsset): bool
-    {
-        return $user->id === $manualAsset->portfolio->user_id;
-    }
+    use AuthorizesOwner;
 
-    public function update(User $user, ManualAsset $manualAsset): bool
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $manualAsset->portfolio->user_id;
-    }
-
-    public function delete(User $user, ManualAsset $manualAsset): bool
-    {
-        return $user->id === $manualAsset->portfolio->user_id;
+        return $model->portfolio->user_id;
     }
 }

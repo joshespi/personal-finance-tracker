@@ -116,4 +116,21 @@ class Envelope extends Model
             ->whereBetween('occurred_at', [$start, $end])
             ->sum('amount');
     }
+
+    public function toBackupArray(): array
+    {
+        return [
+            'name'              => $this->name,
+            'monthly_target'    => $this->monthly_target !== null ? (float) $this->monthly_target : null,
+            'goal_amount'       => $this->goal_amount !== null ? (float) $this->goal_amount : null,
+            'goal_date'         => $this->goal_date?->toDateString(),
+            'color'             => $this->color,
+            'sort_order'        => $this->sort_order,
+            'is_mandatory'      => (bool) $this->is_mandatory,
+            'is_emergency_fund' => (bool) $this->is_emergency_fund,
+            'is_savings'        => (bool) $this->is_savings,
+            'notes'             => $this->notes,
+            'transactions'      => $this->transactions->map(fn ($t) => $t->toBackupArray())->values(),
+        ];
+    }
 }

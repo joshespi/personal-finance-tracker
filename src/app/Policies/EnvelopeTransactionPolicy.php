@@ -2,13 +2,15 @@
 
 namespace App\Policies;
 
-use App\Models\EnvelopeTransaction;
-use App\Models\User;
+use App\Concerns\AuthorizesOwnerDelete;
+use Illuminate\Database\Eloquent\Model;
 
 class EnvelopeTransactionPolicy
 {
-    public function delete(User $user, EnvelopeTransaction $envelopeTransaction): bool
+    use AuthorizesOwnerDelete;
+
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $envelopeTransaction->envelope->user_id;
+        return $model->envelope->user_id;
     }
 }

@@ -6,7 +6,6 @@ use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
-use App\Models\IncomeEntry;
 use App\Models\User;
 use Tests\TestCase;
 
@@ -237,60 +236,5 @@ class ReadyToAssignTest extends TestCase
 
         // Cash: 1000-200=800, Envelope: 800, RTA: 800-800=0
         $this->assertEquals(0.0, $user->readyToAssign());
-    }
-
-    public function test_income_entry_store_requires_auth(): void
-    {
-        $this->post(route('income-entries.store'), ['amount' => 100, 'occurred_at' => now()->toDateString()])
-            ->assertRedirect(route('login'));
-    }
-
-    public function test_income_entry_store_creates_record(): void
-    {
-        $user = User::factory()->create();
-
-        $this->actingAs($user)->post(route('income-entries.store'), [
-            'amount'      => 3500,
-            'description' => 'Freelance',
-            'occurred_at' => now()->toDateString(),
-        ])->assertRedirect(route('ready-to-assign'));
-
-        $this->assertDatabaseHas('income_entries', [
-            'user_id' => $user->id,
-            'amount'  => 3500,
-        ]);
-    }
-
-    public function test_income_entry_store_validates_positive_amount(): void
-    {
-        $user = User::factory()->create();
-
-        $this->actingAs($user)->post(route('income-entries.store'), [
-            'amount'      => -100,
-            'occurred_at' => now()->toDateString(),
-        ])->assertSessionHasErrors('amount');
-    }
-
-    public function test_income_entry_destroy_requires_ownership(): void
-    {
-        $owner = User::factory()->create();
-        $other = User::factory()->create();
-        $entry = IncomeEntry::factory()->for($owner)->create();
-
-        $this->actingAs($other)
-            ->delete(route('income-entries.destroy', $entry))
-            ->assertForbidden();
-    }
-
-    public function test_income_entry_owner_can_delete(): void
-    {
-        $user  = User::factory()->create();
-        $entry = IncomeEntry::factory()->for($user)->create();
-
-        $this->actingAs($user)
-            ->delete(route('income-entries.destroy', $entry))
-            ->assertRedirect(route('ready-to-assign'));
-
-        $this->assertDatabaseMissing('income_entries', ['id' => $entry->id]);
     }
 }

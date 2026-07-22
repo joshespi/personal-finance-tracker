@@ -4,6 +4,41 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.10.0] - 2026-07-22
+
+### Added
+- **Savings reconciliation** — an envelope can now be linked to one of the user's savings-type cash accounts (savings, money market, CD) via a "Lives in account" field on the envelope form. The linked account's show page gains a Savings Reconciliation panel comparing what its linked envelopes say should be held against the account's actual balance (short/over/even), plus a count of this month's withdrawals from that account that weren't tagged to any envelope.
+- **Interactive 50/30/20 calculator** — the Budget Rule tab on `/analysis` now includes a "try any amount" widget: type any monthly income and see the Needs/Wants/Wealth-Building split recompute live, seeded from your real trailing income.
+- Scheduled-transaction materialization now runs on every authenticated request (`MaterializeDueScheduledTransactions` middleware), not only when opening the All Transactions ledger — envelope balances, Ready to Assign, and debt figures no longer depend on which page you open first. The daily `transactions:materialize` cron remains the sole trigger for the scheduled-transaction summary email.
+
+### Changed
+- Income is now recorded exclusively as a cash transaction tagged with an income category; the parallel "quick income entry" feature (`IncomeEntry` model/controller/policy, `/income-entries`) is removed, along with the last remnants of the earlier watchlist removal ([1.7.0]'s `WatchlistItem` model/factory).
+- Full-backup export no longer includes `income_entries` or `watchlist` keys, and is now built from a `toBackupArray()` method on each exportable model instead of inline per-model closures in `ExportController`.
+- Daily portfolio snapshot cron (`portfolios:snapshot`) now shares its valuation algorithm with the admin manual-backfill tool via `PortfolioSnapshotBackfillService`, instead of maintaining a separate holdings computation.
+- Policy authorization (`view`/`update`/`delete`) across all owned-model policies deduplicated into a shared `AuthorizesOwner` concern.
+- Portfolio allocation and slice-rebalancing calculations extracted from `PortfolioController` into `PortfolioAllocationService`.
+- Fee/quantity math consolidated onto `Transaction` (`usdFee()`, `quantityWithAssetFee()`, `netOfFee()`), replacing duplicated inline calculations in `RealizedGainService`, `EmailSummaryService`, `PortfolioTransferController`, and the transaction edit form.
+- Proxy-ticker manual asset valuation and cash-account balance summation extracted into reusable model methods (`ManualAsset::proxyValueAt()`, `CashAccount::currentBalanceFromSums()`), replacing hand-duplicated copies in the snapshot backfill service, email summary warnings, and the navigation sidebar.
+- Analysis/Planning page tab switchers now share a single `<x-tab-nav>` component instead of duplicated markup.
+- Removed the redundant direct cash-transaction "deposit" creation route, which duplicated the shared Livewire ledger form path.
+- Stat-tile figures use a tighter, first-line-only responsive font-size clamp so large numbers no longer oversize on narrow tiles.
+- The two Livewire ledger views (`transaction-list.blade.php`, `all-transactions.blade.php`) shared ~90% identical markup; extracted into four `resources/views/livewire/partials/*` includes (balance card, scheduled panel, record-transaction form, transaction table) parameterized for the single-account vs. cross-account cases. Removed the unused `alpinejs` devDependency (Livewire boots its own copy; a second import previously broke `wire:*` bindings app-wide) and added a Vitest guard that fails the build if anything reintroduces it.
+- Analysis/Planning/Forecast/Dividends pages no longer hand-roll Chart.js in inline `<script>` blocks with their own $-formatter reimplementations — each now has a real Vite entry (`analysis-charts.js`, `planning-charts.js`, `forecast-charts.js`, `dividends-charts.js`) importing the shared `chart-utils`/`format-utils` helpers, with the Blade views reduced to a small JSON data blob.
+- The debt-payoff snowball/avalanche simulation was implemented twice — once in `DebtPayoffService::simulate()` (PHP, initial page render) and again in a ~50-line hand-rolled Alpine method (JS, the live "extra payment" slider). The slider now calls a debounced `POST /planning/debt-payoff/simulate` endpoint backed by the same `DebtPayoffService`, so there is exactly one implementation of the payoff algorithm.
+- `RealizedGainService` split: its FIFO open-lot walk was duplicated between `compute()` (realized gains) and `openLotsForAsset()` (transfer cost-basis lookup) — both now share one `buildOpenLots()`. Time-weighted return (`computeTwr()`, an unrelated value-performance calculation that only lived here because it also took a `Portfolio`) moved to a new `PortfolioPerformanceService`.
+- **Unrealized cost basis is now FIFO, matching realized gains** (`Transaction::accumulateFifoCostBasis()`, replacing the old weighted-average `accumulateCostBasis()`). Previously the portfolio page's unrealized gain used a blended average cost while realized gains (tax summary, CSV export) used FIFO lots — the two didn't reconcile for a position that had been partially sold. This changes displayed `total_cost`/`avg_cost`/`unrealized_gain`/`unrealized_pct` figures (on the portfolio show page, dashboard net-worth rollup, and `portfolio_snapshots.cost_basis` going forward) for any position with multiple buy lots at different prices *and* at least one partial sell; quantity and market value are unaffected. Existing snapshot rows are not retroactively recomputed.
+- **Retirement and FIRE Forecast merged into one calculator.** The Retirement tab on `/planning` now has two modes — "Age-Based Target" (the existing 4%-rule/gap/benchmarks calculator) and "FIRE Trajectory" (the former standalone `/forecast` page's wealth-projection chart and milestones) — toggled without a page reload. `/forecast` now redirects into the trajectory mode, query params preserved, like the other consolidated planning pages. Each mode keeps its own contextually-correct starting-value default (portfolio value for the target; full net worth for the trajectory); "Expected Annual Return" is shared between both since it's the same real-world assumption either way.
+- The 365-day IRS long/short-term capital-gains threshold was independently re-derived in three places (`ExportController`'s realized-gains CSV, `TaxSummaryController`'s year grouping, and the portfolio show page's lot table). `RealizedGainService::compute()` now tags each realized-gain lot with `term` ('long'/'short') once; all three read that instead.
+- `DemoMode::scaleValues()` (a flat-array numeric scaler with exactly one call site) retired in favor of the already-existing `scaleAmounts()`, which does the same walk for any nested structure — one fewer near-duplicate entry point in the demo-mode scaling API.
+
+### Flagged (not fixed — needs a product decision)
+
+- Credit-card `CashAccount`s and `Liability` remain two unreconciled "debt with an APR" models: `Liability::monthlyInterest()` and the credit-card panel on `cash-accounts/show.blade.php` compute the identical monthly-interest formula independently, and the debt-payoff/allocator calculators only ever see `Liability` rows — a credit card tracked purely as a `CashAccount` is invisible to them. Reconciling the two (e.g. should a credit-card `CashAccount` imply a shadow `Liability`?) is a product decision, documented in code at both sites rather than silently picked.
+
+### Fixed
+- Nginx no longer caches a dead container IP for the PHP upstream after a redeploy — `fastcgi_pass` now resolves dynamically via Docker's embedded DNS instead of once at config load, eliminating post-deploy 502s.
+- `Transaction::totalCost()` no longer double-counts fees paid in-asset (`fee_in_asset` transactions) — cost basis for those buys was previously overstated.
+
 ## [1.9.0] - 2026-07-12
 
 ### Added

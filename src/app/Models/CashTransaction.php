@@ -83,4 +83,16 @@ class CashTransaction extends Model
     {
         return $this->linkedTo ?? $this->linkedFrom;
     }
+
+    public function toBackupArray(): array
+    {
+        return [
+            'date'            => $this->occurred_at->toDateString(),
+            'type'            => $this->type,
+            'amount'          => (float) $this->amount,
+            'description'     => $this->description,
+            'income_category' => $this->incomeCategory?->name,
+            'cleared'         => (bool) $this->cleared,
+        ];
+    }
 }

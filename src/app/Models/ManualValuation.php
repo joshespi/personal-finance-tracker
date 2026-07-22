@@ -21,4 +21,12 @@ class ManualValuation extends Model
     {
         return $this->belongsTo(ManualAsset::class);
     }
+
+    public function toBackupArray(): array
+    {
+        return [
+            'date'  => $this->valued_at->toDateString(),
+            'value' => (float) $this->value,
+        ];
+    }
 }

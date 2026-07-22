@@ -3,9 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\Portfolio;
-use App\Models\PortfolioSnapshot;
+use App\Services\PortfolioSnapshotBackfillService;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 class SnapshotPortfolios extends Command
 {
@@ -13,10 +13,15 @@ class SnapshotPortfolios extends Command
 
     protected $description = 'Record a daily value snapshot for every portfolio';
 
+    public function __construct(private PortfolioSnapshotBackfillService $backfillService)
+    {
+        parent::__construct();
+    }
+
     public function handle(): int
     {
-        $today      = now()->toDateString();
-        $portfolios = Portfolio::with(['transactions.asset.latestPrice', 'manualAssets.latestValuation', 'manualAssets.proxyAsset.latestPrice'])->get();
+        $today      = Carbon::now()->startOfDay();
+        $portfolios = $this->backfillService->resolvePortfolios(null);
 
         if ($portfolios->isEmpty()) {
             $this->info('No portfolios found.');
@@ -24,27 +29,13 @@ class SnapshotPortfolios extends Command
             return self::SUCCESS;
         }
 
-        DB::transaction(function () use ($portfolios, $today) {
-            foreach ($portfolios as $portfolio) {
-                $holdings = $portfolio->computeHoldings();
+        $allAssets = $this->backfillService->collectAssets($portfolios);
 
-                $costBasis   = $holdings->sum('total_cost');
-                $marketValue = $holdings->sum('effective_value');
-                $manualValue = $portfolio->chartManualValue();
-
-                PortfolioSnapshot::updateOrCreate(
-                    ['portfolio_id' => $portfolio->id, 'recorded_on' => $today],
-                    [
-                        'cost_basis'   => $costBasis,
-                        'market_value' => $marketValue,
-                        'manual_value' => $manualValue,
-                    ]
-                );
-
-                $total = round($marketValue + $manualValue, 2);
+        $this->backfillService->writeRange($portfolios, $allAssets, $today, $today, false,
+            function (string $date, Portfolio $portfolio, float $total) {
                 $this->line("  {$portfolio->name}: \${$total}");
             }
-        });
+        );
 
         $this->info('Snapshots recorded for '.$portfolios->count().' portfolio(s).');
 

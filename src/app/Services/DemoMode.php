@@ -44,6 +44,7 @@ class DemoMode
         return number_format($value, $decimals);
     }
 
+    /** Scales one number by the demo factor. For a whole chart-data structure, use scaleAmounts() instead. */
     public function scaleScalar(float|int $value): float|int
     {
         return $this->isActive() ? $value * $this->factor() : $value;
@@ -67,6 +68,7 @@ class DemoMode
         return self::TICKERS[abs(crc32($seed.$this->salt())) % count(self::TICKERS)];
     }
 
+    /** Recursively scales every float (or positive int) in an arbitrarily nested array/collection — chart data, allocation breakdowns, etc. For a single number, use scaleScalar() instead. */
     public function scaleAmounts(mixed $data): mixed
     {
         if (! $this->isActive()) {
@@ -74,15 +76,6 @@ class DemoMode
         }
 
         return $this->walk($data);
-    }
-
-    public function scaleValues(array $values): array
-    {
-        if (! $this->isActive()) {
-            return $values;
-        }
-
-        return array_map(fn ($v) => is_numeric($v) ? $v * $this->factor() : $v, $values);
     }
 
     public function scrambleHoldings(array $rows): array

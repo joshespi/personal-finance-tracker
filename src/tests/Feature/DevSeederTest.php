@@ -7,7 +7,6 @@ use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
-use App\Models\IncomeEntry;
 use App\Models\Liability;
 use App\Models\ManualAsset;
 use App\Models\Portfolio;
@@ -53,7 +52,6 @@ class DevSeederTest extends TestCase
         $this->assertSame(7, Envelope::where('user_id', $demo->id)->count());
         $this->assertTrue(Envelope::where('user_id', $demo->id)->where('is_emergency_fund', true)->exists());
         $this->assertTrue(Envelope::where('user_id', $demo->id)->whereNotNull('goal_amount')->exists());
-        $this->assertGreaterThanOrEqual(12, IncomeEntry::where('user_id', $demo->id)->count());
         $this->assertGreaterThanOrEqual(2, ScheduledTransaction::where('user_id', $demo->id)->count());
     }
 

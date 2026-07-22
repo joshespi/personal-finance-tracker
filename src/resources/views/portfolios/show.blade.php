@@ -435,7 +435,7 @@
                                         </td>
                                         <td class="px-6 py-3 text-right font-mono text-gray-500 dark:text-gray-400">
                                             {{ number_format($lot['holding_days']) }}
-                                            @if ($lot['holding_days'] >= 365)
+                                            @if ($lot['term'] === 'long')
                                                 <span class="text-xs text-green-500 ml-1">LT</span>
                                             @else
                                                 <span class="text-xs text-amber-500 ml-1">ST</span>

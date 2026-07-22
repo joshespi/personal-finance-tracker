@@ -18,9 +18,7 @@ use App\Http\Controllers\DividendController;
 use App\Http\Controllers\EnvelopeController;
 use App\Http\Controllers\EnvelopeTransactionController;
 use App\Http\Controllers\ExportController;
-use App\Http\Controllers\ForecastController;
 use App\Http\Controllers\IncomeCategoryController;
-use App\Http\Controllers\IncomeEntryController;
 use App\Http\Controllers\JournalEntryController;
 use App\Http\Controllers\LiabilityBalanceController;
 use App\Http\Controllers\LiabilityController;
@@ -124,8 +122,6 @@ Route::middleware('auth')->group(function () {
 
     Route::post('cash-accounts/{cashAccount}/reconcile', [CashAccountController::class, 'reconcile'])
         ->name('cash-accounts.reconcile');
-    Route::post('cash-accounts/{cashAccount}/transactions', [CashTransactionController::class, 'store'])
-        ->name('cash-accounts.transactions.store');
     Route::delete('cash-transactions/{transaction}', [CashTransactionController::class, 'destroy'])
         ->name('cash-accounts.transactions.destroy');
 
@@ -134,8 +130,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/analysis', AnalysisController::class)->name('analysis');
     Route::get('/planning', PlanningController::class)->name('planning');
-    // These six used to be standalone pages; each is now a tab of /analysis or
-    // /planning. Kept as redirects (not simply removed) so old bookmarks still land
+    Route::post('/planning/debt-payoff/simulate', [PlanningController::class, 'resimulateDebtPayoff'])
+        ->name('planning.debt-payoff.simulate');
+    // These used to be standalone pages; each is now a tab (or tab+mode) of /analysis
+    // or /planning. Kept as redirects (not simply removed) so old bookmarks still land
     // somewhere, mirroring the /ready-to-assign redirect below.
     Route::get('/cashflow', fn () => redirect()->route('analysis', [...request()->query(), 'tab' => 'cashflow']))->name('cashflow');
     Route::get('/spending-trends', fn () => redirect()->route('analysis', [...request()->query(), 'tab' => 'trends']))->name('spending-trends');
@@ -143,10 +141,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/debt-payoff', fn () => redirect()->route('planning', [...request()->query(), 'tab' => 'debt-payoff']))->name('debt-payoff');
     Route::get('/allocator', fn () => redirect()->route('planning', [...request()->query(), 'tab' => 'allocator']))->name('allocator');
     Route::get('/emergency-fund', fn () => redirect()->route('planning', [...request()->query(), 'tab' => 'emergency-fund']))->name('emergency-fund');
-    Route::get('/forecast', ForecastController::class)->name('forecast');
+    // FIRE Forecast is now the "trajectory" mode of the Retirement tab (was its own page).
+    Route::get('/forecast', fn () => redirect()->route('planning', [...request()->query(), 'tab' => 'retirement', 'mode' => 'trajectory']))->name('forecast');
     Route::get('/ready-to-assign', fn () => redirect()->route('envelopes.index'))->name('ready-to-assign');
-    Route::post('/income-entries', [IncomeEntryController::class, 'store'])->name('income-entries.store');
-    Route::delete('/income-entries/{incomeEntry}', [IncomeEntryController::class, 'destroy'])->name('income-entries.destroy');
 
     Route::resource('income-categories', IncomeCategoryController::class)->except(['show']);
 

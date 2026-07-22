@@ -6,11 +6,11 @@ use App\Enums\TransactionType;
 use App\Models\ActivityLog;
 use App\Models\Portfolio;
 use App\Services\BenchmarkService;
+use App\Services\PortfolioAllocationService;
+use App\Services\PortfolioPerformanceService;
 use App\Services\RealizedGainService;
-use App\Support\Rebalancing;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class PortfolioController extends Controller
@@ -43,7 +43,7 @@ class PortfolioController extends Controller
         return redirect()->route('portfolios.show', $portfolio)->with('success', 'Portfolio created.');
     }
 
-    public function show(Request $request, Portfolio $portfolio): View
+    public function show(Request $request, Portfolio $portfolio, RealizedGainService $gainService, PortfolioPerformanceService $performanceService, BenchmarkService $benchmarkService, PortfolioAllocationService $allocationService): View
     {
         $this->authorize('view', $portfolio);
 
@@ -70,12 +70,11 @@ class PortfolioController extends Controller
                 'cost'  => round((float) $s->cost_basis, 2),
             ])->values();
 
-        $gainService   = new RealizedGainService;
         $realizedGains = $gainService->compute($portfolio);
-        $twr           = $gainService->computeTwr($portfolio);
-        $benchmarkData = (new BenchmarkService)->all();
-        $allocation    = $this->buildAllocation($holdings, $portfolio);
-        $rebalancing   = $this->buildSliceRebalancing($holdings, $portfolio);
+        $twr           = $performanceService->computeTwr($portfolio);
+        $benchmarkData = $benchmarkService->all();
+        $allocation    = $allocationService->buildAllocation($holdings, $portfolio);
+        $rebalancing   = $allocationService->buildSliceRebalancing($holdings, $portfolio);
 
         return view('portfolios.show', compact(
             'portfolio', 'holdings', 'incomeByAsset', 'chartData',
@@ -163,54 +162,5 @@ class PortfolioController extends Controller
         $validated['is_tax_advantaged'] = $request->boolean('is_tax_advantaged');
 
         return $validated;
-    }
-
-    private function buildAllocation(Collection $holdings, Portfolio $portfolio): array
-    {
-        $byHolding = $holdings->map(fn ($h) => [
-            'symbol' => $h['asset']->symbol,
-            'value'  => round($h['effective_value'], 2),
-            'type'   => $h['asset']->asset_type,
-        ])->sortByDesc('value')->values();
-
-        $manualValue = $portfolio->chartManualValue();
-
-        $total = $byHolding->sum('value') + $manualValue;
-
-        return [
-            'holdings'     => $byHolding,
-            'manual_value' => round($manualValue, 2),
-            'total'        => round($total, 2),
-        ];
-    }
-
-    private function buildSliceRebalancing(Collection $holdings, Portfolio $portfolio): array
-    {
-        $slices = $portfolio->slices;
-
-        if ($slices->isEmpty()) {
-            return [];
-        }
-
-        $holdingsByAssetId = $holdings->keyBy(fn ($h) => $h['asset']->id);
-
-        $total = $holdings->sum('effective_value') + $portfolio->chartManualValue();
-
-        if ($total <= 0) {
-            return [];
-        }
-
-        $rows = [];
-        foreach ($slices as $slice) {
-            $holding = $holdingsByAssetId->get($slice->asset_id);
-
-            $rows[] = ['symbol' => $slice->asset->symbol]
-                + Rebalancing::driftRow((float) ($holding['effective_value'] ?? 0), (float) $slice->target_pct, $total)
-                + ['slice_id' => $slice->id];
-        }
-
-        usort($rows, fn ($a, $b) => $b['target_pct'] <=> $a['target_pct']);
-
-        return $rows;
     }
 }

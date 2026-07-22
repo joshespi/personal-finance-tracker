@@ -2,23 +2,15 @@
 
 namespace App\Policies;
 
-use App\Models\Portfolio;
-use App\Models\User;
+use App\Concerns\AuthorizesOwner;
+use Illuminate\Database\Eloquent\Model;
 
 class PortfolioPolicy
 {
-    public function view(User $user, Portfolio $portfolio): bool
-    {
-        return $user->id === $portfolio->user_id;
-    }
+    use AuthorizesOwner;
 
-    public function update(User $user, Portfolio $portfolio): bool
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $portfolio->user_id;
-    }
-
-    public function delete(User $user, Portfolio $portfolio): bool
-    {
-        return $user->id === $portfolio->user_id;
+        return $model->user_id;
     }
 }

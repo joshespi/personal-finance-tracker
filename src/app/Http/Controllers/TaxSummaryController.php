@@ -15,8 +15,8 @@ class TaxSummaryController extends Controller
         $byYear = $allLots
             ->groupBy(fn ($l) => $l['sell_date']->year)
             ->map(function ($lots, $year) {
-                $short = $lots->filter(fn ($l) => $l['holding_days'] < 365);
-                $long  = $lots->filter(fn ($l) => $l['holding_days'] >= 365);
+                $short = $lots->filter(fn ($l) => $l['term'] === 'short');
+                $long  = $lots->filter(fn ($l) => $l['term'] === 'long');
 
                 return [
                     'year'       => $year,

@@ -29,4 +29,13 @@ class JournalEntry extends Model
             'allow_unsafe_links' => false,
         ]))->convert($this->body ?? '')->getContent();
     }
+
+    public function toBackupArray(): array
+    {
+        return [
+            'date'  => $this->entry_date->toDateString(),
+            'title' => $this->title,
+            'body'  => $this->body,
+        ];
+    }
 }

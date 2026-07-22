@@ -118,10 +118,11 @@ class TransactionController extends Controller
 
         // quantity field on transfer_out edit shows gross (sent + fee); strip fee back out for storage
         // since holdings logic adds fees back when deducting from position
-        $quantity = (float) $validated['quantity'];
-        if ($feeInAsset && $type === TransactionType::TransferOut) {
-            $quantity = max(0, $quantity - $fees);
-        }
+        $quantity = Transaction::netOfFee(
+            (float) $validated['quantity'],
+            $fees,
+            $feeInAsset && $type === TransactionType::TransferOut
+        );
 
         $transaction->update([
             'type'           => $validated['type'],

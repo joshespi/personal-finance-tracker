@@ -1,6 +1,6 @@
 <x-app-layout>
     @push('head-vite')
-        @vite(['resources/js/chartjs.js'])
+        @vite(['resources/js/chartjs.js', 'resources/js/planning-charts.js', 'resources/js/forecast-charts.js'])
     @endpush
 
     <x-slot name="header">
@@ -13,43 +13,19 @@
                     @elseif ($tab === 'allocator')
                         Extra-Cash Allocator
                     @elseif ($tab === 'retirement')
-                        Retirement Catch-Up
+                        {{ $mode === 'trajectory' ? 'FIRE Forecast' : 'Retirement Catch-Up' }}
                     @else
                         Emergency Fund
                     @endif
                 </h2>
             </div>
 
-            <div class="flex items-center gap-1">
-                <a href="{{ route('planning', ['tab' => 'debt-payoff']) }}"
-                   class="px-3 py-1.5 text-xs rounded-md font-medium transition
-                          {{ $tab === 'debt-payoff'
-                              ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
-                              : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600' }}">
-                    Debt Payoff
-                </a>
-                <a href="{{ route('planning', ['tab' => 'allocator']) }}"
-                   class="px-3 py-1.5 text-xs rounded-md font-medium transition
-                          {{ $tab === 'allocator'
-                              ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
-                              : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600' }}">
-                    Allocator
-                </a>
-                <a href="{{ route('planning', ['tab' => 'emergency-fund']) }}"
-                   class="px-3 py-1.5 text-xs rounded-md font-medium transition
-                          {{ $tab === 'emergency-fund'
-                              ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
-                              : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600' }}">
-                    Emergency Fund
-                </a>
-                <a href="{{ route('planning', ['tab' => 'retirement']) }}"
-                   class="px-3 py-1.5 text-xs rounded-md font-medium transition
-                          {{ $tab === 'retirement'
-                              ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
-                              : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600' }}">
-                    Retirement
-                </a>
-            </div>
+            <x-tab-nav :tabs="[
+                ['href' => route('planning', ['tab' => 'debt-payoff']), 'label' => 'Debt Payoff', 'active' => $tab === 'debt-payoff'],
+                ['href' => route('planning', ['tab' => 'allocator']), 'label' => 'Allocator', 'active' => $tab === 'allocator'],
+                ['href' => route('planning', ['tab' => 'emergency-fund']), 'label' => 'Emergency Fund', 'active' => $tab === 'emergency-fund'],
+                ['href' => route('planning', ['tab' => 'retirement']), 'label' => 'Retirement', 'active' => $tab === 'retirement'],
+            ]" />
         </div>
     </x-slot>
 
@@ -88,136 +64,12 @@
                     </div>
                 @endif
 
-                <script>
-                    var __debtPayoffInputs    = @json(array_values($debts));
-                    var __debtPayoffSnowball  = @json($snowball);
-                    var __debtPayoffAvalanche = @json($avalanche);
-                </script>
-
+                {{-- Alpine.data('debtPayoff', ...) is registered by planning-charts.js (pushed
+                     to head-vite above) — it owns the chart setup and the "extra payment"
+                     what-if slider, which now re-simulates via the server (DebtPayoffService)
+                     instead of a second client-side copy of the payoff algorithm. --}}
                 <div
-                    x-data="{
-                        debtInputs: __debtPayoffInputs,
-                        extraPayment: 0,
-                        strategy: 'snowball',
-                        snowballResult: __debtPayoffSnowball,
-                        avalancheResult: __debtPayoffAvalanche,
-                        chart: null,
-                        _debounce: null,
-
-                        get activeResult() {
-                            return this.strategy === 'snowball' ? this.snowballResult : this.avalancheResult;
-                        },
-
-                        formatMonths(n) {
-                            if (!n || n >= 600) return '50+ yrs';
-                            const y = Math.floor(n / 12), m = n % 12;
-                            if (y === 0) return m + ' mo';
-                            if (m === 0) return y + ' yr';
-                            return y + 'yr ' + m + 'mo';
-                        },
-
-                        payoffDate(months) {
-                            if (!months || months >= 600) return '50+ yrs';
-                            const d = new Date();
-                            d.setMonth(d.getMonth() + months);
-                            return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                        },
-
-                        recalculate() {
-                            const extra = parseFloat(this.extraPayment) || 0;
-                            const totalBudget  = extra + this.debtInputs.reduce((s, d) => s + d.min_payment, 0);
-                            const snowballIds  = [...this.debtInputs].sort((a, b) => a.balance - b.balance).map(d => d.id);
-                            const avalancheIds = [...this.debtInputs].sort((a, b) => b.apr - a.apr).map(d => d.id);
-                            this.snowballResult  = this.runSimulation(snowballIds, totalBudget);
-                            this.avalancheResult = this.runSimulation(avalancheIds, totalBudget);
-                            this.updateChart();
-                        },
-
-                        runSimulation(priorityIds, totalBudget) {
-                            const bal = {}, byId = {};
-                            this.debtInputs.forEach(d => { bal[d.id] = d.balance; byId[d.id] = d; });
-                            let totalInterest = 0;
-                            const payoff = {}, timeline = [];
-                            for (let month = 1; month <= 600; month++) {
-                                this.debtInputs.forEach(d => {
-                                    if (bal[d.id] <= 0) return;
-                                    const i = bal[d.id] * d.monthly_rate;
-                                    bal[d.id] += i; totalInterest += i;
-                                });
-                                let priorityId = null;
-                                for (const pid of priorityIds) { if (bal[pid] > 0) { priorityId = pid; break; } }
-                                let allocated = 0;
-                                this.debtInputs.forEach(d => {
-                                    if (d.id === priorityId || bal[d.id] <= 0) return;
-                                    const pmt = Math.min(d.min_payment, bal[d.id]);
-                                    bal[d.id] -= pmt; allocated += pmt;
-                                    if (bal[d.id] <= 0.01) { bal[d.id] = 0; if (!payoff[d.id]) payoff[d.id] = month; }
-                                });
-                                if (priorityId && bal[priorityId] > 0) {
-                                    const pmt = Math.min(Math.max(0, totalBudget - allocated), bal[priorityId]);
-                                    bal[priorityId] -= pmt;
-                                    if (bal[priorityId] <= 0.01) { bal[priorityId] = 0; if (!payoff[priorityId]) payoff[priorityId] = month; }
-                                }
-                                const total = Math.max(0, Object.values(bal).reduce((s, v) => s + v, 0));
-                                timeline.push(Math.round(total * 100) / 100);
-                                if (total <= 0.01) break;
-                            }
-                            const keys = Object.values(payoff);
-                            return { months: keys.length > 0 ? Math.max(...keys) : 600, total_interest: Math.round(totalInterest * 100) / 100, payoff_per_debt: payoff, timeline };
-                        },
-
-                        chartLabels(len) {
-                            return Array.from({ length: len }, (_, i) => {
-                                const d = new Date(); d.setMonth(d.getMonth() + i + 1);
-                                return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-                            });
-                        },
-
-                        updateChart() {
-                            if (!this.chart) return;
-                            const s = this.snowballResult.timeline, a = this.avalancheResult.timeline;
-                            const maxLen = Math.max(s.length, a.length);
-                            this.chart.data.labels = this.chartLabels(maxLen);
-                            this.chart.data.datasets[0].data = s;
-                            this.chart.data.datasets[1].data = a;
-                            this.chart.update('none');
-                        },
-
-                        init() {
-                            this.$nextTick(() => {
-                                const ctx = document.getElementById('debtChart');
-                                if (!ctx) return;
-                                const { gridColor: gc, labelColor: tc } = window.themeColors();
-                                const s = __debtPayoffSnowball.timeline, a = __debtPayoffAvalanche.timeline;
-                                this.chart = new Chart(ctx, {
-                                    type: 'line',
-                                    data: {
-                                        labels: this.chartLabels(Math.max(s.length, a.length)),
-                                        datasets: [
-                                            { label: 'Snowball',  data: s, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)', fill: true,  tension: 0.3, pointRadius: 0, borderWidth: 2 },
-                                            { label: 'Avalanche', data: a, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.04)',  fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2, borderDash: [5, 4] },
-                                        ],
-                                    },
-                                    options: {
-                                        responsive: true, maintainAspectRatio: false, animation: false,
-                                        plugins: {
-                                            legend: { position: 'top', labels: { color: tc, usePointStyle: true, pointStyleWidth: 10 } },
-                                            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': $' + Math.round(ctx.raw).toLocaleString() } },
-                                        },
-                                        scales: {
-                                            x: { ticks: { maxTicksLimit: 12, color: tc }, grid: { color: gc } },
-                                            y: { ticks: { callback: v => '$' + Math.round(v).toLocaleString(), color: tc }, grid: { color: gc } },
-                                        },
-                                    },
-                                });
-                            });
-
-                            this.$watch('extraPayment', () => {
-                                clearTimeout(this._debounce);
-                                this._debounce = setTimeout(() => this.recalculate(), 250);
-                            });
-                        },
-                    }"
+                    x-data="debtPayoff(@js(array_values($debts)), @js($snowball), @js($avalanche))"
                     class="space-y-8"
                 >
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -568,6 +420,18 @@
         @if ($tab === 'retirement')
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
+            {{-- Two lenses on "will my money be enough": an age-based 4%-rule target,
+                 and the FIRE Forecast wealth trajectory (formerly the standalone
+                 /forecast page). Each keeps its own starting-value default — portfolio
+                 value for the target, full net worth for the trajectory — since those
+                 are different questions, not two copies of the same one. --}}
+            <x-tab-nav :tabs="[
+                ['href' => route('planning', ['tab' => 'retirement', 'mode' => 'target']), 'label' => 'Age-Based Target', 'active' => $mode === 'target'],
+                ['href' => route('planning', ['tab' => 'retirement', 'mode' => 'trajectory']), 'label' => 'FIRE Trajectory', 'active' => $mode === 'trajectory'],
+            ]" />
+
+        @if ($mode === 'target')
+
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-5 text-sm text-gray-600 dark:text-gray-400 space-y-1.5">
                 <p class="text-gray-700 dark:text-gray-300">
                     Enter your birth year and current contribution to see whether you're on track for retirement — and what monthly catch-up looks like if you're not.
@@ -581,6 +445,7 @@
             <form method="GET" action="{{ route('planning', ['tab' => 'retirement']) }}"
                   class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-5 space-y-5">
                 <input type="hidden" name="tab" value="retirement">
+                <input type="hidden" name="mode" value="target">
 
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-4">
                     <div>
@@ -755,6 +620,192 @@
                     Retirement age must be greater than current age.
                 </div>
             @endif
+
+        @else {{-- mode === 'trajectory': FIRE Forecast, formerly the standalone /forecast page --}}
+
+            <form method="GET" action="{{ route('planning', ['tab' => 'retirement']) }}" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-5">
+                <input type="hidden" name="tab" value="retirement">
+                <input type="hidden" name="mode" value="trajectory">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Starting Net Worth
+                            @if ($startingNw == $defaultStartNw)
+                                <span class="text-gray-400 font-normal">(from your data)</span>
+                            @endif
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 dark:text-gray-400 text-sm">$</span>
+                            <x-masked-money-input name="starting_nw" :value="$startingNw" :masked="$demo->isActive()" step="any" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Monthly Savings
+                            @if ($monthlySavings == $defaultMonthlySavings)
+                                <span class="text-gray-400 font-normal">(3-mo avg)</span>
+                            @endif
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 dark:text-gray-400 text-sm">$</span>
+                            <x-masked-money-input name="monthly_savings" :value="$monthlySavings" :masked="$demo->isActive()" step="any" min="0" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">FIRE Target <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 dark:text-gray-400 text-sm">$</span>
+                            <x-masked-money-input name="fire_target" :value="$fireTarget ?? ''" :masked="$demo->isActive() && $fireTarget !== null" step="any" min="0" placeholder="1000000" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Annual Return</label>
+                        <div class="relative">
+                            <input type="number" name="annual_return" value="{{ $annualReturn }}" step="0.1" min="0" max="30"
+                                   class="pr-8 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                            <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 dark:text-gray-400 text-sm">%</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Inflation Rate</label>
+                        <div class="relative">
+                            <input type="number" name="inflation_rate" value="{{ $inflationRate }}" step="0.1" min="0" max="20"
+                                   class="pr-8 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
+                            <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 dark:text-gray-400 text-sm">%</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Time Horizon</label>
+                        <div class="flex gap-1.5">
+                            @foreach ([10, 20, 30, 40, 50] as $y)
+                                <button type="submit" name="years" value="{{ $y }}"
+                                        class="flex-1 py-1.5 rounded-md text-sm font-medium border transition
+                                            {{ $years === $y
+                                                ? 'bg-indigo-600 border-indigo-600 text-white'
+                                                : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-indigo-400' }}">
+                                    {{ $y }}yr
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button type="submit"
+                            class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-500 transition">
+                        Update Projection
+                    </button>
+                    <span class="text-xs text-gray-400 dark:text-gray-500">Starting net worth and monthly savings are pre-filled from your data.</span>
+                </div>
+            </form>
+
+            @if ($fireTarget !== null)
+                @php
+                    $endNominal = $projection[count($projection) - 1]['nominal'];
+                    $shortfall  = max(0, $fireTarget - $endNominal);
+                @endphp
+                <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl p-5">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-indigo-500 dark:text-indigo-400">FIRE Target: ${{ $demo->amt($fireTarget, 0) }}</p>
+                    @if ($fireMilestone)
+                        <p class="text-2xl font-bold text-indigo-900 dark:text-indigo-100 mt-1">
+                            Year {{ $fireMilestone['year'] }} &mdash; {{ $fireMilestone['calendar'] }}
+                        </p>
+                        <p class="text-sm text-indigo-600 dark:text-indigo-400 mt-0.5">
+                            {{ $fireMilestone['year'] === 0 ? 'Already achieved!' : 'In ' . $fireMilestone['year'] . ' ' . Str::plural('year', $fireMilestone['year']) }}
+                        </p>
+                    @else
+                        <p class="text-xl font-bold text-indigo-900 dark:text-indigo-100 mt-1">Not reached in {{ $years }} years</p>
+                        <p class="text-sm text-indigo-600 dark:text-indigo-400 mt-0.5">
+                            ${{ $demo->amt($shortfall, 0) }} short at year {{ $years }} &mdash; try increasing savings or return rate
+                        </p>
+                    @endif
+                </div>
+            @endif
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                @foreach ($standardMilestones as $m)
+                    @php
+                        $label = $m['threshold'] >= 1_000_000
+                            ? '$' . number_format($m['threshold'] / 1_000_000, 0) . 'M'
+                            : '$500k';
+                    @endphp
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $label }}</p>
+                        @if ($m['hit'])
+                            <p class="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">Year {{ $m['hit']['year'] }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ $m['hit']['calendar'] }}</p>
+                        @else
+                            <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Not in {{ $years }}yr</p>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ $years }}-Year Projection</h3>
+                    <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                        <span class="flex items-center gap-1.5">
+                            <span class="inline-block w-6 h-0.5 bg-indigo-500 rounded"></span>Nominal
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                            <span class="inline-block w-6 border-t-2 border-dashed border-gray-400 rounded"></span>Real ({{ $inflationRate }}% inflation)
+                        </span>
+                    </div>
+                </div>
+                <canvas id="forecastChart" class="w-full" style="max-height:380px"></canvas>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+                    <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Year-by-Year (every 5 years)</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-xs text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
+                                <th class="text-left px-4 py-2 font-medium">Year</th>
+                                <th class="text-right px-4 py-2 font-medium">Calendar</th>
+                                <th class="text-right px-4 py-2 font-medium">Nominal</th>
+                                <th class="text-right px-4 py-2 font-medium">Real (today's $)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
+                            @foreach ($projection as $row)
+                                @if ($row['year'] % 5 === 0)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {{ $row['year'] === 0 ? 'font-medium' : '' }}">
+                                        <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300">
+                                            {{ $row['year'] === 0 ? 'Now' : 'Year ' . $row['year'] }}
+                                        </td>
+                                        <td class="px-4 py-2.5 text-right text-gray-500 dark:text-gray-400">{{ $row['label'] }}</td>
+                                        <td class="px-4 py-2.5 text-right font-mono text-gray-900 dark:text-gray-100">${{ $demo->amt($row['nominal'], 0) }}</td>
+                                        <td class="px-4 py-2.5 text-right font-mono text-gray-500 dark:text-gray-400">${{ $demo->amt($row['real'], 0) }}</td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @php
+                // Only nominal/real are dollar figures — scaling the whole row would also
+                // scramble year/label and break the chart's x-axis and milestone math.
+                $jsProjection = collect($projection)->map(fn ($row) => array_merge($row, [
+                    'nominal' => $demo->scaleScalar($row['nominal']),
+                    'real'    => $demo->scaleScalar($row['real']),
+                ]));
+            @endphp
+            {{-- Chart data only — forecast-charts.js (pushed to head-vite above) owns all
+                 Chart.js setup and reads this blob on DOMContentLoaded. --}}
+            <script>window.__forecastChart = @json(['projection' => $jsProjection]);</script>
+
+        @endif
 
         </div>
         @endif

@@ -2,23 +2,15 @@
 
 namespace App\Policies;
 
-use App\Models\Envelope;
-use App\Models\User;
+use App\Concerns\AuthorizesOwner;
+use Illuminate\Database\Eloquent\Model;
 
 class EnvelopePolicy
 {
-    public function view(User $user, Envelope $envelope): bool
-    {
-        return $user->id === $envelope->user_id;
-    }
+    use AuthorizesOwner;
 
-    public function update(User $user, Envelope $envelope): bool
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $envelope->user_id;
-    }
-
-    public function delete(User $user, Envelope $envelope): bool
-    {
-        return $user->id === $envelope->user_id;
+        return $model->user_id;
     }
 }

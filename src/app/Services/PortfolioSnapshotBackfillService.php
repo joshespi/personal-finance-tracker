@@ -146,7 +146,7 @@ class PortfolioSnapshotBackfillService
             ->groupBy('asset_id');
 
         foreach ($groups as $assetId => $txns) {
-            [$totalQty, $totalCost] = Transaction::accumulateCostBasis($txns);
+            [$totalQty, $totalCost] = Transaction::accumulateFifoCostBasis($txns);
             $costBasis += $totalCost;
 
             $price = $this->closestPrice($pricesByAssetAndDate->get($assetId, collect()), $date);
@@ -177,9 +177,7 @@ class PortfolioSnapshotBackfillService
                     $shares      = ($anchorPrice && $anchorPrice > 0) ? (float) $ma->anchor_value / $anchorPrice : 0;
                 }
 
-                $total += ($price !== null && $shares > 0)
-                    ? round($shares * $price, 2)
-                    : (float) ($ma->anchor_value ?? 0);
+                $total += $ma->proxyValueAt($price, $shares);
             } else {
                 $val = $ma->valuations
                     ->filter(fn ($v) => $v->valued_at->toDateString() <= $date)

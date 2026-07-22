@@ -605,7 +605,7 @@
             $jsChartData       = $demo->scaleAmounts($chartData->toArray());
             $jsChartDataExMan  = $demo->scaleAmounts($chartDataExManual->toArray());
             $jsBenchmarkData   = $benchmarkData; // normalized index — no scaling needed
-            $jsAllocation      = array_merge($allocation, ['values' => $demo->scaleValues($allocation['values']), 'total' => $demo->scaleScalar($allocation['total'])]);
+            $jsAllocation      = array_merge($allocation, ['values' => $demo->scaleAmounts($allocation['values']), 'total' => $demo->scaleScalar($allocation['total'])]);
         @endphp
         <script>window.__dashCharts = { chartData: @json($jsChartData), chartDataExManual: @json($jsChartDataExMan), benchmarkData: @json($jsBenchmarkData), allocation: @json($jsAllocation) };</script>
         @vite('resources/js/dashboard-charts.js')

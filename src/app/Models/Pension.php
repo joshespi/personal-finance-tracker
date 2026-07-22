@@ -37,4 +37,27 @@ class Pension extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function toBackupArray(): array
+    {
+        return [
+            'name'                     => $this->name,
+            'plan_label'               => $this->plan_label,
+            'membership_date'          => $this->membership_date?->toDateString(),
+            'service_credit_years'     => (float) $this->service_credit_years,
+            'service_cap_years'        => $this->service_cap_years !== null ? (float) $this->service_cap_years : null,
+            'multiplier_pct'           => (float) $this->multiplier_pct,
+            'final_average_salary'     => (float) $this->final_average_salary,
+            'salary_growth_pct'        => (float) $this->salary_growth_pct,
+            'cola_pct'                 => (float) $this->cola_pct,
+            'monthly_benefit_estimate' => $this->monthly_benefit_estimate !== null ? (float) $this->monthly_benefit_estimate : null,
+            'birth_year'               => $this->birth_year !== null ? (int) $this->birth_year : null,
+            'retirement_age'           => (int) $this->retirement_age,
+            'life_expectancy_age'      => (int) $this->life_expectancy_age,
+            'discount_rate_pct'        => (float) $this->discount_rate_pct,
+            'include_in_net_worth'     => (bool) $this->include_in_net_worth,
+            'notes'                    => $this->notes,
+            'currency'                 => $this->currency,
+        ];
+    }
 }

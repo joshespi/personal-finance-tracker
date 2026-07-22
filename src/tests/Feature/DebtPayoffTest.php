@@ -257,4 +257,83 @@ class DebtPayoffTest extends TestCase
             ->assertSee('Snowball')
             ->assertSee('Avalanche');
     }
+
+    public function test_resimulate_endpoint_requires_auth(): void
+    {
+        $this->postJson(route('planning.debt-payoff.simulate'), ['extra_payment' => 100])
+            ->assertUnauthorized();
+    }
+
+    /**
+     * The planning page's "extra payment" slider calls this endpoint instead of
+     * carrying its own copy of the payoff algorithm (see planning-charts.js). At
+     * extra_payment=0 it must reconcile exactly with DebtPayoffService::compute()'s
+     * initial-render simulation, since both now go through the same simulate().
+     */
+    public function test_resimulate_endpoint_matches_initial_render_at_zero_extra(): void
+    {
+        $user = User::factory()->create();
+
+        $debtA = Liability::factory()->for($user)->create([
+            'liability_type' => 'credit_card', 'interest_rate' => 5.0, 'minimum_payment' => 30,
+        ]);
+        LiabilityBalance::factory()->for($debtA)->create(['balance' => 500]);
+
+        $debtB = Liability::factory()->for($user)->create([
+            'liability_type' => 'credit_card', 'interest_rate' => 20.0, 'minimum_payment' => 30,
+        ]);
+        LiabilityBalance::factory()->for($debtB)->create(['balance' => 2000]);
+
+        $initial = (new DebtPayoffService)->compute($user->fresh());
+
+        $response = $this->actingAs($user)
+            ->postJson(route('planning.debt-payoff.simulate'), ['extra_payment' => 0])
+            ->assertOk()
+            ->json();
+
+        // assertEquals, not assertSame: $response round-tripped through JSON, which
+        // collapses whole-number floats like 1398.0 to the int 1398 — a serialization
+        // artifact, not a real behavioral difference from $initial's native PHP floats.
+        $this->assertEquals($initial['snowball'], $response['snowball']);
+        $this->assertEquals($initial['avalanche'], $response['avalanche']);
+    }
+
+    public function test_resimulate_endpoint_extra_payment_shortens_payoff(): void
+    {
+        $user = User::factory()->create();
+
+        $debt = Liability::factory()->for($user)->create([
+            'liability_type' => 'credit_card', 'interest_rate' => 20.0, 'minimum_payment' => 50,
+        ]);
+        LiabilityBalance::factory()->for($debt)->create(['balance' => 2000]);
+
+        $noExtra = $this->actingAs($user)
+            ->postJson(route('planning.debt-payoff.simulate'), ['extra_payment' => 0])
+            ->assertOk()->json();
+
+        $withExtra = $this->actingAs($user)
+            ->postJson(route('planning.debt-payoff.simulate'), ['extra_payment' => 300])
+            ->assertOk()->json();
+
+        $this->assertLessThan($noExtra['snowball']['months'], $withExtra['snowball']['months']);
+    }
+
+    public function test_resimulate_endpoint_ignores_other_users_debts(): void
+    {
+        $user  = User::factory()->create();
+        $other = User::factory()->create();
+
+        $otherDebt = Liability::factory()->for($other)->create([
+            'liability_type' => 'credit_card', 'interest_rate' => 20.0, 'minimum_payment' => 50,
+        ]);
+        LiabilityBalance::factory()->for($otherDebt)->create(['balance' => 5000]);
+
+        $response = $this->actingAs($user)
+            ->postJson(route('planning.debt-payoff.simulate'), ['extra_payment' => 0])
+            ->assertOk()
+            ->json();
+
+        $this->assertSame(0, $response['snowball']['months']);
+        $this->assertSame([], $response['snowball']['timeline']);
+    }
 }

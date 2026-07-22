@@ -28,8 +28,12 @@ class IncomeCategory extends Model
         return $this->hasMany(CashTransaction::class);
     }
 
-    public function incomeEntries(): HasMany
+    public function toBackupArray(): array
     {
-        return $this->hasMany(IncomeEntry::class);
+        return [
+            'name'       => $this->name,
+            'color'      => $this->color,
+            'sort_order' => $this->sort_order,
+        ];
     }
 }

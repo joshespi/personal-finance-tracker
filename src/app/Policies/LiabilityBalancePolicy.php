@@ -2,13 +2,15 @@
 
 namespace App\Policies;
 
-use App\Models\LiabilityBalance;
-use App\Models\User;
+use App\Concerns\AuthorizesOwnerDelete;
+use Illuminate\Database\Eloquent\Model;
 
 class LiabilityBalancePolicy
 {
-    public function delete(User $user, LiabilityBalance $liabilityBalance): bool
+    use AuthorizesOwnerDelete;
+
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $liabilityBalance->liability->user_id;
+        return $model->liability->user_id;
     }
 }

@@ -2,23 +2,15 @@
 
 namespace App\Policies;
 
-use App\Models\CashAccount;
-use App\Models\User;
+use App\Concerns\AuthorizesOwner;
+use Illuminate\Database\Eloquent\Model;
 
 class CashAccountPolicy
 {
-    public function view(User $user, CashAccount $cashAccount): bool
-    {
-        return $user->id === $cashAccount->user_id;
-    }
+    use AuthorizesOwner;
 
-    public function update(User $user, CashAccount $cashAccount): bool
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $cashAccount->user_id;
-    }
-
-    public function delete(User $user, CashAccount $cashAccount): bool
-    {
-        return $user->id === $cashAccount->user_id;
+        return $model->user_id;
     }
 }

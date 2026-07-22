@@ -21,4 +21,14 @@ class EnvelopeTransaction extends Model
     {
         return $this->belongsTo(Envelope::class);
     }
+
+    public function toBackupArray(): array
+    {
+        return [
+            'date'        => $this->occurred_at->toDateString(),
+            'type'        => $this->type,
+            'amount'      => (float) $this->amount,
+            'description' => $this->description,
+        ];
+    }
 }

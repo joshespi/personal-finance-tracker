@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Liability;
 use App\Models\User;
+use Illuminate\Support\Collection;
 
 class DebtPayoffService
 {
@@ -22,30 +24,7 @@ class DebtPayoffService
             return ['has_data' => false, 'debts' => [], 'mortgages' => []];
         }
 
-        $debtData = $debts->map(function ($l) {
-            $balance         = $l->currentBalance();
-            $apr             = (float) ($l->interest_rate ?? 0);
-            $monthlyRate     = $apr / 100 / 12;
-            $monthlyInterest = round($balance * $monthlyRate, 2);
-            $minPaymentSet   = $l->minimum_payment !== null;
-            $minPayment      = $minPaymentSet
-                ? (float) $l->minimum_payment
-                : round(max(25.0, $balance * self::DEFAULT_MIN_PCT), 2);
-            $negAmort = $monthlyInterest > 0 && $minPayment < $monthlyInterest;
-
-            return [
-                'id'                    => $l->id,
-                'name'                  => $l->name,
-                'liability_type'        => $l->liability_type,
-                'balance'               => $balance,
-                'apr'                   => $apr,
-                'monthly_rate'          => $monthlyRate,
-                'monthly_interest'      => $monthlyInterest,
-                'min_payment'           => $minPayment,
-                'min_payment_set'       => $minPaymentSet,
-                'negative_amortization' => $negAmort,
-            ];
-        })->values()->all();
+        $debtData = $this->buildDebtData($debts);
 
         $mortgageData = $mortgages->map(function ($l) {
             $balance         = $l->currentBalance();
@@ -89,6 +68,59 @@ class DebtPayoffService
             'interest_saved'              => round(max(0.0, $snowball['total_interest'] - $avalanche['total_interest']), 2),
             'negative_amortization_count' => count(array_filter($debtData, fn ($d) => $d['negative_amortization'])),
         ];
+    }
+
+    /**
+     * Re-run the snowball/avalanche simulation for the user's current revolving debts
+     * at a hypothetical extra monthly payment — the endpoint the planning page's "what
+     * if I pay $X more" slider calls, so the live what-if figures and the initial page
+     * render always come from this one simulate() implementation.
+     */
+    public function resimulate(User $user, float $extraPayment): array
+    {
+        $debts    = $user->liabilities()->with('latestBalance')->get()->filter(fn ($l) => $l->currentBalance() > 0 && $l->isRevolving())->values();
+        $debtData = $this->buildDebtData($debts);
+
+        if (empty($debtData)) {
+            return ['snowball' => $this->emptySimulation(), 'avalanche' => $this->emptySimulation()];
+        }
+
+        $snowballOrder  = collect($debtData)->sortBy('balance')->pluck('id')->values()->all();
+        $avalancheOrder = collect($debtData)->sortByDesc('apr')->pluck('id')->values()->all();
+
+        return [
+            'snowball'  => $this->simulate($debtData, $snowballOrder, $extraPayment),
+            'avalanche' => $this->simulate($debtData, $avalancheOrder, $extraPayment),
+        ];
+    }
+
+    /** @param  Collection<int, Liability>  $debts */
+    private function buildDebtData($debts): array
+    {
+        return $debts->map(function ($l) {
+            $balance         = $l->currentBalance();
+            $apr             = (float) ($l->interest_rate ?? 0);
+            $monthlyRate     = $apr / 100 / 12;
+            $monthlyInterest = round($balance * $monthlyRate, 2);
+            $minPaymentSet   = $l->minimum_payment !== null;
+            $minPayment      = $minPaymentSet
+                ? (float) $l->minimum_payment
+                : round(max(25.0, $balance * self::DEFAULT_MIN_PCT), 2);
+            $negAmort = $monthlyInterest > 0 && $minPayment < $monthlyInterest;
+
+            return [
+                'id'                    => $l->id,
+                'name'                  => $l->name,
+                'liability_type'        => $l->liability_type,
+                'balance'               => $balance,
+                'apr'                   => $apr,
+                'monthly_rate'          => $monthlyRate,
+                'monthly_interest'      => $monthlyInterest,
+                'min_payment'           => $minPayment,
+                'min_payment_set'       => $minPaymentSet,
+                'negative_amortization' => $negAmort,
+            ];
+        })->values()->all();
     }
 
     public function simulate(array $debtData, array $priorityIds, float $extraPayment): array

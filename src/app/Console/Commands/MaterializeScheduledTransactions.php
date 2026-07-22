@@ -9,6 +9,14 @@ use App\Services\ScheduledTransactionService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 
+/**
+ * Daily backstop: MaterializeDueScheduledTransactions middleware already materializes
+ * on every authenticated web request, so by the time this runs there's usually nothing
+ * left for an active user — this command mainly catches accounts that never opened the
+ * app. It remains the *only* trigger for the ScheduledTransactionsSummary email
+ * (deliberately not sent from the middleware, or an active user would get emailed on
+ * every page load about things they're already looking at).
+ */
 class MaterializeScheduledTransactions extends Command
 {
     protected $signature = 'transactions:materialize';

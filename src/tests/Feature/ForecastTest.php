@@ -10,11 +10,35 @@ use App\Models\PortfolioSnapshot;
 use App\Models\User;
 use Tests\TestCase;
 
+/**
+ * The FIRE Forecast page was merged into the Retirement tab's "trajectory" mode
+ * (see PlanningController::retirement()) — /forecast now just redirects there,
+ * preserving query params, like the other retired standalone calculator pages.
+ */
 class ForecastTest extends TestCase
 {
+    private function trajectory(array $params = []): string
+    {
+        return route('planning', ['tab' => 'retirement', 'mode' => 'trajectory', ...$params]);
+    }
+
     public function test_forecast_requires_auth(): void
     {
         $this->get(route('forecast'))->assertRedirect(route('login'));
+    }
+
+    public function test_forecast_redirects_to_retirement_trajectory_mode(): void
+    {
+        $user = User::factory()->create();
+
+        // Param order mirrors the redirect closure in routes/web.php
+        // ([...request()->query(), 'tab' => ..., 'mode' => ...]) since route() bakes
+        // query strings in array-key order and assertRedirect() compares literally.
+        $this->actingAs($user)
+            ->get(route('forecast', ['starting_nw' => 100000, 'years' => 20]))
+            ->assertRedirect(route('planning', [
+                'starting_nw' => 100000, 'years' => 20, 'tab' => 'retirement', 'mode' => 'trajectory',
+            ]));
     }
 
     public function test_forecast_loads_for_empty_user(): void
@@ -22,9 +46,9 @@ class ForecastTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('forecast'))
+            ->get($this->trajectory())
             ->assertOk()
-            ->assertSee('Net Worth Forecast')
+            ->assertSee('FIRE Forecast')
             ->assertSee('Year-by-Year');
     }
 
@@ -33,7 +57,7 @@ class ForecastTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('forecast', [
+            ->get($this->trajectory([
                 'starting_nw'     => 100000,
                 'monthly_savings' => 2000,
                 'annual_return'   => 8,
@@ -50,7 +74,7 @@ class ForecastTest extends TestCase
 
         // Starting at $950k with $10k/mo savings, $1M is hit in year 0 or 1
         $this->actingAs($user)
-            ->get(route('forecast', [
+            ->get($this->trajectory([
                 'starting_nw'     => 950000,
                 'monthly_savings' => 10000,
                 'annual_return'   => 7,
@@ -68,7 +92,7 @@ class ForecastTest extends TestCase
 
         // $0 starting, $0 savings, 0% return — $1B never reached in 10 years
         $this->actingAs($user)
-            ->get(route('forecast', [
+            ->get($this->trajectory([
                 'starting_nw'     => 0,
                 'monthly_savings' => 0,
                 'annual_return'   => 0,
@@ -92,7 +116,7 @@ class ForecastTest extends TestCase
             CashTransaction::factory()->for($account)->spend($envelope)->create(['amount' => 100, 'occurred_at' => $m->startOfMonth()]);
         }
 
-        $response = $this->actingAs($user)->get(route('forecast'))->assertOk();
+        $response = $this->actingAs($user)->get($this->trajectory())->assertOk();
 
         // Default monthly_savings field should be pre-filled with 200
         $response->assertSee('value="200"', false);
@@ -111,7 +135,7 @@ class ForecastTest extends TestCase
 
         // Latest values: A = 600 + 150 = 750, B = 250 → starting_nw = 1000 (no cash/debt).
         $this->actingAs($user)
-            ->get(route('forecast'))
+            ->get($this->trajectory())
             ->assertOk()
             ->assertSee('value="1000"', false);
     }
@@ -122,7 +146,7 @@ class ForecastTest extends TestCase
 
         $this->actingAs($user)
             ->withSession(['demo_mode' => true])
-            ->get(route('forecast', [
+            ->get($this->trajectory([
                 'starting_nw'     => 950000,
                 'monthly_savings' => 10000,
                 'annual_return'   => 7,
@@ -143,7 +167,7 @@ class ForecastTest extends TestCase
         // from the true starting_nw instead of compounding the demo-mode scale factor.
         $response = $this->actingAs($user)
             ->withSession(['demo_mode' => true])
-            ->get(route('forecast', ['starting_nw' => 950000, 'years' => 30]));
+            ->get($this->trajectory(['starting_nw' => 950000, 'years' => 30]));
 
         $response->assertOk()
             ->assertSee('<input type="hidden" name="starting_nw" value="950000" />', false)
@@ -156,7 +180,7 @@ class ForecastTest extends TestCase
 
         // Starting at $2M already exceeds $500k and $1M milestones at year 0
         $response = $this->actingAs($user)
-            ->get(route('forecast', [
+            ->get($this->trajectory([
                 'starting_nw'     => 2_000_000,
                 'monthly_savings' => 0,
                 'annual_return'   => 0,

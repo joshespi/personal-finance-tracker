@@ -27,9 +27,7 @@ class CashAccountController extends Controller
             ->withCurrentBalance()
             ->orderBy('name')
             ->get()
-            ->each(function ($a) {
-                $a->current_balance = (float) ($a->deposits_total ?? 0) - (float) ($a->withdrawals_total ?? 0);
-            });
+            ->each(fn ($a) => $a->current_balance = $a->currentBalanceFromSums());
 
         $totalCash = $accounts->sum('current_balance');
 

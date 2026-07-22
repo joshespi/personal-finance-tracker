@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Asset;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
+use App\Models\Envelope;
+use App\Models\EnvelopeTransaction;
 use App\Models\Liability;
 use App\Models\LiabilityBalance;
 use App\Models\Pension;
@@ -44,9 +46,7 @@ class ExportBackupTest extends TestCase
         $this->assertArrayHasKey('cash_accounts', $data);
         $this->assertArrayHasKey('pensions', $data);
         $this->assertArrayHasKey('envelopes', $data);
-        $this->assertArrayHasKey('income_entries', $data);
         $this->assertArrayHasKey('scheduled_transactions', $data);
-        $this->assertArrayHasKey('watchlist', $data);
         $this->assertSame(1, $data['version']);
     }
 
@@ -133,6 +133,28 @@ class ExportBackupTest extends TestCase
         $this->assertSame('URS Pension', $data['pensions'][0]['name']);
         $this->assertEqualsWithDelta(16.588, $data['pensions'][0]['service_credit_years'], 0.001);
         $this->assertTrue($data['pensions'][0]['include_in_net_worth']);
+    }
+
+    public function test_backup_includes_envelope_transactions(): void
+    {
+        $user     = User::factory()->create();
+        $envelope = Envelope::factory()->for($user)->create(['name' => 'Groceries', 'is_mandatory' => true]);
+        EnvelopeTransaction::factory()->for($envelope)->spend()->create([
+            'amount'      => 75.50,
+            'description' => 'Weekly shop',
+        ]);
+
+        $data = json_decode(
+            $this->actingAs($user)->get(route('export.backup'))->streamedContent(),
+            true
+        );
+
+        $this->assertCount(1, $data['envelopes']);
+        $this->assertSame('Groceries', $data['envelopes'][0]['name']);
+        $this->assertTrue($data['envelopes'][0]['is_mandatory']);
+        $this->assertCount(1, $data['envelopes'][0]['transactions']);
+        $this->assertSame('spend', $data['envelopes'][0]['transactions'][0]['type']);
+        $this->assertEquals(75.50, $data['envelopes'][0]['transactions'][0]['amount']);
     }
 
     public function test_backup_cross_user_isolation(): void

@@ -2,23 +2,15 @@
 
 namespace App\Policies;
 
-use App\Models\IncomeCategory;
-use App\Models\User;
+use App\Concerns\AuthorizesOwner;
+use Illuminate\Database\Eloquent\Model;
 
 class IncomeCategoryPolicy
 {
-    public function view(User $user, IncomeCategory $incomeCategory): bool
-    {
-        return $user->id === $incomeCategory->user_id;
-    }
+    use AuthorizesOwner;
 
-    public function update(User $user, IncomeCategory $incomeCategory): bool
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $incomeCategory->user_id;
-    }
-
-    public function delete(User $user, IncomeCategory $incomeCategory): bool
-    {
-        return $user->id === $incomeCategory->user_id;
+        return $model->user_id;
     }
 }

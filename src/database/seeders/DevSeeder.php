@@ -9,7 +9,6 @@ use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
-use App\Models\IncomeEntry;
 use App\Models\Liability;
 use App\Models\LiabilityBalance;
 use App\Models\ManualAsset;
@@ -51,7 +50,6 @@ class DevSeeder extends Seeder
         $this->seedPension($demo);
         $this->seedCashAccounts($demo);
         $this->seedEnvelopes($demo);
-        $this->seedIncome($demo);
         $this->seedScheduledTransactions($demo);
     }
 
@@ -353,22 +351,6 @@ class DevSeeder extends Seeder
                 'is_savings'  => true,
             ],
         );
-    }
-
-    private function seedIncome(User $user): void
-    {
-        for ($month = 5; $month >= 0; $month--) {
-            $date = CarbonImmutable::now()->subMonths($month)->startOfMonth();
-
-            IncomeEntry::firstOrCreate(
-                ['user_id' => $user->id, 'occurred_at' => $date->toDateString(), 'description' => 'Paycheck'],
-                ['amount' => 4200],
-            );
-            IncomeEntry::firstOrCreate(
-                ['user_id' => $user->id, 'occurred_at' => $date->addDays(14)->toDateString(), 'description' => 'Paycheck'],
-                ['amount' => 4200],
-            );
-        }
     }
 
     private function seedScheduledTransactions(User $user): void

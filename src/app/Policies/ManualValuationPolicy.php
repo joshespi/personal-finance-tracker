@@ -2,13 +2,15 @@
 
 namespace App\Policies;
 
-use App\Models\ManualValuation;
-use App\Models\User;
+use App\Concerns\AuthorizesOwnerDelete;
+use Illuminate\Database\Eloquent\Model;
 
 class ManualValuationPolicy
 {
-    public function delete(User $user, ManualValuation $manualValuation): bool
+    use AuthorizesOwnerDelete;
+
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $manualValuation->manualAsset->portfolio->user_id;
+        return $model->manualAsset->portfolio->user_id;
     }
 }

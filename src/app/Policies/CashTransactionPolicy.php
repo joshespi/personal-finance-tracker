@@ -2,18 +2,16 @@
 
 namespace App\Policies;
 
-use App\Models\CashTransaction;
-use App\Models\User;
+use App\Concerns\AuthorizesOwnerDelete;
+use App\Concerns\AuthorizesOwnerUpdate;
+use Illuminate\Database\Eloquent\Model;
 
 class CashTransactionPolicy
 {
-    public function update(User $user, CashTransaction $cashTransaction): bool
-    {
-        return $user->id === $cashTransaction->cashAccount->user_id;
-    }
+    use AuthorizesOwnerDelete, AuthorizesOwnerUpdate;
 
-    public function delete(User $user, CashTransaction $cashTransaction): bool
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $cashTransaction->cashAccount->user_id;
+        return $model->cashAccount->user_id;
     }
 }

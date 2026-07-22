@@ -98,28 +98,6 @@ class CashAccountTest extends TestCase
         $this->assertDatabaseMissing('cash_accounts', ['id' => $account->id]);
     }
 
-    public function test_record_deposit(): void
-    {
-        $account = CashAccount::factory()->create();
-
-        $this->actingAs($account->user)
-            ->post(route('cash-accounts.transactions.store', $account), [
-                'type'        => 'deposit',
-                'amount'      => 1000,
-                'occurred_at' => '2026-04-26',
-                'description' => 'Paycheck',
-            ])
-            ->assertRedirect(route('cash-accounts.show', $account));
-
-        $this->assertDatabaseHas('cash_transactions', [
-            'cash_account_id' => $account->id,
-            'type'            => 'deposit',
-            'amount'          => 1000,
-        ]);
-
-        $this->assertEquals(1000.0, $account->fresh()->balance());
-    }
-
     public function test_balance_reflects_deposits_minus_withdrawals(): void
     {
         $account = CashAccount::factory()->create();
@@ -202,33 +180,6 @@ class CashAccountTest extends TestCase
             ->call('toggleCleared', $tx->id);
 
         $this->assertTrue($tx->fresh()->cleared);
-    }
-
-    public function test_transaction_validation_rejects_zero_amount(): void
-    {
-        $account = CashAccount::factory()->create();
-
-        $this->actingAs($account->user)
-            ->post(route('cash-accounts.transactions.store', $account), [
-                'type'        => 'deposit',
-                'amount'      => 0,
-                'occurred_at' => '2026-04-26',
-            ])
-            ->assertSessionHasErrors('amount');
-    }
-
-    public function test_transaction_forbidden_for_other_user(): void
-    {
-        $account = CashAccount::factory()->create();
-        $other   = User::factory()->create();
-
-        $this->actingAs($other)
-            ->post(route('cash-accounts.transactions.store', $account), [
-                'type'        => 'deposit',
-                'amount'      => 100,
-                'occurred_at' => '2026-04-26',
-            ])
-            ->assertForbidden();
     }
 
     public function test_delete_transaction(): void

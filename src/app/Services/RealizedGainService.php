@@ -4,12 +4,22 @@ namespace App\Services;
 
 use App\Enums\TransactionType;
 use App\Models\Portfolio;
+use App\Models\Transaction;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
+/**
+ * FIFO cost-basis kernel for a portfolio's position history: realized gains on sales,
+ * and open-lot lookups for transfer cost-basis carryover. Time-weighted return lives in
+ * PortfolioPerformanceService — a different concern (chart-of-value performance, not
+ * lot accounting) that used to live here only because it also needed a Portfolio.
+ */
 class RealizedGainService
 {
+    /** IRS long-term capital gains threshold: held for more than one year. */
+    private const LONG_TERM_HOLDING_DAYS = 365;
+
     /** Realized-gain lots across every non-tax-advantaged portfolio a user owns, each tagged with its source portfolio. */
     public function allLotsForUser(User $user): Collection
     {
@@ -31,50 +41,34 @@ class RealizedGainService
             ->filter(fn ($t) => $t->type->affectsPosition())
             ->sortBy('transacted_at');
 
-        $lots     = collect();
-        $openLots = [];
+        $lots = collect();
 
-        foreach ($txns as $t) {
-            $assetId = $t->asset_id;
-            $openLots[$assetId] ??= [];
-
-            if ($t->type->isInflow()) {
-                $usdFee               = $t->fee_in_asset ? 0.0 : (float) $t->fees;
-                $costPerUnit          = (float) $t->price_per_unit + ($usdFee / max(1, (float) $t->quantity));
-                $openLots[$assetId][] = [
-                    'qty'           => (float) $t->quantity,
-                    'cost_per_unit' => $costPerUnit,
-                    'date'          => $t->transacted_at,
-                    'asset'         => $t->asset,
-                ];
-            } elseif ($t->type->isOutflow()) {
-                // fee_in_asset on a transfer_out means fee units also left the wallet
-                $remainingToSell = $t->fee_in_asset
-                    ? (float) $t->quantity + (float) $t->fees
-                    : (float) $t->quantity;
-                $sellPrice = (float) $t->price_per_unit;
-                $sellDate  = $t->transacted_at;
-                $isSale    = $t->type === TransactionType::Sell;
-
-                // transfers move cost basis to the destination portfolio — not a taxable event
-                $this->consumeFifo($openLots[$assetId], $remainingToSell, function (array $lot, float $matched) use ($lots, $isSale, $t, $sellPrice, $sellDate) {
-                    if ($isSale) {
-                        $lots->push([
-                            'asset'        => $t->asset,
-                            'quantity'     => $matched,
-                            'buy_price'    => $lot['cost_per_unit'],
-                            'sell_price'   => $sellPrice,
-                            'cost_basis'   => round($matched * $lot['cost_per_unit'], 2),
-                            'proceeds'     => round($matched * $sellPrice, 2),
-                            'gain'         => round($matched * ($sellPrice - $lot['cost_per_unit']), 2),
-                            'buy_date'     => $lot['date'],
-                            'sell_date'    => $sellDate,
-                            'holding_days' => (int) $lot['date']->diffInDays($sellDate),
-                        ]);
-                    }
-                });
+        $this->buildOpenLots($txns, function (array $lot, float $matched, Transaction $t) use ($lots) {
+            if ($t->type !== TransactionType::Sell) {
+                return; // transfers move cost basis to the destination portfolio — not a taxable event
             }
-        }
+
+            $sellPrice   = (float) $t->price_per_unit;
+            $sellDate    = $t->transacted_at;
+            $holdingDays = (int) $lot['date']->diffInDays($sellDate);
+
+            $lots->push([
+                'asset'        => $t->asset,
+                'quantity'     => $matched,
+                'buy_price'    => $lot['cost_per_unit'],
+                'sell_price'   => $sellPrice,
+                'cost_basis'   => round($matched * $lot['cost_per_unit'], 2),
+                'proceeds'     => round($matched * $sellPrice, 2),
+                'gain'         => round($matched * ($sellPrice - $lot['cost_per_unit']), 2),
+                'buy_date'     => $lot['date'],
+                'sell_date'    => $sellDate,
+                'holding_days' => $holdingDays,
+                // IRS long-term/short-term threshold: held > 1 year. Tagged here so
+                // consumers (tax summary, realized-gains export) don't each re-derive
+                // the 365-day rule from holding_days themselves.
+                'term' => $holdingDays >= self::LONG_TERM_HOLDING_DAYS ? 'long' : 'short',
+            ]);
+        });
 
         $totalGain = round($lots->sum('gain'), 2);
 
@@ -113,25 +107,53 @@ class RealizedGainService
             ->orderBy('transacted_at')
             ->get();
 
+        $openLots = $this->buildOpenLots($txns)[$assetId] ?? [];
+
+        return array_values(array_filter($openLots, fn ($l) => $l['qty'] > 0.000001));
+    }
+
+    /**
+     * Builds FIFO open lots per asset from a transaction set: inflows push a new lot
+     * (qty, cost-per-unit, date, asset), outflows consume existing lots FIFO. Shared by
+     * compute() (portfolio-wide, needs the date/asset tags to build realized-gain rows)
+     * and openLotsForAsset() (single-asset, for transfer cost-basis carryover) — these
+     * used to be two separately maintained copies of the same walk.
+     *
+     * $onSale, if given, is invoked (lot, matchedQty, transaction) for every FIFO match
+     * on an outflow — the hook compute() uses to record a realized-gain row per match,
+     * without duplicating the walk itself.
+     *
+     * @return array<int, array<int, array{qty: float, cost_per_unit: float, date: Carbon, asset: mixed}>> keyed by asset_id
+     */
+    private function buildOpenLots(Collection $txns, ?callable $onSale = null): array
+    {
         $openLots = [];
 
         foreach ($txns as $t) {
+            $assetId = $t->asset_id;
+            $openLots[$assetId] ??= [];
+
             if ($t->type->isInflow()) {
-                $usdFee     = $t->fee_in_asset ? 0.0 : (float) $t->fees;
-                $openLots[] = [
+                $costPerUnit          = (float) $t->price_per_unit + ($t->usdFee() / max(1, (float) $t->quantity));
+                $openLots[$assetId][] = [
                     'qty'           => (float) $t->quantity,
-                    'cost_per_unit' => (float) $t->price_per_unit + ($usdFee / max(1, (float) $t->quantity)),
+                    'cost_per_unit' => $costPerUnit,
+                    'date'          => $t->transacted_at,
+                    'asset'         => $t->asset,
                 ];
             } elseif ($t->type->isOutflow()) {
-                $remaining = $t->fee_in_asset
-                    ? (float) $t->quantity + (float) $t->fees
-                    : (float) $t->quantity;
+                // fee_in_asset on a transfer_out means fee units also left the wallet
+                $remainingToSell = $t->quantityWithAssetFee();
 
-                $this->consumeFifo($openLots, $remaining);
+                $this->consumeFifo($openLots[$assetId], $remainingToSell, function (array $lot, float $matched) use ($onSale, $t) {
+                    if ($onSale !== null) {
+                        $onSale($lot, $matched, $t);
+                    }
+                });
             }
         }
 
-        return array_values(array_filter($openLots, fn ($l) => $l['qty'] > 0.000001));
+        return $openLots;
     }
 
     /**
@@ -187,80 +209,5 @@ class RealizedGainService
         }
 
         return $totalCost / $qtyReceived;
-    }
-
-    public function computeTwr(Portfolio $portfolio): array
-    {
-        if ($portfolio->relationLoaded('snapshots')) {
-            $snapshots = $portfolio->snapshots->sortBy('recorded_on')->values();
-        } else {
-            $snapshots = $portfolio->snapshots()->orderBy('recorded_on')->get(['recorded_on', 'market_value', 'manual_value', 'cost_basis']);
-        }
-
-        if ($snapshots->count() < 2) {
-            return ['total_pct' => null, 'annualized_pct' => null, 'first_date' => null];
-        }
-
-        // TWR cashflows exclude staking rewards (no cash changed hands).
-        if ($portfolio->relationLoaded('transactions')) {
-            $txns = $portfolio->transactions
-                ->filter(fn ($t) => $t->type->isCashflow())
-                ->sortBy('transacted_at')
-                ->values();
-        } else {
-            $txns = $portfolio->transactions()
-                ->whereIn('type', TransactionType::cashflowValues())
-                ->orderBy('transacted_at')
-                ->get(['type', 'quantity', 'price_per_unit', 'fees', 'transacted_at']);
-        }
-
-        $cashflows = [];
-        foreach ($txns as $t) {
-            $date             = $t->transacted_at->toDateString();
-            $amount           = (float) $t->quantity * (float) $t->price_per_unit + (float) $t->fees;
-            $sign             = $t->type->isInflow() ? 1 : -1;
-            $cashflows[$date] = ($cashflows[$date] ?? 0) + $sign * $amount;
-        }
-
-        $twr       = 1.0;
-        $prevValue = null;
-        $firstDate = null;
-        $lastDate  = null;
-
-        foreach ($snapshots as $snap) {
-            $date  = $snap->recorded_on->toDateString();
-            $value = (float) $snap->market_value + (float) $snap->manual_value;
-
-            if ($prevValue === null) {
-                $prevValue = $value;
-                $firstDate = $date;
-                $lastDate  = $date;
-
-                continue;
-            }
-
-            $cf          = $cashflows[$date] ?? 0;
-            $denominator = $prevValue + $cf;
-
-            if ($denominator > 0) {
-                $twr *= ($value / $denominator);
-            }
-
-            $prevValue = $value;
-            $lastDate  = $date;
-        }
-
-        $totalPct = round(($twr - 1) * 100, 2);
-
-        $days          = Carbon::parse($firstDate)->diffInDays(Carbon::parse($lastDate));
-        $annualizedPct = $days > 0
-            ? round((pow($twr, 365 / $days) - 1) * 100, 2)
-            : null;
-
-        return [
-            'total_pct'      => $totalPct,
-            'annualized_pct' => $annualizedPct,
-            'first_date'     => $firstDate,
-        ];
     }
 }

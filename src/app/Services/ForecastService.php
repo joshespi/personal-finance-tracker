@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\CashTransaction;
 use App\Models\User;
 use App\Support\Finance;
 
@@ -13,18 +12,8 @@ class ForecastService
     {
         $defaultStartNw = round($user->latestPortfolioValue() + $user->totalCash() - $user->totalDebt(), 2);
 
-        $threeMonthsAgo = now()->subMonths(3)->startOfMonth();
-        $lastMonthEnd   = now()->subMonth()->endOfMonth();
-
         $income3m = $user->incomeForTrailingMonths(3);
-
-        $envelopeIds = $user->envelopes()->pluck('id');
-        $spend3m     = $envelopeIds->isNotEmpty()
-            ? (float) CashTransaction::whereIn('envelope_id', $envelopeIds)
-                ->withdrawals()
-                ->whereBetween('occurred_at', [$threeMonthsAgo, $lastMonthEnd])
-                ->sum('amount')
-            : 0.0;
+        $spend3m  = $user->spendForTrailingMonths(3);
 
         $defaultMonthlySavings = round(max(0, ($income3m - $spend3m) / 3), 2);
 

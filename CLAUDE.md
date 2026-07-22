@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Self-hosted personal finance app ("Personal Finance Tracker", repo formerly `portfolio-tracker`) covering two domains in one Laravel app:
 
 - **Investing** — portfolios, transactions, market-priced assets (Finnhub stocks/bonds/real-estate, CoinGecko crypto), manual assets, tax/realized-gain reporting, snapshots & benchmarks.
-- **Budgeting** — envelopes, cash accounts, income, "ready to assign", scheduled/recurring transactions, and a family of planning calculators (cashflow, spending trends, emergency fund, debt payoff, allocator, 50/30/20 budget rule, FIRE forecast).
-- **Import/export** — per-portfolio CSV transaction import (`TransactionImportController`), a multi-step YNAB importer (`YnabImportController` + `YnabImportService`: upload → preview → commit/cancel), and CSV/full-backup exports (`ExportController`).
+- **Budgeting** — envelopes, cash accounts, income, "ready to assign", scheduled/recurring transactions, and a family of planning calculators (cashflow, spending trends, emergency fund, debt payoff, allocator, 50/30/20 budget rule, retirement/FIRE).
+- **Import/export** — per-portfolio CSV transaction import (`TransactionImportController` + `TransactionCsvImportService`), a multi-step generic CSV importer for cash transactions (`CsvImportController` + `CsvImportService`: upload → preview → column-mapping → commit/cancel) driven by named column presets in `Support\ImportPresets` (YNAB is one preset among several, no longer a hard-coded parser), and CSV/full-backup exports (`ExportController`).
 
 The Laravel project lives in `src/`. Everything below assumes `src/` is the app root.
 
@@ -28,17 +28,17 @@ The `app` entrypoint runs `composer install`, `migrate --force`, and `optimize` 
 ## Tests
 
 ```bash
-docker compose exec app php artisan test                      # full suite (~460 tests, SQLite :memory:)
-docker compose exec app php artisan test --filter EnvelopeTest # single test class/method
+docker compose exec app php vendor/bin/phpunit                       # full suite (~640 tests, SQLite :memory:)
+docker compose exec app php vendor/bin/phpunit --filter EnvelopeTest  # single test class/method
 ```
 
-`phpunit.xml` forces `sqlite`/`:memory:`, `array` cache/mail, `sync` queue. Tests live in `tests/Feature` (one file per domain feature — mostly HTTP-level) and `tests/Unit` (model/enum logic). The CLI image sets `memory_limit = 512M` via `docker/php/zz-app.ini`; the full run OOMs at PHP's 128M default (the YNAB import tests are the heavy ones). Lint/format with `docker compose exec app ./vendor/bin/pint`.
+`phpunit.xml` forces `sqlite`/`:memory:`, `array` cache/mail, `sync` queue via `tests/bootstrap.php` (which also deletes any cached `bootstrap/cache/config.php`, since a cached config bakes in the container's real `DB_CONNECTION` and would otherwise mask the override). Prefer `vendor/bin/phpunit` directly over `php artisan test` — the latter boots the framework against the live config before handing off to PHPUnit, and has been observed to run against the real MariaDB dev database instead of sqlite (harmless — `RefreshDatabase` still rolls back per test — but produces spurious failures from pre-existing data). Tests live in `tests/Feature` (one file per domain feature — mostly HTTP-level) and `tests/Unit` (model/enum logic). The CLI image sets `memory_limit = 512M` via `docker/php/zz-app.ini`; the full run OOMs at PHP's 128M default (the CSV import tests are the heavy ones). Lint/format with `docker compose exec app ./vendor/bin/pint`.
 
 ## Architecture
 
-**Request flow:** thin resource controllers (`app/Http/Controllers`) → domain **Services** (`app/Services`) for anything non-trivial. Services hold the real logic and are the right place to add/read business rules: `ScheduledTransactionService` (recurrence materialization), `RealizedGainService`, `BudgetRuleService`, `DebtPayoffService`, `YnabImportService`, `BenchmarkService`, `AssetService`, `DemoMode`.
+**Request flow:** thin resource controllers (`app/Http/Controllers`) → domain **Services** (`app/Services`) for anything non-trivial. Services hold the real logic and are the right place to add/read business rules: `ScheduledTransactionService` (recurrence materialization), `RealizedGainService` (FIFO cost-basis/realized-gain lots), `PortfolioPerformanceService` (time-weighted return), `PortfolioAllocationService`, `BudgetRuleService`, `DebtPayoffService`, `ForecastService` (FIRE trajectory) + `RetirementProjectionService` (age-based 4%-rule target) — both power the Retirement tab's two modes, `CsvImportService` (generic column-mapped import; YNAB is one of several `Support\ImportPresets`, not its own service), `BenchmarkService`, `AssetService`, `DemoMode`.
 
-**Routing & auth:** all routes in `routes/web.php` (auth scaffolding in `auth.php`, both wired through `bootstrap/app.php`). Authorization is via **Laravel Policies** (`app/Policies`, one per owned model) — not ad-hoc `abort_unless` checks. Admin area is the `admin` middleware group (`EnsureUserIsAdmin`). Two custom web-group middlewares: `HandleImpersonation` (admin "log in as user") and `ShareDemoMode` (anonymized display mode for screenshots).
+**Routing & auth:** all routes in `routes/web.php` (auth scaffolding in `auth.php`, both wired through `bootstrap/app.php`). Authorization is via **Laravel Policies** (`app/Policies`, one per owned model) — not ad-hoc `abort_unless` checks. Admin area is the `admin` middleware group (`EnsureUserIsAdmin`). Three custom web-group middlewares: `HandleImpersonation` (admin "log in as user"), `ShareDemoMode` (anonymized display mode for screenshots), and `MaterializeDueScheduledTransactions` (see Scheduling below).
 
 **Pricing model (investing core):**
 - `Asset` is a globally-shared instrument. `Asset::effectivePriceSource()` resolves the feed: explicit `price_source`, else crypto→CoinGecko / everything else→Finnhub.
@@ -49,9 +49,9 @@ docker compose exec app php artisan test --filter EnvelopeTest # single test cla
 
 **Scheduling (two distinct mechanisms — don't conflate):**
 - Cron-style commands registered in `bootstrap/app.php` `withSchedule`: `assets:fetch-prices` (hourly), `portfolios:snapshot` (daily 00:05), `transactions:materialize` (daily 00:10). These need a host cron running `schedule:run`.
-- Recurring `ScheduledTransaction`s are **materialized lazily** by `ScheduledTransactionService` whenever a user hits the relevant page — due entries are created and `next_due_at` advanced (capped at 24 catch-up cycles). The daily `transactions:materialize` command is a backstop, not the primary path.
+- Recurring `ScheduledTransaction`s are **materialized lazily** by `ScheduledTransactionService`, triggered app-wide by the `MaterializeDueScheduledTransactions` web-group middleware on every authenticated request — due entries are created and `next_due_at` advanced (capped at 24 catch-up cycles). The daily `transactions:materialize` command is a backstop for accounts that never open the app, and is deliberately the *only* trigger for the `ScheduledTransactionsSummary` email (an active user materializing on every page load would otherwise get emailed about things they're already looking at).
 
-**Frontend:** Blade + Alpine.js + Tailwind, built by Vite (`node` service). Charts via Chart.js (shared helpers have vitest unit tests — `npm run test`), markdown via EasyMDE, QR via `qrcode`. One Livewire component (`app/Livewire/TransactionList.php`); the app is otherwise server-rendered.
+**Frontend:** Blade + Alpine.js + Tailwind, built by Vite (`node` service). Charts via Chart.js (shared helpers have vitest unit tests — `npm run test`), markdown via EasyMDE, QR via `qrcode`. Two Livewire components (`app/Livewire/TransactionList.php`, single-account ledger; `AllTransactions.php`, the cross-account ledger — sharing form/CRUD logic via `Concerns\ManagesCashTransactionForm`); the app is otherwise server-rendered.
 
 **Conventions:** `Model::preventLazyLoading()` is on outside production — N+1s throw in dev/test, so eager-load relations. Production forces HTTPS. Login events are recorded to `LoginHistory` via a listener.
 

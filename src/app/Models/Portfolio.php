@@ -95,7 +95,10 @@ class Portfolio extends Model
     }
 
     /**
-     * Compute holdings from transactions.
+     * Compute holdings from transactions. Cost basis (total_cost/avg_cost) is FIFO —
+     * see Transaction::accumulateFifoCostBasis() — the same convention RealizedGainService
+     * uses for realized gains, so a position's unrealized_gain here reconciles against
+     * its realized gain rather than drifting from it.
      * Requires transactions.asset.latestPrice and manualAssets.latestValuation to be loaded.
      */
     public function computeHoldings(): Collection
@@ -109,7 +112,7 @@ class Portfolio extends Model
             ->groupBy('asset_id')
             ->map(function ($txns) {
                 $asset                  = $txns->first()->asset;
-                [$totalQty, $totalCost] = Transaction::accumulateCostBasis($txns);
+                [$totalQty, $totalCost] = Transaction::accumulateFifoCostBasis($txns);
 
                 $latestPrice    = $asset->latestPrice ? (float) $asset->latestPrice->price : null;
                 $currentValue   = $latestPrice !== null ? round($totalQty * $latestPrice, 2) : null;
@@ -133,5 +136,19 @@ class Portfolio extends Model
             ->filter(fn ($h) => $h['quantity'] > 0)
             ->sortBy(fn ($h) => $h['asset']->symbol)
             ->values();
+    }
+
+    public function toBackupArray(): array
+    {
+        return [
+            'name'              => $this->name,
+            'description'       => $this->description,
+            'currency'          => $this->currency,
+            'is_tax_advantaged' => (bool) $this->is_tax_advantaged,
+            'created_at'        => $this->created_at->toDateString(),
+            'transactions'      => $this->transactions->map(fn ($t) => $t->toBackupArray())->values(),
+            'manual_assets'     => $this->manualAssets->map(fn ($m) => $m->toBackupArray())->values(),
+            'journal_entries'   => $this->journalEntries->map(fn ($j) => $j->toBackupArray())->values(),
+        ];
     }
 }

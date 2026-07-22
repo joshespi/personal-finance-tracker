@@ -72,7 +72,7 @@ class Transaction extends Model
     /** Total cost including fees (for buys) */
     public function totalCost(): float
     {
-        return (float) $this->quantity * (float) $this->price_per_unit + (float) $this->fees;
+        return (float) $this->quantity * (float) $this->price_per_unit + $this->usdFee();
     }
 
     /** Dividend received: quantity × price_per_unit (no fees) */
@@ -81,9 +81,61 @@ class Transaction extends Model
         return (float) $this->quantity * (float) $this->price_per_unit;
     }
 
+    public function toBackupArray(): array
+    {
+        return [
+            'date'           => $this->transacted_at->toDateString(),
+            'symbol'         => $this->asset->symbol,
+            'asset_type'     => $this->asset->asset_type,
+            'type'           => $this->type->value,
+            'quantity'       => (float) $this->quantity,
+            'price_per_unit' => (float) $this->price_per_unit,
+            'fees'           => (float) $this->fees,
+            'currency'       => $this->currency,
+            'notes'          => $this->notes,
+        ];
+    }
+
     /**
-     * Accumulates running quantity and weighted-average cost basis across a set of
-     * same-asset transactions (outflows deduct proportionally from the running cost).
+     * The fee expressed in cash terms — zero when fee_in_asset is set, since that fee
+     * was paid in units of the asset itself (see quantityWithAssetFee()) rather than cash.
+     */
+    public function usdFee(): float
+    {
+        return $this->fee_in_asset ? 0.0 : (float) $this->fees;
+    }
+
+    /**
+     * Total asset units this transaction removes from the wallet: the stored quantity
+     * plus the fee, when the fee was paid in the asset itself rather than in cash.
+     */
+    public function quantityWithAssetFee(): float
+    {
+        return $this->fee_in_asset ? (float) $this->quantity + (float) $this->fees : (float) $this->quantity;
+    }
+
+    /**
+     * Net quantity after subtracting an in-asset fee (never below zero) — shared by the
+     * transfer wizard (destination received quantity) and the transaction edit form
+     * (undoing its gross-for-display transform before storage).
+     */
+    public static function netOfFee(float $quantity, float $fees, bool $feeInAsset): float
+    {
+        return $feeInAsset ? max(0.0, $quantity - $fees) : $quantity;
+    }
+
+    /**
+     * Accumulates running quantity and FIFO remaining cost basis across a set of
+     * same-asset transactions: each inflow opens a lot at its own cost-per-unit, each
+     * outflow consumes the oldest open lot(s) first. Cost basis is the sum of what's
+     * left in the still-open lots — the same FIFO convention RealizedGainService's
+     * realized-gain lots already use, so a position's unrealized_gain now reconciles
+     * against its realized gain (previously computeHoldings() used a blended
+     * weighted-average cost instead, which could not guarantee that).
+     *
+     * Quantity is unaffected by which convention is used — FIFO and weighted-average
+     * net the same units held, only the cost basis of what remains differs.
+     *
      * Shared by Portfolio::computeHoldings() (current holdings) and
      * PortfolioSnapshotBackfillService (historical as-of holdings) — same algorithm,
      * only the transaction set and the price used to value the result differ.
@@ -91,25 +143,31 @@ class Transaction extends Model
      * @param  Collection<int, Transaction>  $transactions  same-asset transactions, any order
      * @return array{0: float, 1: float} [quantity, cost_basis]
      */
-    public static function accumulateCostBasis(Collection $transactions): array
+    public static function accumulateFifoCostBasis(Collection $transactions): array
     {
-        $totalQty  = 0.0;
-        $totalCost = 0.0;
+        $lots = [];
 
         foreach ($transactions->sortBy('transacted_at') as $t) {
-            $qty = (float) $t->quantity;
             if ($t->type->isInflow()) {
-                $usdFee = $t->fee_in_asset ? 0.0 : (float) $t->fees;
-                $totalCost += $qty * (float) $t->price_per_unit + $usdFee;
-                $totalQty += $qty;
+                $costPerUnit = (float) $t->price_per_unit + ($t->usdFee() / max(1, (float) $t->quantity));
+                $lots[]      = ['qty' => (float) $t->quantity, 'cost_per_unit' => $costPerUnit];
             } elseif ($t->type->isOutflow()) {
-                $deduct = $t->fee_in_asset ? $qty + (float) $t->fees : $qty;
-                if ($totalQty > 0) {
-                    $totalCost -= ($totalCost / $totalQty) * min($deduct, $totalQty);
+                $remaining = $t->quantityWithAssetFee();
+
+                while ($remaining > 0.000001 && ! empty($lots)) {
+                    $matched = min($lots[0]['qty'], $remaining);
+                    $lots[0]['qty'] -= $matched;
+                    $remaining -= $matched;
+
+                    if ($lots[0]['qty'] < 0.000001) {
+                        array_shift($lots);
+                    }
                 }
-                $totalQty -= $deduct;
             }
         }
+
+        $totalQty  = array_sum(array_column($lots, 'qty'));
+        $totalCost = array_sum(array_map(fn ($l) => $l['qty'] * $l['cost_per_unit'], $lots));
 
         return [max(0.0, round($totalQty, 8)), max(0.0, $totalCost)];
     }

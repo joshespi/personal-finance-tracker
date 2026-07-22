@@ -2,23 +2,15 @@
 
 namespace App\Policies;
 
-use App\Models\ScheduledTransaction;
-use App\Models\User;
+use App\Concerns\AuthorizesOwner;
+use Illuminate\Database\Eloquent\Model;
 
 class ScheduledTransactionPolicy
 {
-    public function view(User $user, ScheduledTransaction $scheduledTransaction): bool
-    {
-        return $user->id === $scheduledTransaction->user_id;
-    }
+    use AuthorizesOwner;
 
-    public function update(User $user, ScheduledTransaction $scheduledTransaction): bool
+    protected function ownerId(Model $model): int
     {
-        return $user->id === $scheduledTransaction->user_id;
-    }
-
-    public function delete(User $user, ScheduledTransaction $scheduledTransaction): bool
-    {
-        return $user->id === $scheduledTransaction->user_id;
+        return $model->user_id;
     }
 }

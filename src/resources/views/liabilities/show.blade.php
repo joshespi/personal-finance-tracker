@@ -64,6 +64,7 @@
                             <x-input-label for="balance" value="Balance Owed ({{ $liability->currency }})" />
                             <x-text-input id="balance" name="balance" type="number" class="mt-1 block w-40"
                                           :value="old('balance')" required min="0" step="any" placeholder="245000.00" />
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Enter as a positive amount, e.g. 245000.00.</p>
                             <x-input-error :messages="$errors->get('balance')" class="mt-2" />
                         </div>
 

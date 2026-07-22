@@ -3,7 +3,7 @@
     $tab = $req->query('tab');
 
     // ── Section active states (drive accordion auto-open) ──────────────────────
-    $budgetActive   = $req->routeIs('envelopes.*', 'ready-to-assign', 'income-categories.*', 'income-entries.*', 'liabilities.*');
+    $budgetActive   = $req->routeIs('envelopes.*', 'ready-to-assign', 'income-categories.*', 'liabilities.*');
     $accountsActive = $req->routeIs('cash-accounts.*');
     $investActive   = $req->routeIs('portfolios.*', 'manual-assets.*', 'transactions.*', 'dividends', 'tax.*', 'pensions.*');
     $planActive     = $req->routeIs('analysis', 'planning', 'forecast', 'cashflow', 'spending-trends', 'budget-rule', 'emergency-fund', 'debt-payoff', 'allocator');
@@ -18,7 +18,7 @@
         ->withCurrentBalance()
         ->orderBy('name')
         ->get()
-        ->each(fn ($a) => $a->current_balance = (float) ($a->deposits_total ?? 0) - (float) ($a->withdrawals_total ?? 0));
+        ->each(fn ($a) => $a->current_balance = $a->currentBalanceFromSums());
 
     $accountItems = [];
     foreach ($sidebarAccounts as $a) {
@@ -54,7 +54,7 @@
             'active' => $budgetActive,
             'items'  => [
                 ['label' => 'Envelopes',   'href' => route('envelopes.index'),         'active' => $req->routeIs('envelopes.*', 'ready-to-assign')],
-                ['label' => 'Income',      'href' => route('income-categories.index'), 'active' => $req->routeIs('income-categories.*', 'income-entries.*')],
+                ['label' => 'Income',      'href' => route('income-categories.index'), 'active' => $req->routeIs('income-categories.*')],
                 ['label' => 'Liabilities', 'href' => route('liabilities.index'),        'active' => $req->routeIs('liabilities.*')],
             ],
         ],
@@ -87,8 +87,7 @@
                 ['label' => 'Emergency Fund',  'href' => route('planning', ['tab' => 'emergency-fund']),   'active' => $isPlanningTab('emergency-fund') || $req->routeIs('emergency-fund')],
                 ['label' => 'Debt Payoff',     'href' => route('planning', ['tab' => 'debt-payoff']),      'active' => $isPlanningTab('debt-payoff') || $req->routeIs('debt-payoff')],
                 ['label' => 'Allocator',       'href' => route('planning', ['tab' => 'allocator']),        'active' => $isPlanningTab('allocator') || $req->routeIs('allocator')],
-                ['label' => 'Retirement',      'href' => route('planning', ['tab' => 'retirement']),       'active' => $isPlanningTab('retirement')],
-                ['label' => 'Forecast',        'href' => route('forecast'),                                'active' => $req->routeIs('forecast')],
+                ['label' => 'Retirement & FIRE', 'href' => route('planning', ['tab' => 'retirement']),     'active' => $isPlanningTab('retirement')],
             ],
         ],
     ];

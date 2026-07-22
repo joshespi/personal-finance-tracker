@@ -21,4 +21,12 @@ class LiabilityBalance extends Model
     {
         return $this->belongsTo(Liability::class);
     }
+
+    public function toBackupArray(): array
+    {
+        return [
+            'date'    => $this->recorded_at->toDateString(),
+            'balance' => (float) $this->balance,
+        ];
+    }
 }

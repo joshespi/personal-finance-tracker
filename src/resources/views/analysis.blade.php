@@ -1,6 +1,6 @@
 <x-app-layout>
     @push('head-vite')
-        @vite(['resources/js/chartjs.js'])
+        @vite(['resources/js/chartjs.js', 'resources/js/analysis-charts.js'])
     @endpush
 
     <x-slot name="header">
@@ -20,29 +20,11 @@
 
             <div class="flex flex-col items-end gap-2">
                 {{-- Tab switcher --}}
-                <div class="flex items-center gap-1">
-                    <a href="{{ route('analysis', ['tab' => 'cashflow']) }}"
-                       class="px-3 py-1.5 text-xs rounded-md font-medium transition
-                              {{ $tab === 'cashflow'
-                                  ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
-                                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600' }}">
-                        Cashflow
-                    </a>
-                    <a href="{{ route('analysis', ['tab' => 'trends']) }}"
-                       class="px-3 py-1.5 text-xs rounded-md font-medium transition
-                              {{ $tab === 'trends'
-                                  ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
-                                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600' }}">
-                        Trends
-                    </a>
-                    <a href="{{ route('analysis', ['tab' => 'budget-rule']) }}"
-                       class="px-3 py-1.5 text-xs rounded-md font-medium transition
-                              {{ $tab === 'budget-rule'
-                                  ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
-                                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600' }}">
-                        50/30/20
-                    </a>
-                </div>
+                <x-tab-nav :tabs="[
+                    ['href' => route('analysis', ['tab' => 'cashflow']), 'label' => 'Cashflow', 'active' => $tab === 'cashflow'],
+                    ['href' => route('analysis', ['tab' => 'trends']), 'label' => 'Trends', 'active' => $tab === 'trends'],
+                    ['href' => route('analysis', ['tab' => 'budget-rule']), 'label' => '50/30/20', 'active' => $tab === 'budget-rule'],
+                ]" />
 
                 {{-- Tab-specific controls --}}
                 @if ($tab === 'cashflow')
@@ -451,67 +433,17 @@
 
     </div>
 
+    @php
+        $analysisChartsData = [
+            'tab'         => $tab,
+            'history'     => $tab === 'cashflow' ? $history : null,
+            'monthLabels' => $tab === 'trends' ? $monthLabels : null,
+            'datasets'    => $tab === 'trends' ? $datasets : null,
+        ];
+    @endphp
     @push('scripts')
-    @if ($tab === 'cashflow')
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const history = @json($history);
-        const { gridColor: grid, labelColor: ticks } = window.themeColors();
-
-        new Chart(document.getElementById('cashflowChart'), {
-            type: 'bar',
-            data: {
-                labels: history.map(h => h.month),
-                datasets: [
-                    { label: 'Income', data: history.map(h => h.income), backgroundColor: 'rgba(34,197,94,0.65)', borderColor: 'rgba(34,197,94,1)', borderWidth: 1, borderRadius: 3 },
-                    { label: 'Spent',  data: history.map(h => h.spent),  backgroundColor: 'rgba(239,68,68,0.65)', borderColor: 'rgba(239,68,68,1)',  borderWidth: 1, borderRadius: 3 },
-                ],
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { labels: { color: ticks } },
-                    tooltip: { callbacks: { label: ctx => ' $' + ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2 }) } },
-                },
-                scales: {
-                    x: { ticks: { color: ticks }, grid: { color: grid } },
-                    y: { beginAtZero: true, ticks: { color: ticks, callback: v => '$' + v.toLocaleString('en-US') }, grid: { color: grid } },
-                },
-            },
-        });
-    });
-    </script>
-    @elseif ($tab === 'trends' && $datasets->isNotEmpty())
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const labels   = @json($monthLabels);
-        const datasets = @json($datasets);
-        const { gridColor: grid, labelColor: ticks } = window.themeColors();
-
-        new Chart(document.getElementById('trendsChart'), {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: datasets.map(ds => ({
-                    label: ds.label, data: ds.data,
-                    backgroundColor: ds.color + 'cc', borderColor: ds.color,
-                    borderWidth: 1, borderRadius: 2, stack: 'spend',
-                })),
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'bottom', labels: { color: ticks, boxWidth: 12, padding: 16 } },
-                    tooltip: { callbacks: { label: ctx => ' ' + ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2 }) } },
-                },
-                scales: {
-                    x: { stacked: true, ticks: { color: ticks }, grid: { color: grid } },
-                    y: { stacked: true, beginAtZero: true, ticks: { color: ticks, callback: v => '$' + v.toLocaleString('en-US') }, grid: { color: grid } },
-                },
-            },
-        });
-    });
-    </script>
-    @endif
+    {{-- Chart data only — analysis-charts.js (pushed to head-vite above) owns all
+         Chart.js setup and reads this blob on DOMContentLoaded. --}}
+    <script>window.__analysisCharts = @json($analysisChartsData);</script>
     @endpush
 </x-app-layout>

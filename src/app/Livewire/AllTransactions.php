@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Concerns\ManagesCashTransactionForm;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
-use App\Services\ScheduledTransactionService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
@@ -31,11 +30,10 @@ class AllTransactions extends Component
     /** Narrow by clearing status: '' = all, 'pending' = uncleared, 'cleared'. */
     public string $statusFilter = '';
 
-    public function mount(ScheduledTransactionService $service): void
+    public function mount(): void
     {
-        // Materialize any due recurring transactions so the ledger reflects them.
-        $service->materializeForUser(auth()->user());
-
+        // Due recurring transactions are materialized app-wide by
+        // MaterializeDueScheduledTransactions middleware before this mounts.
         $this->newOccurredAt = now()->format('Y-m-d');
         $this->newAccountId  = $this->accounts->first()?->id;
     }

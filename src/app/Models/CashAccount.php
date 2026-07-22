@@ -61,6 +61,18 @@ class CashAccount extends Model
             ->withSum(['transactions as withdrawals_total' => fn ($q) => $q->where('type', 'withdrawal')], 'amount');
     }
 
+    /**
+     * Balance derived from the deposits_total/withdrawals_total sums loaded by
+     * scopeWithCurrentBalance() — the cheap, N+1-avoiding balance for a *list* of
+     * accounts. Callers assign the result onto current_balance themselves (it isn't
+     * an accessor) since the sum attributes are only present after that scope.
+     * For a single account, prefer balance()/balances() instead.
+     */
+    public function currentBalanceFromSums(): float
+    {
+        return (float) ($this->deposits_total ?? 0) - (float) ($this->withdrawals_total ?? 0);
+    }
+
     /** Working balance — every transaction, cleared or not. */
     public function balance(): float
     {
@@ -94,4 +106,15 @@ class CashAccount extends Model
     }
 
     private ?array $balancesCache = null;
+
+    public function toBackupArray(): array
+    {
+        return [
+            'name'         => $this->name,
+            'account_type' => $this->account_type,
+            'currency'     => $this->currency,
+            'notes'        => $this->notes,
+            'transactions' => $this->transactions->map(fn ($t) => $t->toBackupArray())->values(),
+        ];
+    }
 }

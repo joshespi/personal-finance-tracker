@@ -21,7 +21,7 @@ class PortfolioTransferController extends Controller
         return view('transfers.create', compact('portfolios'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, RealizedGainService $gainService): RedirectResponse
     {
         $portfolioIds = $request->user()->portfolios()->pluck('id');
 
@@ -46,11 +46,10 @@ class PortfolioTransferController extends Controller
         $qtySent    = (float) $validated['quantity'];
 
         // transfer_in records what actually landed — fee was consumed on the sending side
-        $receivedQty = $feeInAsset ? max(0, $qtySent - $fees) : $qtySent;
+        $receivedQty = Transaction::netOfFee($qtySent, $fees, $feeInAsset);
 
         // carry the original cost basis from source portfolio into the destination lot
         $fromPortfolio   = $request->user()->portfolios()->findOrFail($validated['from_portfolio_id']);
-        $gainService     = new RealizedGainService;
         $openLots        = $gainService->openLotsForAsset($fromPortfolio, $asset->id, $validated['transacted_at']);
         $transferInPrice = $gainService->transferInCostPerUnit($openLots, $qtySent, $receivedQty)
             ?? (float) $validated['price_per_unit'];

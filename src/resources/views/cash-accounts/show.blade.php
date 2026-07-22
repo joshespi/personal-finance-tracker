@@ -48,6 +48,9 @@
             @if ($account->account_type === 'credit_card' && ($account->interest_rate || $account->billing_day))
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4 flex flex-wrap gap-6 text-sm">
                     @if ($account->interest_rate)
+                        {{-- Same formula as Liability::monthlyInterest() — flagged there, not
+                             fixed: a credit-card CashAccount isn't a Liability row, so the
+                             debt-payoff/allocator calculators never see it. --}}
                         @php $monthlyInterest = round(abs($account->current_balance) * ((float)$account->interest_rate / 100) / 12, 2); @endphp
                         <div>
                             <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">APR</p>
