@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.10.1] - 2026-07-22
+
+### Fixed
+
+- **Transfers are now atomic.** Cash-account and portfolio transfers each write two linked rows (withdrawal + deposit / `transfer_out` + `transfer_in`); these were created outside a transaction, so a failure on the second write left an orphaned half-transfer — money debited from one side with no matching credit, and ledgers that no longer reconciled. Both `CashTransferController` and `PortfolioTransferController` now wrap the pair in `DB::transaction()`, matching the pattern already used by `EnvelopeTransactionController`.
+- Cash-transaction description search no longer treats `%`/`_` in the filter as SQL LIKE wildcards — searching for `50%` now matches literally instead of every row.
+
+### Changed
+
+- Finnhub and CoinGecko API calls now retry transient failures (`->retry(3, 200)`), so a single dropped request or HTTP 429/5xx no longer loses a whole price fetch.
+- `assets:fetch-prices` stops the run on a sustained HTTP 429 (rather than hammering every remaining ticker), batches its price inserts into one write per feed instead of a row-at-a-time INSERT, and paces Finnhub calls at 1s to respect the free-tier 60/min limit.
+
 ## [1.10.0] - 2026-07-22
 
 ### Added

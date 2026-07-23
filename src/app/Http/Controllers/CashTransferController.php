@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CashTransaction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -39,16 +40,18 @@ class CashTransferController extends Controller
             'cleared'     => $request->boolean('cleared'),
         ];
 
-        $withdrawal = CashTransaction::create(array_merge($common, [
-            'cash_account_id' => $validated['from_account_id'],
-            'type'            => 'withdrawal',
-        ]));
+        DB::transaction(function () use ($common, $validated) {
+            $withdrawal = CashTransaction::create(array_merge($common, [
+                'cash_account_id' => $validated['from_account_id'],
+                'type'            => 'withdrawal',
+            ]));
 
-        CashTransaction::create(array_merge($common, [
-            'cash_account_id'       => $validated['to_account_id'],
-            'type'                  => 'deposit',
-            'linked_transaction_id' => $withdrawal->id,
-        ]));
+            CashTransaction::create(array_merge($common, [
+                'cash_account_id'       => $validated['to_account_id'],
+                'type'                  => 'deposit',
+                'linked_transaction_id' => $withdrawal->id,
+            ]));
+        });
 
         return redirect()->route('cash-accounts.all')->with('success', 'Transfer recorded.');
     }

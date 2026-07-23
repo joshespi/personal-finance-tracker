@@ -9,6 +9,7 @@ use App\Services\AssetService;
 use App\Services\RealizedGainService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -64,21 +65,23 @@ class PortfolioTransferController extends Controller
             'notes'          => $validated['notes'] ?? null,
         ];
 
-        $transferOut = Transaction::create(array_merge($common, [
-            'portfolio_id' => $validated['from_portfolio_id'],
-            'type'         => TransactionType::TransferOut,
-            'quantity'     => $qtySent,
-        ]));
+        DB::transaction(function () use ($common, $validated, $qtySent, $receivedQty, $transferInPrice) {
+            $transferOut = Transaction::create(array_merge($common, [
+                'portfolio_id' => $validated['from_portfolio_id'],
+                'type'         => TransactionType::TransferOut,
+                'quantity'     => $qtySent,
+            ]));
 
-        Transaction::create(array_merge($common, [
-            'portfolio_id'       => $validated['to_portfolio_id'],
-            'type'               => TransactionType::TransferIn,
-            'quantity'           => $receivedQty,
-            'price_per_unit'     => $transferInPrice,
-            'fee_in_asset'       => false,
-            'fees'               => 0,
-            'linked_transfer_id' => $transferOut->id,
-        ]));
+            Transaction::create(array_merge($common, [
+                'portfolio_id'       => $validated['to_portfolio_id'],
+                'type'               => TransactionType::TransferIn,
+                'quantity'           => $receivedQty,
+                'price_per_unit'     => $transferInPrice,
+                'fee_in_asset'       => false,
+                'fees'               => 0,
+                'linked_transfer_id' => $transferOut->id,
+            ]));
+        });
 
         if ($request->boolean('add_another')) {
             return redirect()

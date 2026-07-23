@@ -95,7 +95,9 @@ trait ManagesCashTransactionForm
         if ($asNum !== null && $asNum > 0) {
             $query->whereRaw('ABS(amount - ?) < 0.005', [$asNum]);
         } else {
-            $query->whereRaw('LOWER(description) LIKE ?', ['%'.$f.'%']);
+            // Escape LIKE wildcards so a filter like "50%" matches literally, not everything.
+            $escaped = addcslashes($f, '%_\\');
+            $query->whereRaw('LOWER(description) LIKE ?', ['%'.$escaped.'%']);
         }
 
         return $query;

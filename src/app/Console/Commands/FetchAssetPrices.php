@@ -76,6 +76,7 @@ class FetchAssetPrices extends Command
         $coinMap     = collect($response->json())->keyBy(fn ($c) => strtoupper($c['symbol']));
         $now         = now();
         $newGeckoIds = [];
+        $rows        = [];
 
         foreach ($assets as $asset) {
             $coin = $coinMap->get(strtoupper($asset->symbol));
@@ -90,14 +91,20 @@ class FetchAssetPrices extends Command
                 $newGeckoIds[] = ['id' => $asset->id, 'coingecko_id' => $coin['id']];
             }
 
-            AssetPrice::create([
+            $rows[] = [
                 'asset_id'    => $asset->id,
                 'price'       => $coin['current_price'],
                 'currency'    => 'USD',
                 'recorded_at' => $now,
-            ]);
+                'created_at'  => $now,
+                'updated_at'  => $now,
+            ];
 
             $this->line("  {$asset->symbol}: \${$coin['current_price']}");
+        }
+
+        if ($rows !== []) {
+            AssetPrice::insert($rows);
         }
 
         if ($newGeckoIds !== []) {
@@ -113,12 +120,21 @@ class FetchAssetPrices extends Command
             return;
         }
 
-        $now = now();
+        $now  = now();
+        $rows = [];
 
         foreach ($assets as $asset) {
             $ticker = $asset->polygon_ticker ?: $asset->symbol;
 
             $response = $this->finnhub->quote($ticker);
+
+            // The client already retries transient failures; a surviving 429 means we're
+            // sustainedly over the free-tier limit, so stop rather than hammer the rest away.
+            if ($response->status() === 429) {
+                $this->warn("  {$asset->symbol}: rate limited (HTTP 429) — stopping this run");
+
+                break;
+            }
 
             if (! $response->successful()) {
                 $this->warn("  {$asset->symbol}: request failed (HTTP {$response->status()})");
@@ -135,16 +151,22 @@ class FetchAssetPrices extends Command
                 continue;
             }
 
-            AssetPrice::create([
+            $rows[] = [
                 'asset_id'    => $asset->id,
                 'price'       => $price,
                 'currency'    => 'USD',
                 'recorded_at' => $now,
-            ]);
+                'created_at'  => $now,
+                'updated_at'  => $now,
+            ];
 
             $this->line("  {$asset->symbol}: \${$price}");
 
-            usleep(200000); // 200ms between calls — free tier: 60/min
+            usleep(1000000); // 1s between calls — free tier: 60/min
+        }
+
+        if ($rows !== []) {
+            AssetPrice::insert($rows);
         }
     }
 }

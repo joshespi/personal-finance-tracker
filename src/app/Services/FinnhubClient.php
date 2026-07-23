@@ -22,7 +22,7 @@ class FinnhubClient
     /** Current quote for a ticker. 'c' in the response is the current price. */
     public function quote(string $symbol): Response
     {
-        return Http::timeout(10)->get('https://finnhub.io/api/v1/quote', [
+        return Http::timeout(10)->retry(3, 200, throw: false)->get('https://finnhub.io/api/v1/quote', [
             'symbol' => $symbol,
             'token'  => $this->apiKey,
         ]);
@@ -31,7 +31,7 @@ class FinnhubClient
     /** Daily OHLC candles between two unix timestamps. */
     public function dailyCandles(string $symbol, int $from, int $to): Response
     {
-        return Http::timeout(30)->get('https://finnhub.io/api/v1/stock/candle', [
+        return Http::timeout(30)->retry(3, 200, throw: false)->get('https://finnhub.io/api/v1/stock/candle', [
             'symbol'     => $symbol,
             'resolution' => 'D',
             'from'       => $from,
@@ -42,7 +42,7 @@ class FinnhubClient
 
     public function search(string $query): Response
     {
-        return Http::timeout(5)->get('https://finnhub.io/api/v1/search', [
+        return Http::timeout(5)->retry(3, 200, throw: false)->get('https://finnhub.io/api/v1/search', [
             'q'     => $query,
             'token' => $this->apiKey,
         ]);
