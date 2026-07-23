@@ -192,7 +192,7 @@
                                                 @if (! $isFutureMonth)
                                                     <div class="relative inline-flex items-center">
                                                         <span class="absolute left-2.5 text-gray-400 text-sm pointer-events-none">$</span>
-                                                        <input type="number" step="0.01" min="0"
+                                                        <input type="number" step="0.01"
                                                                x-model="inputs[{{ $e->id }}]"
                                                                class="rta-input w-32 rounded-md border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm text-right pl-6 pr-2 py-1"
                                                                :class="saved[{{ $e->id }}] ? 'border-green-400 dark:border-green-500 bg-green-50 dark:bg-green-900/20' : ''"
@@ -380,7 +380,7 @@
             async onBlur(id, el) {
                 const current  = parseFloat(this.inputs[id]); // blank blur parses to NaN → no-op
                 const original = parseFloat(this.focusValues[id]) || 0;
-                if (isNaN(current) || current < 0 || current === original) return;
+                if (isNaN(current) || current === original) return;
 
                 // Commit optimistically so an Enter-then-blur can't double-submit the same edit.
                 this.focusValues[id] = current;

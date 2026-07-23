@@ -166,7 +166,7 @@ class EnvelopeController extends Controller
 
         $validated = $request->validate([
             'envelope_id' => ['required', 'integer'],
-            'amount'      => ['required', 'numeric', 'gte:0'],
+            'amount'      => ['required', 'numeric'],
             'month'       => ['nullable', 'date_format:Y-m'],
         ]);
 

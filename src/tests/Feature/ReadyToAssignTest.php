@@ -124,6 +124,29 @@ class ReadyToAssignTest extends TestCase
         $this->assertEquals(100.0, $funded);
     }
 
+    public function test_assign_one_allows_negative_amount_to_claw_back_carryover(): void
+    {
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        CashTransaction::factory()->for($account)->deposit()->create(['amount' => 2000]);
+
+        // Funded in a prior month, so this month's assigned total starts at 0 —
+        // there's no non-negative delta that could pull this money back out.
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create([
+            'amount'      => 2000,
+            'occurred_at' => now()->subMonth()->startOfMonth(),
+        ]);
+
+        $this->actingAs($user)->postJson(route('envelopes.assign-one'), [
+            'envelope_id' => $envelope->id,
+            'amount'      => -2000,
+        ])->assertOk()->assertJson(['envelope_balance' => 0.0]);
+
+        $this->assertEquals(2000.0, $user->readyToAssign());
+    }
+
     public function test_assign_one_without_month_dates_today(): void
     {
         $user     = User::factory()->create();

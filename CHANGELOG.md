@@ -4,12 +4,14 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+
 ## [1.10.1] - 2026-07-22
 
 ### Fixed
 
 - **Transfers are now atomic.** Cash-account and portfolio transfers each write two linked rows (withdrawal + deposit / `transfer_out` + `transfer_in`); these were created outside a transaction, so a failure on the second write left an orphaned half-transfer — money debited from one side with no matching credit, and ledgers that no longer reconciled. Both `CashTransferController` and `PortfolioTransferController` now wrap the pair in `DB::transaction()`, matching the pattern already used by `EnvelopeTransactionController`.
 - Cash-transaction description search no longer treats `%`/`_` in the filter as SQL LIKE wildcards — searching for `50%` now matches literally instead of every row.
+- Envelope "Assigned" amounts couldn't go negative, so there was no way to pull money back out of an envelope's carried-over balance into Ready to Assign — only the current month's own assignment could be lowered, and only down to zero. The assigned-amount input (and `EnvelopeController::assignOne()`'s validation) now accepts negative values, matching YNAB's behavior; the existing delta-based accounting already handled negative deltas correctly.
 
 ### Changed
 
