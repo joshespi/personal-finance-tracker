@@ -16,7 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withSchedule(function (Schedule $schedule): void {
-        $schedule->command('assets:fetch-prices')->hourly();
+        // withoutOverlapping: a slow run (provider degraded, many retries) shouldn't overlap
+        // the next hourly tick and double up on price fetching/quota against the same hour.
+        $schedule->command('assets:fetch-prices')->hourly()->withoutOverlapping();
         // A large backfill's write phase can now span multiple hourly ticks (chunked by
         // --day-limit) — withoutOverlapping() stops a slow-running tick from colliding with
         // the next hour's invocation and corrupting the request's write_cursor/status.

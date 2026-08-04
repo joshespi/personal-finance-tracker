@@ -162,6 +162,32 @@ class CsvImportTest extends TestCase
         $this->assertDatabaseHas('cash_transactions', ['type' => 'withdrawal', 'amount' => 60.00, 'occurred_at' => '2025-03-03 00:00:00']);
     }
 
+    public function test_commit_skips_rows_with_unparseable_dates_instead_of_guessing_today(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+
+        $csv = $this->genericCsv([
+            ['2025-03-01', 'Refund', '120.00'],
+            ['not-a-date', 'Garbled row', '45.00'],
+        ]);
+
+        $this->actingAs($user)->post(route('import.csv.upload'), ['csv_file' => $csv]);
+
+        $this->actingAs($user)
+            ->post(route('import.csv.commit'), [
+                'columns'         => ['date' => 'Date', 'payee' => 'Description', 'amount' => 'Amount'],
+                'date_format'     => 'Y-m-d',
+                'default_account' => (string) $account->id,
+            ])
+            ->assertRedirect(route('cash-accounts.index'));
+
+        // The garbled-date row must be skipped, not silently dated today() —
+        // only the one well-formed row should import.
+        $this->assertDatabaseCount('cash_transactions', 1);
+        $this->assertDatabaseHas('cash_transactions', ['amount' => 120.00, 'occurred_at' => '2025-03-01 00:00:00']);
+    }
+
     public function test_commit_requires_an_amount_source(): void
     {
         $user    = User::factory()->create();

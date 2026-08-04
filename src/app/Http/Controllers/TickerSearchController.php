@@ -74,7 +74,7 @@ class TickerSearchController extends Controller
                 ->values()
                 ->all();
         } catch (\Exception $e) {
-            Log::warning('Ticker search failed', ['error' => $e->getMessage()]);
+            Log::warning('Ticker search failed', ['error' => FinnhubClient::redact($e->getMessage())]);
 
             return [];
         }

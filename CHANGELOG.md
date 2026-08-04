@@ -10,10 +10,28 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - **Sortable ledger columns** — every column header on the single-account ledger (`/cash-accounts/{id}`) and the All Accounts ledger is now a sort control: Account, Date, Type, Status, Description, Envelope / Category, Outflow, and Inflow. Clicking a header sorts by it (text columns ascending first, dates/amounts/status descending first); clicking the active header again reverses the direction. The default remains newest-first, and sorting survives the search filter. Outflow and Inflow sort independently rather than both on the raw amount — rows of the opposite type count as zero, so sorting by Outflow brings the largest spends to the top and pushes deposits to the bottom. Envelope / Category sorts across both relations at once, interleaving envelope-tagged withdrawals with income-category-tagged deposits alphabetically.
+- **Credit-card debt now counts in Debt Payoff and Allocator.** Resolves the product decision flagged in [1.10.0]: credit-card `CashAccount`s with a balance owed are now folded into the snowball/avalanche payoff simulation and the extra-cash allocator's debt-priority ranking alongside real `Liability` rows, ranked together by APR. Deliberately **not** added to net worth's `total_debt` — a card's negative balance already reduces `total_cash` there, so counting it twice would double-subtract it.
+- A transaction's account/portfolio can now be changed from its edit form (a "move to another portfolio" dropdown), guarded so a linked transfer leg can't be moved independently of its pair (which would desync the two sides).
 
 ### Fixed
 
 - The version shown in the app footer was stuck at 1.9.0 — `config/app.php` wasn't bumped for the 1.10.0 or 1.10.1 releases.
+- **A single rate-limited (HTTP 429) Finnhub/CoinGecko request was silently retried 3 times instead of backing off immediately.** [1.10.1]'s `->retry(3, 200)` retries any non-2xx response by default when no `when` callback says otherwise — so a provider that had just said "back off" got hit two more times per asset, and `assets:fetch-prices`/the historical backfill's "stop on first 429" logic only ever saw the *last* attempt's status, never the first. Both `FinnhubClient` and `CoinGeckoClient` now exclude 429 from retry while still retrying genuine transient failures (5xx, timeouts).
+- A genuine connection failure (timeout, DNS, refused) during hourly price fetching or benchmark fetching threw uncaught out of the current asset/benchmark's loop, aborting the *entire* run — a CoinGecko outage skipped the Finnhub stock fetch that runs right after it, and one flaky stock ticker aborted every ticker later in the loop. Now isolated per call: logged and skipped, not fatal to the run.
+- Scheduler failures had no log trail: several `FetchAssetPrices`/`FetchBenchmarkPrices` warnings only wrote to console output, which the scheduler discards (no `sendOutputTo()`), making a stopped-pricing ticker invisible to an operator. Now backed by `Log::warning`/`Log::error` too.
+- Multi-cycle scheduled liability-payment catch-up (a user who falls more than one billing cycle behind) computed every overdue cycle's interest/principal off the *same* starting balance instead of compounding — the cached `latestBalance` relation was never refreshed between cycles in the same materialization run.
+- Realized-gain proceeds/gain silently dropped a Sell transaction's cash fee entirely (only the buy side folded fees into cost), overstating realized gains — and the tax summary — by the fee amount whenever a sale recorded a fee.
+- Portfolio time-weighted return used a transaction's raw `fees` column instead of the fee-in-asset-aware `usdFee()`, skewing TWR for any `fee_in_asset` transfer.
+- The generic CSV importer silently dated an unparseable row "today" instead of skipping it, unlike the dedicated transactions importer — a malformed date cell could quietly corrupt cashflow/budget history with no warning.
+- Dashboard holdings table's expandable "Held in" row had a hardcoded `colspan="9"`, one column too many for non-admin users (the 9th column is admin-only), leaving a phantom empty column.
+- Several icon-only controls (mobile quick-add/dark-mode toggle, envelope month navigation, envelope edit/delete) had no `aria-label`.
+- An admin editing their own account (or the last remaining admin) could uncheck "Admin" and lock everyone out of `/admin`, with no in-app recovery path. Both self-demotion and last-admin removal are now blocked.
+- Manually verifying or deleting a user from the admin panel wrote no `ActivityLog` entry, unlike every other admin action.
+
+### Security
+
+- Finnhub's API token (sent as a URL query parameter) was leaking into `storage/logs/laravel.log` whenever a connection failure's exception message — which embeds the full request URI — got logged. Token is now redacted before any such message is logged.
+- `User::is_admin` is no longer mass-assignable, closing off a theoretical future `User::create($request->all())`-style mistake. No live exploit existed — every current write path already used a validated field list.
 
 ## [1.10.1] - 2026-07-22
 

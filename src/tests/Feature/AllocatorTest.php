@@ -110,6 +110,47 @@ class AllocatorTest extends TestCase
         );
     }
 
+    public function test_allocates_to_credit_card_cash_account_debt(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create([
+            'name'          => 'Store Card',
+            'account_type'  => 'credit_card',
+            'interest_rate' => 24.0,
+        ]);
+        CashTransaction::factory()->for($account)->withdrawal()->create(['amount' => 500]);
+
+        $this->actingAs($user)
+            ->get(route('planning', ['tab' => 'allocator', 'amount' => 700]))
+            ->assertOk()
+            ->assertSee('Store Card')
+            ->assertSee('500.00');
+    }
+
+    public function test_ranks_credit_card_debt_by_apr_alongside_liability_debt(): void
+    {
+        $user = User::factory()->create();
+
+        $lowApr = Liability::factory()->for($user)->create(['interest_rate' => 5.00, 'name' => 'Low APR Loan']);
+        LiabilityBalance::factory()->for($lowApr)->create(['balance' => 1000]);
+
+        $account = CashAccount::factory()->for($user)->create([
+            'name' => 'High APR Card', 'account_type' => 'credit_card', 'interest_rate' => 24.99,
+        ]);
+        CashTransaction::factory()->for($account)->withdrawal()->create(['amount' => 500]);
+
+        $response = $this->actingAs($user)
+            ->get(route('planning', ['tab' => 'allocator', 'amount' => 700]))
+            ->assertOk();
+
+        $content = $response->content();
+
+        $this->assertLessThan(
+            strpos($content, 'Low APR Loan'),
+            strpos($content, 'High APR Card')
+        );
+    }
+
     public function test_allocates_to_savings_goals(): void
     {
         $user = User::factory()->create();

@@ -44,6 +44,20 @@
                     @method('PUT')
 
                     <div>
+                        <x-input-label for="portfolio_id" value="Account" />
+                        <select id="portfolio_id" name="portfolio_id"
+                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                            @foreach ($portfolios as $p)
+                                <option value="{{ $p->id }}" @selected((int) old('portfolio_id', $transaction->portfolio_id) === $p->id)>{{ $p->name }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-show="isTransfer" x-cloak>
+                            Transfer transactions can't be moved to a different account.
+                        </p>
+                        <x-input-error :messages="$errors->get('portfolio_id')" class="mt-2" />
+                    </div>
+
+                    <div>
                         <x-input-label for="type" value="Transaction Type" />
                         <select id="type" name="type" x-model="txType"
                                 class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">

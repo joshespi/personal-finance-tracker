@@ -23,7 +23,8 @@
                         fetches or writes anything.
                     </p>
 
-                    <form method="POST" action="{{ route('admin.tools.backfill-snapshots') }}" class="space-y-4">
+                    <form method="POST" action="{{ route('admin.tools.backfill-snapshots') }}" class="space-y-4"
+                          x-data="{ submitting: false }" @submit="submitting = true">
                         @csrf
 
                         <div class="grid grid-cols-2 gap-4">
@@ -62,9 +63,10 @@
                         </div>
 
                         <div class="pt-2">
-                            <button type="submit"
-                                    class="inline-flex items-center px-3 py-1.5 bg-gray-800 dark:bg-gray-700 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition">
-                                Run Backfill
+                            <button type="submit" :disabled="submitting"
+                                    class="inline-flex items-center px-3 py-1.5 bg-gray-800 dark:bg-gray-700 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-show="!submitting">Run Backfill</span>
+                                <span x-show="submitting" x-cloak>Running…</span>
                             </button>
                         </div>
                     </form>

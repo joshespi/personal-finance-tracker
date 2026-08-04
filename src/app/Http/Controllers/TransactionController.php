@@ -12,6 +12,7 @@ use App\Services\AssetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class TransactionController extends Controller
@@ -94,6 +95,7 @@ class TransactionController extends Controller
         return view('transactions.edit', [
             'transaction' => $transaction,
             'portfolio'   => $transaction->portfolio,
+            'portfolios'  => $request->user()->portfolios()->orderBy('name')->get(),
             'types'       => TransactionType::options(),
             'assetTypes'  => AssetType::cases(),
         ]);
@@ -103,9 +105,12 @@ class TransactionController extends Controller
     {
         $this->authorize('update', $transaction);
 
+        $portfolioIds = $request->user()->portfolios()->pluck('id');
+
         $validated = $request->validate(
             Arr::only(Transaction::fieldRules(), ['type', 'quantity', 'price_per_unit', 'fees', 'currency'])
             + [
+                'portfolio_id'  => ['required', 'integer', Rule::in($portfolioIds)],
                 'fee_in_asset'  => ['nullable', 'boolean'],
                 'transacted_at' => ['required', 'date'],
                 'notes'         => ['nullable', 'string', 'max:1000'],
@@ -116,6 +121,12 @@ class TransactionController extends Controller
         $feeInAsset = $type->isTransfer() && ($validated['fee_in_asset'] ?? false);
         $fees       = (float) ($validated['fees'] ?? 0);
 
+        // linked transfer pairs live across two portfolios by design (see PortfolioTransferController);
+        // moving one leg independently would desync the pair, so the account can't be changed for them
+        if ($type->isTransfer() && (int) $validated['portfolio_id'] !== $transaction->portfolio_id) {
+            return back()->withInput()->with('error', 'Transfer transactions can\'t be moved to a different account.');
+        }
+
         // quantity field on transfer_out edit shows gross (sent + fee); strip fee back out for storage
         // since holdings logic adds fees back when deducting from position
         $quantity = Transaction::netOfFee(
@@ -125,6 +136,7 @@ class TransactionController extends Controller
         );
 
         $transaction->update([
+            'portfolio_id'   => $validated['portfolio_id'],
             'type'           => $validated['type'],
             'quantity'       => $quantity,
             'price_per_unit' => $validated['price_per_unit'],
@@ -136,7 +148,7 @@ class TransactionController extends Controller
         ]);
 
         return redirect()
-            ->route('portfolios.transactions.index', $transaction->portfolio_id)
+            ->route('portfolios.transactions.index', $validated['portfolio_id'])
             ->with('success', 'Transaction updated.');
     }
 

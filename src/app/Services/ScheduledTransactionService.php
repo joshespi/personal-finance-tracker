@@ -144,11 +144,17 @@ class ScheduledTransactionService
             $principal  = round($piPayment - $interest, 2);
             $newBalance = round(max(0.0, $balance - $principal), 2);
 
-            LiabilityBalance::create([
+            $balanceRow = LiabilityBalance::create([
                 'liability_id' => $liability->id,
                 'balance'      => $newBalance,
                 'recorded_at'  => $date->toDateString(),
             ]);
+
+            // materializeOne()'s while loop calls this repeatedly for the same $liability
+            // instance on multi-cycle catch-up — keep the cached relation in sync so the
+            // next cycle's currentBalance()/monthlyInterest() compound off this payment
+            // instead of the stale balance loaded before the loop began.
+            $liability->setRelation('latestBalance', $balanceRow);
         }
     }
 

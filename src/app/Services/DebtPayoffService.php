@@ -17,14 +17,14 @@ class DebtPayoffService
         $liabilities = $user->liabilities()->with('latestBalance')->orderBy('name')->get();
         $withBalance = $liabilities->filter(fn ($l) => $l->currentBalance() > 0);
 
-        $mortgages = $withBalance->filter(fn ($l) => ! $l->isRevolving())->values();
-        $debts     = $withBalance->filter(fn ($l) => $l->isRevolving())->values();
+        $mortgages     = $withBalance->filter(fn ($l) => ! $l->isRevolving())->values();
+        $liabilityDebt = $withBalance->filter(fn ($l) => $l->isRevolving())->values();
 
-        if ($debts->isEmpty() && $mortgages->isEmpty()) {
+        $debtData = array_merge($this->buildDebtData($liabilityDebt), $this->buildCreditCardDebtData($user));
+
+        if (empty($debtData) && $mortgages->isEmpty()) {
             return ['has_data' => false, 'debts' => [], 'mortgages' => []];
         }
-
-        $debtData = $this->buildDebtData($debts);
 
         $mortgageData = $mortgages->map(function ($l) {
             $balance         = $l->currentBalance();
@@ -78,8 +78,8 @@ class DebtPayoffService
      */
     public function resimulate(User $user, float $extraPayment): array
     {
-        $debts    = $user->liabilities()->with('latestBalance')->get()->filter(fn ($l) => $l->currentBalance() > 0 && $l->isRevolving())->values();
-        $debtData = $this->buildDebtData($debts);
+        $liabilityDebt = $user->liabilities()->with('latestBalance')->get()->filter(fn ($l) => $l->currentBalance() > 0 && $l->isRevolving())->values();
+        $debtData      = array_merge($this->buildDebtData($liabilityDebt), $this->buildCreditCardDebtData($user));
 
         if (empty($debtData)) {
             return ['snowball' => $this->emptySimulation(), 'avalanche' => $this->emptySimulation()];
@@ -98,29 +98,88 @@ class DebtPayoffService
     private function buildDebtData($debts): array
     {
         return $debts->map(function ($l) {
-            $balance         = $l->currentBalance();
-            $apr             = (float) ($l->interest_rate ?? 0);
-            $monthlyRate     = $apr / 100 / 12;
-            $monthlyInterest = round($balance * $monthlyRate, 2);
-            $minPaymentSet   = $l->minimum_payment !== null;
-            $minPayment      = $minPaymentSet
-                ? (float) $l->minimum_payment
-                : round(max(25.0, $balance * self::DEFAULT_MIN_PCT), 2);
-            $negAmort = $monthlyInterest > 0 && $minPayment < $monthlyInterest;
+            $balance     = $l->currentBalance();
+            $apr         = (float) ($l->interest_rate ?? 0);
+            $monthlyRate = $apr / 100 / 12;
 
-            return [
-                'id'                    => $l->id,
-                'name'                  => $l->name,
-                'liability_type'        => $l->liability_type,
-                'balance'               => $balance,
-                'apr'                   => $apr,
-                'monthly_rate'          => $monthlyRate,
-                'monthly_interest'      => $monthlyInterest,
-                'min_payment'           => $minPayment,
-                'min_payment_set'       => $minPaymentSet,
-                'negative_amortization' => $negAmort,
-            ];
+            return $this->buildDebtRow(
+                // Kept as the raw int (not namespaced like the cash_account rows below) —
+                // existing consumers key payoff_per_debt by the Liability's ->id directly.
+                // Safe: a non-numeric 'cash_account-N' string key can never collide with it.
+                id: $l->id,
+                source: 'liability',
+                entityId: $l->id,
+                name: $l->name,
+                liabilityType: $l->liability_type,
+                balance: $balance,
+                apr: $apr,
+                monthlyRate: $monthlyRate,
+                monthlyInterest: round($balance * $monthlyRate, 2),
+                explicitMinPayment: $l->minimum_payment !== null ? (float) $l->minimum_payment : null,
+            );
         })->values()->all();
+    }
+
+    /**
+     * Synthesizes debt-payoff rows for credit-card CashAccounts with money owed — see
+     * User::creditCardDebts() for why these aren't Liability rows. Shares the same
+     * min-payment-estimate convention as buildDebtData() since CashAccount has no
+     * minimum_payment field at all (never "set").
+     */
+    private function buildCreditCardDebtData(User $user): array
+    {
+        return $user->creditCardDebts()->map(fn (array $row) => $this->buildDebtRow(
+            id: 'cash_account-'.$row['account']->id,
+            source: 'cash_account',
+            entityId: $row['account']->id,
+            name: $row['account']->name,
+            liabilityType: 'credit_card',
+            balance: $row['balance'],
+            apr: $row['apr'],
+            monthlyRate: $row['apr'] / 100 / 12,
+            monthlyInterest: $row['monthly_interest'],
+            explicitMinPayment: null,
+        ))->values()->all();
+    }
+
+    /**
+     * Shared shape for a debt-payoff row, whichever source it comes from. Centralizes
+     * the min-payment-estimate fallback (25.0 or self::DEFAULT_MIN_PCT of balance, whichever
+     * is larger) and the negative-amortization check so both buildDebtData() and
+     * buildCreditCardDebtData() can't drift out of sync on that rule.
+     */
+    private function buildDebtRow(
+        int|string $id,
+        string $source,
+        int $entityId,
+        string $name,
+        string $liabilityType,
+        float $balance,
+        float $apr,
+        float $monthlyRate,
+        float $monthlyInterest,
+        ?float $explicitMinPayment,
+    ): array {
+        $minPaymentSet = $explicitMinPayment !== null;
+        $minPayment    = $minPaymentSet
+            ? $explicitMinPayment
+            : round(max(25.0, $balance * self::DEFAULT_MIN_PCT), 2);
+        $negAmort = $monthlyInterest > 0 && $minPayment < $monthlyInterest;
+
+        return [
+            'id'                    => $id,
+            'source'                => $source,
+            'entity_id'             => $entityId,
+            'name'                  => $name,
+            'liability_type'        => $liabilityType,
+            'balance'               => $balance,
+            'apr'                   => $apr,
+            'monthly_rate'          => $monthlyRate,
+            'monthly_interest'      => $monthlyInterest,
+            'min_payment'           => $minPayment,
+            'min_payment_set'       => $minPaymentSet,
+            'negative_amortization' => $negAmort,
+        ];
     }
 
     public function simulate(array $debtData, array $priorityIds, float $extraPayment): array

@@ -125,7 +125,7 @@ class AssetReclassifyTest extends TestCase
     public function test_admin_can_set_price_source(): void
     {
         [$user, $asset] = $this->userWithAsset();
-        $user->update(['is_admin' => true]);
+        $user->forceFill(['is_admin' => true])->save();
 
         $this->actingAs($user)
             ->patch(route('assets.reclassify', $asset), ['price_source' => 'finnhub'])
@@ -148,7 +148,7 @@ class AssetReclassifyTest extends TestCase
     public function test_admin_can_reset_price_source_to_auto(): void
     {
         [$user, $asset] = $this->userWithAsset();
-        $user->update(['is_admin' => true]);
+        $user->forceFill(['is_admin' => true])->save();
         $asset->update(['price_source' => 'finnhub']);
 
         $this->actingAs($user)

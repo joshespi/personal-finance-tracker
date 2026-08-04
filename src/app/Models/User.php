@@ -16,7 +16,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 
-#[Fillable(['name', 'email', 'password', 'is_admin', 'emergency_fund_target_months', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'notify_scheduled_transactions', 'dashboard_preferences', 'email_summary_frequencies', 'email_summary_sections', 'last_email_summary_sent_at'])]
+// is_admin deliberately excluded: it must never be mass-assignable, even though every
+// current write path already passes a validated array rather than $request->all() — this
+// is defense-in-depth against a future call site introducing that mistake. The one
+// legitimate write path (Admin\UserController::update) sets it explicitly instead.
+#[Fillable(['name', 'email', 'password', 'emergency_fund_target_months', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'notify_scheduled_transactions', 'dashboard_preferences', 'email_summary_frequencies', 'email_summary_sections', 'last_email_summary_sent_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -225,6 +229,41 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return $this->totalDebtCache;
+    }
+
+    /**
+     * Credit-card CashAccounts with money owed (a negative working balance) — real
+     * revolving debt even though it isn't a Liability row. Consumed by DebtPayoffService
+     * and AllocatorService, which need to fold it in alongside Liability debt.
+     *
+     * Deliberately NOT folded into totalDebt()/net worth: a credit card's negative
+     * balance already reduces totalCash() (it's summed like any other CashAccount), so
+     * subtracting it again via totalDebt() would double-count it in net_worth.
+     *
+     * Uses scopeWithCurrentBalance()'s batched sums rather than each account's balance()
+     * so N credit cards cost one query instead of N.
+     *
+     * @return Collection<int, array{account: CashAccount, balance: float, apr: float, monthly_interest: float}>
+     */
+    public function creditCardDebts(): Collection
+    {
+        return $this->cashAccounts()
+            ->where('account_type', 'credit_card')
+            ->withCurrentBalance()
+            ->get()
+            ->map(function (CashAccount $a) {
+                $balance = round(-$a->currentBalanceFromSums(), 2);
+                $apr     = (float) ($a->interest_rate ?? 0);
+
+                return [
+                    'account'          => $a,
+                    'balance'          => $balance,
+                    'apr'              => $apr,
+                    'monthly_interest' => round($balance * ($apr / 100 / 12), 2),
+                ];
+            })
+            ->filter(fn (array $row) => $row['balance'] > 0.01)
+            ->values();
     }
 
     /** Sum of (market_value + manual_value) across each portfolio's most recent snapshot. */

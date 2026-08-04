@@ -42,7 +42,7 @@ class PortfolioPerformanceService
         $cashflows = [];
         foreach ($txns as $t) {
             $date             = $t->transacted_at->toDateString();
-            $amount           = (float) $t->quantity * (float) $t->price_per_unit + (float) $t->fees;
+            $amount           = (float) $t->quantity * (float) $t->price_per_unit + $t->usdFee();
             $sign             = $t->type->isInflow() ? 1 : -1;
             $cashflows[$date] = ($cashflows[$date] ?? 0) + $sign * $amount;
         }

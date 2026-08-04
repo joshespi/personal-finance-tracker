@@ -155,8 +155,13 @@ class CsvImportService
             $amount = $inflow > 0 ? $inflow : $outflow;
         }
 
+        $date = $this->parseDate($get('date'), $dateFormat);
+        if ($date === null) {
+            return null;
+        }
+
         return [
-            'date'        => $this->parseDate($get('date'), $dateFormat),
+            'date'        => $date,
             'type'        => $type,
             'amount'      => $amount,
             'description' => $this->buildDescription($get('payee'), $get('category'), $get('memo')),
@@ -179,9 +184,13 @@ class CsvImportService
         return $negative ? -$this->parseAmount($val) : $this->parseAmount($val);
     }
 
-    private function parseDate(string $val, string $format): string
+    /** Returns null (row skipped by the caller) rather than guessing a date for an unparseable cell. */
+    private function parseDate(string $val, string $format): ?string
     {
         $val = trim($val);
+        if ($val === '') {
+            return null;
+        }
 
         try {
             return Carbon::createFromFormat($format, $val)->format('Y-m-d');
@@ -190,7 +199,7 @@ class CsvImportService
             try {
                 return Carbon::parse($val)->format('Y-m-d');
             } catch (\Exception) {
-                return now()->format('Y-m-d');
+                return null;
             }
         }
     }

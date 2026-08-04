@@ -45,6 +45,9 @@ class UserFactory extends Factory
 
     public function admin(): static
     {
-        return $this->state(['is_admin' => true]);
+        // is_admin is deliberately not mass-assignable (see User::$fillable) — state()
+        // alone would silently drop it, since factories build via the model constructor's
+        // fill(). forceFill() bypasses that guarding; save() itself doesn't re-check it.
+        return $this->afterMaking(fn (User $user) => $user->forceFill(['is_admin' => true]));
     }
 }

@@ -48,9 +48,15 @@ class RealizedGainService
                 return; // transfers move cost basis to the destination portfolio — not a taxable event
             }
 
-            $sellPrice   = (float) $t->price_per_unit;
-            $sellDate    = $t->transacted_at;
-            $holdingDays = (int) $lot['date']->diffInDays($sellDate);
+            $sellPrice = (float) $t->price_per_unit;
+            // A cash sell fee reduces what was actually received — mirrors the buy-side
+            // fee-into-cost-per-unit fold in buildOpenLots() so proceeds/gain reconcile
+            // with the account's actual cash movement. Zero when fee_in_asset is set
+            // (that fee left as units, already reflected via quantityWithAssetFee()).
+            $sellFeePerUnit = $t->usdFee() / max(1, (float) $t->quantity);
+            $netSellPrice   = $sellPrice - $sellFeePerUnit;
+            $sellDate       = $t->transacted_at;
+            $holdingDays    = (int) $lot['date']->diffInDays($sellDate);
 
             $lots->push([
                 'asset'        => $t->asset,
@@ -58,8 +64,8 @@ class RealizedGainService
                 'buy_price'    => $lot['cost_per_unit'],
                 'sell_price'   => $sellPrice,
                 'cost_basis'   => round($matched * $lot['cost_per_unit'], 2),
-                'proceeds'     => round($matched * $sellPrice, 2),
-                'gain'         => round($matched * ($sellPrice - $lot['cost_per_unit']), 2),
+                'proceeds'     => round($matched * $netSellPrice, 2),
+                'gain'         => round($matched * ($netSellPrice - $lot['cost_per_unit']), 2),
                 'buy_date'     => $lot['date'],
                 'sell_date'    => $sellDate,
                 'holding_days' => $holdingDays,

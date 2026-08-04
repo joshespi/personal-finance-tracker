@@ -8,6 +8,7 @@ use App\Services\CoinGeckoClient;
 use App\Services\FinnhubClient;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -65,7 +66,17 @@ class FetchBenchmarkPrices extends Command
 
         $this->line("Fetching {$ticker} (Finnhub)...");
 
-        $response = $this->finnhub->dailyCandles($ticker, $from->timestamp, $to->timestamp);
+        // A connection-level failure throws past retry(..., throw: false) (that flag only
+        // covers non-2xx responses) — isolate it so one benchmark's outage doesn't abort
+        // the other benchmark's fetch called right after this in handle().
+        try {
+            $response = $this->finnhub->dailyCandles($ticker, $from->timestamp, $to->timestamp);
+        } catch (ConnectionException $e) {
+            $this->error("Failed to fetch {$ticker}: connection failed");
+            Log::error("Benchmark fetch: connection failed for {$ticker}", ['message' => FinnhubClient::redact($e->getMessage())]);
+
+            return;
+        }
 
         if (! $response->successful() || ($response->json('s') ?? 'no_data') === 'no_data') {
             $this->error("Failed to fetch {$ticker}: ".$response->status());
@@ -102,10 +113,18 @@ class FetchBenchmarkPrices extends Command
         $days = $from->diffInDays($to);
         $days = max(1, min($days, 3650));
 
-        $response = $this->coinGecko->marketChart($coingeckoId, $days);
+        try {
+            $response = $this->coinGecko->marketChart($coingeckoId, $days);
+        } catch (ConnectionException $e) {
+            $this->error("Failed to fetch {$ticker}: connection failed");
+            Log::error("Benchmark fetch: connection failed for {$ticker}", ['message' => $e->getMessage()]);
+
+            return;
+        }
 
         if (! $response->successful()) {
             $this->error("Failed to fetch {$ticker}: ".$response->status());
+            Log::error("Benchmark fetch failed for {$ticker}", ['status' => $response->status()]);
 
             return;
         }

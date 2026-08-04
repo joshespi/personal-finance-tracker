@@ -526,7 +526,7 @@
                                             <td class="px-5 py-3 text-right font-mono text-gray-500 dark:text-gray-400" x-text="fmtPct(h.pct)"></td>
                                         </tr>
                                         <tr x-show="openSymbol === h.symbol" style="display:none">
-                                            <td colspan="9" class="px-5 pb-4 bg-indigo-50/60 dark:bg-indigo-950/20">
+                                            <td colspan="{{ auth()->user()?->is_admin ? 9 : 8 }}" class="px-5 pb-4 bg-indigo-50/60 dark:bg-indigo-950/20">
                                                 <div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2 pt-2">Held in</div>
                                                 <div class="flex flex-wrap gap-3">
                                                     <template x-for="p in h.portfolios" :key="p.id">

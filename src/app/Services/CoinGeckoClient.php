@@ -2,15 +2,17 @@
 
 namespace App\Services;
 
+use App\Concerns\RetriesHttpRequests;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
 
 class CoinGeckoClient
 {
+    use RetriesHttpRequests;
+
     /** Top coins by market cap, with current prices. No API key needed on the free tier. */
     public function markets(int $perPage = 250, int $page = 1): Response
     {
-        return Http::timeout(15)->retry(3, 200, throw: false)->get('https://api.coingecko.com/api/v3/coins/markets', [
+        return $this->client(15)->get('https://api.coingecko.com/api/v3/coins/markets', [
             'vs_currency' => 'usd',
             'order'       => 'market_cap_desc',
             'per_page'    => $perPage,
@@ -21,7 +23,7 @@ class CoinGeckoClient
     /** Daily price series for the trailing N days. */
     public function marketChart(string $coinId, int $days): Response
     {
-        return Http::timeout(30)->retry(3, 200, throw: false)->get("https://api.coingecko.com/api/v3/coins/{$coinId}/market_chart", [
+        return $this->client(30)->get("https://api.coingecko.com/api/v3/coins/{$coinId}/market_chart", [
             'vs_currency' => 'usd',
             'days'        => $days,
             'interval'    => 'daily',
@@ -31,7 +33,7 @@ class CoinGeckoClient
     /** Price series between two unix timestamps. */
     public function marketChartRange(string $coinId, int $from, int $to): Response
     {
-        return Http::timeout(30)->retry(3, 200, throw: false)->get("https://api.coingecko.com/api/v3/coins/{$coinId}/market_chart/range", [
+        return $this->client(30)->get("https://api.coingecko.com/api/v3/coins/{$coinId}/market_chart/range", [
             'vs_currency' => 'usd',
             'from'        => $from,
             'to'          => $to,
@@ -40,7 +42,7 @@ class CoinGeckoClient
 
     public function search(string $query): Response
     {
-        return Http::timeout(5)->retry(3, 200, throw: false)->get('https://api.coingecko.com/api/v3/search', [
+        return $this->client(5)->get('https://api.coingecko.com/api/v3/search', [
             'query' => $query,
         ]);
     }

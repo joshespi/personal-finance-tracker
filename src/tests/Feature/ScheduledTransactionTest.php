@@ -426,6 +426,42 @@ class ScheduledTransactionTest extends TestCase
         ]);
     }
 
+    public function test_materialize_liability_payment_compounds_balance_across_multiple_overdue_cycles(): void
+    {
+        $user      = User::factory()->create();
+        $account   = CashAccount::factory()->for($user)->create();
+        $liability = Liability::factory()->for($user)->create([
+            'liability_type'  => 'credit_card',
+            'interest_rate'   => 24,
+            'minimum_payment' => 300,
+        ]);
+        LiabilityBalance::factory()->for($liability)->create([
+            'balance'     => 10000,
+            'recorded_at' => today()->subMonths(4),
+        ]);
+        // Three overdue monthly cycles in one materialization run — regression guard for a
+        // bug where each cycle re-read the same cached pre-loop balance instead of compounding.
+        ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->for($liability, 'liability')->create([
+            'type'   => 'mortgage_payment',
+            'amount' => 300,
+            // +1 day so 3 monthly advances land just past today (exactly 3 cycles fire,
+            // not 4 — subMonths(3) alone lands exactly on today, which still satisfies
+            // the loop's <= check and fires an extra cycle).
+            'next_due_at' => today()->subMonths(3)->addDay(),
+        ]);
+
+        app(ScheduledTransactionService::class)->materializeForUser($user);
+
+        // Cycle 1: interest = 10000*24%/12 = 200.00; principal = 100.00; balance = 9900.00
+        // Cycle 2: interest = 9900*24%/12  = 198.00; principal = 102.00; balance = 9798.00
+        // Cycle 3: interest = 9798*24%/12  = 195.96; principal = 104.04; balance = 9693.96
+        $this->assertDatabaseCount('liability_balances', 4);
+        $this->assertDatabaseHas('liability_balances', ['liability_id' => $liability->id, 'balance' => 9900.00]);
+        $this->assertDatabaseHas('liability_balances', ['liability_id' => $liability->id, 'balance' => 9798.00]);
+        $this->assertDatabaseHas('liability_balances', ['liability_id' => $liability->id, 'balance' => 9693.96]);
+        $this->assertDatabaseCount('cash_transactions', 3);
+    }
+
     public function test_materialize_mortgage_payment_skips_paydown_when_liability_missing(): void
     {
         $user    = User::factory()->create();

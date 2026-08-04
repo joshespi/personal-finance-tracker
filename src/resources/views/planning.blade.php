@@ -184,10 +184,18 @@
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                     @foreach ($debts as $d)
-                                        @php $debtId = $d['id']; @endphp
+                                        @php
+                                            $debtId  = $d['id'];
+                                            // Credit-card debt rows are synthesized from a CashAccount, not a real
+                                            // Liability — see User::creditCardDebts() — so they route differently.
+                                            $showUrl = $d['source'] === 'cash_account'
+                                                ? route('cash-accounts.show', $d['entity_id'])
+                                                : route('liabilities.show', $d['entity_id']);
+                                        @endphp
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                                             <td class="px-4 py-3">
-                                                <a href="{{ route('liabilities.show', $debtId) }}" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ $d['name'] }}</a>
+                                                <a href="{{ $showUrl }}" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ $d['name'] }}</a>
+                                                @if ($d['source'] === 'cash_account') <span class="ml-1 text-xs text-gray-400 dark:text-gray-500" title="Tracked as a cash account, not a Liability">card</span> @endif
                                                 @if ($d['negative_amortization']) <span class="ml-1 text-xs text-amber-600 dark:text-amber-400" title="Minimum payment is less than monthly interest">⚠</span> @endif
                                                 @if (! $d['min_payment_set']) <span class="ml-1 text-xs text-blue-500 dark:text-blue-400" title="Estimated minimum payment">est.</span> @endif
                                             </td>

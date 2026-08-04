@@ -42,26 +42,42 @@ class AllocatorService
         }
 
         if ($remaining > 0.01) {
-            $liabilities = $user->liabilities()
+            // Liability rows and credit-card CashAccounts with a balance owed (see
+            // User::creditCardDebts()) are both real revolving debt — normalize to a
+            // common {name, balance, apr, monthly_interest} shape so one loop ranks
+            // them together by APR instead of running two separate passes.
+            $liabilityDebt = $user->liabilities()
                 ->with('latestBalance')
                 ->get()
                 ->filter(fn ($l) => $l->isRevolving() && $l->currentBalance() > 0)
-                ->sortByDesc(fn ($l) => (float) ($l->interest_rate ?? 0));
+                ->map(fn ($l) => [
+                    'name'             => $l->name,
+                    'balance'          => $l->currentBalance(),
+                    'apr'              => (float) ($l->interest_rate ?? 0),
+                    'monthly_interest' => round($l->monthlyInterest(), 2),
+                ]);
 
-            foreach ($liabilities as $l) {
+            $creditCardDebt = $user->creditCardDebts()->map(fn (array $row) => [
+                'name'             => $row['account']->name,
+                'balance'          => $row['balance'],
+                'apr'              => $row['apr'],
+                'monthly_interest' => $row['monthly_interest'],
+            ]);
+
+            $debts = $liabilityDebt->concat($creditCardDebt)->sortByDesc('apr');
+
+            foreach ($debts as $d) {
                 if ($remaining <= 0.01) {
                     break;
                 }
-                $balance   = $l->currentBalance();
-                $apr       = (float) ($l->interest_rate ?? 0);
-                $alloc     = min($remaining, $balance);
+                $alloc     = min($remaining, $d['balance']);
                 $buckets[] = [
-                    'label'  => $l->name,
-                    'reason' => $apr > 0
-                        ? number_format($apr, 2).'% APR · $'.number_format(round($l->monthlyInterest(), 2), 2).'/mo interest'
+                    'label'  => $d['name'],
+                    'reason' => $d['apr'] > 0
+                        ? number_format($d['apr'], 2).'% APR · $'.number_format($d['monthly_interest'], 2).'/mo interest'
                         : 'No APR recorded',
                     'amount' => round($alloc, 2),
-                    'gap'    => round($balance, 2),
+                    'gap'    => round($d['balance'], 2),
                     'type'   => 'debt',
                 ];
                 $remaining -= $alloc;

@@ -102,6 +102,45 @@ class RealizedGainTest extends TestCase
         $this->assertEquals(50.00, $result['byYear'][2023]);
     }
 
+    public function test_sell_cash_fee_reduces_proceeds_and_gain(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = Asset::factory()->stock()->create(['symbol' => 'IBM']);
+
+        Transaction::factory()->for($portfolio)->for($asset)->buy()
+            ->create(['quantity' => 10, 'price_per_unit' => 100, 'fees' => 0, 'transacted_at' => '2024-01-01']);
+        Transaction::factory()->for($portfolio)->for($asset)->sell()
+            ->create(['quantity' => 10, 'price_per_unit' => 150, 'fees' => 20, 'fee_in_asset' => false, 'transacted_at' => '2024-06-01']);
+
+        $portfolio->load('transactions.asset');
+        $result = (new RealizedGainService)->compute($portfolio);
+
+        // Gross gain would be 10*(150-100)=500; a $20 cash sell fee must reduce both
+        // proceeds and gain by $20 — previously the fee was silently dropped entirely.
+        $this->assertEquals(1480.00, $result['lots'][0]['proceeds']);
+        $this->assertEquals(480.00, $result['lots'][0]['gain']);
+        $this->assertEquals(480.00, $result['totalGain']);
+    }
+
+    public function test_sell_in_asset_fee_does_not_reduce_cash_proceeds(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = Asset::factory()->crypto()->create(['symbol' => 'SOL']);
+
+        Transaction::factory()->for($portfolio)->for($asset)->buy()
+            ->create(['quantity' => 10, 'price_per_unit' => 100, 'fees' => 0, 'transacted_at' => '2024-01-01']);
+        // fee_in_asset sell: the fee left the wallet as extra units, not cash — proceeds
+        // on the units actually sold must stay at the gross price.
+        Transaction::factory()->for($portfolio)->for($asset)->sell()
+            ->create(['quantity' => 10, 'price_per_unit' => 150, 'fees' => 1, 'fee_in_asset' => true, 'transacted_at' => '2024-06-01']);
+
+        $portfolio->load('transactions.asset');
+        $result = (new RealizedGainService)->compute($portfolio);
+
+        $this->assertEquals(1500.00, $result['lots'][0]['proceeds']);
+        $this->assertEquals(500.00, $result['lots'][0]['gain']);
+    }
+
     public function test_portfolio_show_renders_realized_gains_section(): void
     {
         $portfolio = Portfolio::factory()->create();

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
@@ -40,7 +41,21 @@ class UserController extends Controller
             'is_admin' => ['boolean'],
         ]);
 
-        $user->update($validated);
+        $revokingAdmin = $user->is_admin && ! $request->boolean('is_admin');
+
+        // Losing admin access has no in-app recovery path, so block the two ways a form
+        // submit could leave zero admins: demoting yourself, or demoting the last one.
+        if ($revokingAdmin && $user->id === $request->user()->id) {
+            return back()->withErrors(['is_admin' => 'You cannot remove your own admin access.'])->withInput();
+        }
+        if ($revokingAdmin && User::where('is_admin', true)->count() <= 1) {
+            return back()->withErrors(['is_admin' => 'Cannot remove the last remaining admin.'])->withInput();
+        }
+
+        // is_admin is deliberately not mass-assignable (see User::$fillable) — set explicitly.
+        $user->fill(['name' => $validated['name'], 'email' => $validated['email']]);
+        $user->is_admin = $request->boolean('is_admin');
+        $user->save();
 
         return redirect()->route('admin.users.index')->with('success', 'User updated.');
     }
@@ -49,6 +64,7 @@ class UserController extends Controller
     {
         if (! $user->hasVerifiedEmail() && $user->markEmailAsVerified()) {
             event(new Verified($user));
+            ActivityLog::record('user.verify', $user, ['target_name' => $user->name]);
         }
 
         return redirect()->route('admin.users.show', $user)->with('success', 'User marked as verified.');
@@ -58,6 +74,7 @@ class UserController extends Controller
     {
         abort_if($user->id === $request->user()->id, 403, 'You cannot delete your own account.');
 
+        ActivityLog::record('user.delete', $user, ['target_name' => $user->name, 'target_email' => $user->email]);
         $user->delete();
 
         return redirect()->route('admin.users.index')->with('success', 'User deleted.');

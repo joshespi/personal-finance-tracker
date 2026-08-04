@@ -9,6 +9,7 @@ use App\Models\ManualAsset;
 use App\Services\CoinGeckoClient;
 use App\Services\FinnhubClient;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -64,7 +65,18 @@ class FetchAssetPrices extends Command
 
     private function fetchCryptoPrices(Collection $assets): void
     {
-        $response = $this->coinGecko->markets();
+        // A genuine connection failure (timeout/DNS/refused) throws past retry(..., throw:
+        // false) — that flag only suppresses the exception for a non-2xx *response*, not a
+        // transport-level failure. Catch it here so a CoinGecko outage doesn't also skip the
+        // stocks fetch that runs after this in handle().
+        try {
+            $response = $this->coinGecko->markets();
+        } catch (ConnectionException $e) {
+            Log::error('CoinGecko price fetch: connection failed', ['message' => $e->getMessage()]);
+            $this->error('CoinGecko connection failed: '.$e->getMessage());
+
+            return;
+        }
 
         if (! $response->successful()) {
             Log::error('CoinGecko price fetch failed', ['status' => $response->status()]);
@@ -83,6 +95,7 @@ class FetchAssetPrices extends Command
 
             if (! $coin) {
                 $this->warn("  {$asset->symbol}: not found in top 250 coins — set coingecko_id manually if needed");
+                Log::warning('CoinGecko price fetch: symbol not found', ['symbol' => $asset->symbol]);
 
                 continue;
             }
@@ -126,18 +139,31 @@ class FetchAssetPrices extends Command
         foreach ($assets as $asset) {
             $ticker = $asset->polygon_ticker ?: $asset->symbol;
 
-            $response = $this->finnhub->quote($ticker);
+            // A connection-level failure (timeout/DNS/refused) throws past retry(...,
+            // throw: false) — that flag only covers non-2xx *responses*. Isolate it per
+            // asset so one flaky call doesn't abort every asset later in this loop.
+            try {
+                $response = $this->finnhub->quote($ticker);
+            } catch (ConnectionException $e) {
+                $message = FinnhubClient::redact($e->getMessage());
+                $this->warn("  {$asset->symbol}: connection failed — {$message}");
+                Log::warning('Finnhub price fetch: connection failed', ['symbol' => $asset->symbol, 'message' => $message]);
+
+                continue;
+            }
 
             // The client already retries transient failures; a surviving 429 means we're
             // sustainedly over the free-tier limit, so stop rather than hammer the rest away.
             if ($response->status() === 429) {
                 $this->warn("  {$asset->symbol}: rate limited (HTTP 429) — stopping this run");
+                Log::warning('Finnhub price fetch: rate limited, stopping run', ['symbol' => $asset->symbol]);
 
                 break;
             }
 
             if (! $response->successful()) {
                 $this->warn("  {$asset->symbol}: request failed (HTTP {$response->status()})");
+                Log::warning('Finnhub price fetch failed', ['symbol' => $asset->symbol, 'status' => $response->status()]);
 
                 continue;
             }
@@ -147,6 +173,7 @@ class FetchAssetPrices extends Command
 
             if (! $price || $price <= 0) {
                 $this->warn("  {$asset->symbol}: no valid price returned");
+                Log::warning('Finnhub price fetch: no valid price', ['symbol' => $asset->symbol]);
 
                 continue;
             }

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\CashAccount;
+use App\Models\CashTransaction;
 use App\Models\Liability;
 use App\Models\LiabilityBalance;
 use App\Models\User;
@@ -185,6 +187,64 @@ class DebtPayoffTest extends TestCase
 
         // 1000 * 0.24 / 12 = 20; 200000 * 0.06 / 12 = 1000; total = 1020
         $this->assertEqualsWithDelta(1020.0, $data['total_monthly_interest'], 0.5);
+    }
+
+    public function test_credit_card_cash_account_with_balance_included_as_debt(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create([
+            'name'          => 'Chase Freedom',
+            'account_type'  => 'credit_card',
+            'interest_rate' => 24.0,
+        ]);
+        CashTransaction::factory()->for($account)->withdrawal()->create(['amount' => 1000]);
+
+        $data = (new DebtPayoffService)->compute($user->fresh());
+
+        $this->assertTrue($data['has_data']);
+        $this->assertCount(1, $data['debts']);
+        $this->assertSame('Chase Freedom', $data['debts'][0]['name']);
+        $this->assertSame('cash_account', $data['debts'][0]['source']);
+        $this->assertSame(1000.0, $data['debts'][0]['balance']);
+        // 1000 * 24% / 12 = 20
+        $this->assertEqualsWithDelta(20.0, $data['debts'][0]['monthly_interest'], 0.01);
+    }
+
+    public function test_credit_card_with_positive_balance_not_treated_as_debt(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create(['account_type' => 'credit_card', 'interest_rate' => 24.0]);
+        CashTransaction::factory()->for($account)->deposit()->create(['amount' => 200]);
+
+        $data = (new DebtPayoffService)->compute($user->fresh());
+
+        $this->assertFalse($data['has_data']);
+    }
+
+    public function test_non_credit_card_cash_account_balance_not_treated_as_debt(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create(['account_type' => 'checking']);
+        CashTransaction::factory()->for($account)->withdrawal()->create(['amount' => 1000]);
+
+        $data = (new DebtPayoffService)->compute($user->fresh());
+
+        $this->assertFalse($data['has_data']);
+    }
+
+    public function test_page_renders_credit_card_debt_linked_to_cash_account(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create([
+            'name' => 'Test Card', 'account_type' => 'credit_card', 'interest_rate' => 22.5,
+        ]);
+        CashTransaction::factory()->for($account)->withdrawal()->create(['amount' => 800]);
+
+        $this->actingAs($user)
+            ->get(route('planning', ['tab' => 'debt-payoff']))
+            ->assertOk()
+            ->assertSee('Test Card')
+            ->assertSee(route('cash-accounts.show', $account), false);
     }
 
     public function test_cross_user_data_does_not_leak(): void

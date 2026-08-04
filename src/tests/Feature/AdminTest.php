@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Admin\UserController;
 use App\Models\ActivityLog;
 use App\Models\AppSetting;
 use App\Models\LoginHistory;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Tests\TestCase;
 
 class AdminTest extends TestCase
@@ -102,6 +104,85 @@ class AdminTest extends TestCase
             ->assertRedirect(route('admin.users.index'));
 
         $this->assertDatabaseHas('users', ['id' => $user->id, 'name' => 'Updated Name']);
+    }
+
+    public function test_admin_cannot_remove_own_admin_access(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->patch(route('admin.users.update', $admin), [
+                'name'     => $admin->name,
+                'email'    => $admin->email,
+                'is_admin' => '0',
+            ])
+            ->assertSessionHasErrors('is_admin');
+
+        $this->assertTrue($admin->fresh()->is_admin);
+    }
+
+    public function test_last_remaining_admin_cannot_be_demoted(): void
+    {
+        // With today's routing, the "id !== actor" branch of this guard can only be
+        // reached by an admin acting on someone else — which always means at least 2
+        // admins exist. Exercise the count-based check directly at the controller level
+        // (bypassing EnsureUserIsAdmin) so it's still verified in isolation, as
+        // defense-in-depth if that routing invariant ever changes.
+        $admin    = User::factory()->admin()->create();
+        $nonAdmin = User::factory()->create();
+
+        $request = Request::create(
+            route('admin.users.update', $admin), 'PATCH',
+            ['name' => $admin->name, 'email' => $admin->email, 'is_admin' => '0']
+        );
+        $request->setUserResolver(fn () => $nonAdmin);
+
+        app(UserController::class)->update($request, $admin);
+
+        $this->assertTrue($admin->fresh()->is_admin);
+    }
+
+    public function test_admin_can_demote_another_admin_when_not_the_last(): void
+    {
+        $admin  = User::factory()->admin()->create();
+        $target = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->patch(route('admin.users.update', $target), [
+                'name'     => $target->name,
+                'email'    => $target->email,
+                'is_admin' => '0',
+            ])
+            ->assertRedirect(route('admin.users.index'));
+
+        $this->assertFalse($target->fresh()->is_admin);
+    }
+
+    public function test_manual_verify_logs_activity(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user  = User::factory()->unverified()->create();
+
+        $this->actingAs($admin)->post(route('admin.users.verify', $user));
+
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id'   => $admin->id,
+            'action'    => 'user.verify',
+            'target_id' => $user->id,
+        ]);
+    }
+
+    public function test_delete_user_logs_activity(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user  = User::factory()->create();
+
+        $this->actingAs($admin)->delete(route('admin.users.destroy', $user));
+
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $admin->id,
+            'action'  => 'user.delete',
+        ]);
     }
 
     public function test_admin_can_delete_other_user(): void
