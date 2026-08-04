@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
 
+## [1.11.0] - 2026-08-04
+
+### Added
+
+- **Sortable ledger columns** — every column header on the single-account ledger (`/cash-accounts/{id}`) and the All Accounts ledger is now a sort control: Account, Date, Type, Status, Description, Envelope / Category, Outflow, and Inflow. Clicking a header sorts by it (text columns ascending first, dates/amounts/status descending first); clicking the active header again reverses the direction. The default remains newest-first, and sorting survives the search filter. Outflow and Inflow sort independently rather than both on the raw amount — rows of the opposite type count as zero, so sorting by Outflow brings the largest spends to the top and pushes deposits to the bottom. Envelope / Category sorts across both relations at once, interleaving envelope-tagged withdrawals with income-category-tagged deposits alphabetically.
+
+### Fixed
+
+- The version shown in the app footer was stuck at 1.9.0 — `config/app.php` wasn't bumped for the 1.10.0 or 1.10.1 releases.
+
 ## [1.10.1] - 2026-07-22
 
 ### Fixed

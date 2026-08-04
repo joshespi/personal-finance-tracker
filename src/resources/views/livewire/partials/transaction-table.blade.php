@@ -10,6 +10,8 @@
       $showAccountFilter (bool) — show the "All accounts" / per-account filter dropdown
       $showStatusFilter (bool), $accountFilter, $statusFilter — status/account filter state
       $emptyFilteredText, $emptyText — empty-state copy when a filter is/isn't active
+    Column headers are sortable via the host's sortBy()/$sortField/$sortDirection
+    (SortsCashLedger), which both hosts expose as view variables.
     Shared by transaction-list.blade.php (single account) and all-transactions.blade.php (aggregate).
 --}}
 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg mt-8">
@@ -72,15 +74,15 @@
                 <thead class="bg-gray-50 dark:bg-gray-700">
                     <tr>
                         @if ($showAccountColumn)
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Account</th>
+                            <x-sort-th field="account" label="Account" :current="$sortField" :direction="$sortDirection" />
                         @endif
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Description</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Envelope / Category</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Outflow</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Inflow</th>
+                        <x-sort-th field="occurred_at" label="Date" :current="$sortField" :direction="$sortDirection" />
+                        <x-sort-th field="type" label="Type" :current="$sortField" :direction="$sortDirection" />
+                        <x-sort-th field="cleared" label="Status" :current="$sortField" :direction="$sortDirection" />
+                        <x-sort-th field="description" label="Description" :current="$sortField" :direction="$sortDirection" />
+                        <x-sort-th field="category" label="Envelope / Category" :current="$sortField" :direction="$sortDirection" />
+                        <x-sort-th field="outflow" label="Outflow" align="right" :current="$sortField" :direction="$sortDirection" />
+                        <x-sort-th field="inflow" label="Inflow" align="right" :current="$sortField" :direction="$sortDirection" />
                         <th class="px-6 py-3"></th>
                     </tr>
                 </thead>

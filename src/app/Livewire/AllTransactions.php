@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Concerns\ManagesCashTransactionForm;
+use App\Concerns\SortsCashLedger;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use Illuminate\Support\Collection;
@@ -18,7 +19,7 @@ use Livewire\WithPagination;
  */
 class AllTransactions extends Component
 {
-    use ManagesCashTransactionForm, WithPagination;
+    use ManagesCashTransactionForm, SortsCashLedger, WithPagination;
 
     public ?int $newAccountId = null;
 
@@ -51,15 +52,14 @@ class AllTransactions extends Component
 
     public function getTransactionsProperty()
     {
-        return $this->filteredQuery()
+        $query = $this->filteredQuery()
             ->with([
                 'cashAccount:id,name', 'envelope:id,name', 'incomeCategory:id,name,color',
                 'linkedFrom:id,cash_account_id', 'linkedFrom.cashAccount:id,name',
                 'linkedTo:id,cash_account_id,linked_transaction_id', 'linkedTo.cashAccount:id,name',
-            ])
-            ->orderByDesc('occurred_at')
-            ->orderByDesc('id')
-            ->paginate(self::PER_PAGE);
+            ]);
+
+        return $this->applySort($query)->paginate(self::PER_PAGE);
     }
 
     /** All cash transactions, narrowed by the account filter and the search filter. */
