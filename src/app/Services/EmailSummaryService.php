@@ -242,7 +242,9 @@ class EmailSummaryService
 
         // withCurrentBalance() aggregates deposits/withdrawals for every account in one
         // query (same helper CashAccountController uses) instead of balance() per account.
-        $lowBalance = $user->cashAccounts()->withCurrentBalance()->get()
+        // Credit cards excluded: a negative balance there is money owed, not an overdraft —
+        // it's the expected, by-design state (see User::creditCardDebts()), not a warning.
+        $lowBalance = $user->cashAccounts()->excludingCreditCards()->withCurrentBalance()->get()
             ->map(fn ($a) => ['account' => $a->name, 'balance' => round($a->currentBalanceFromSums(), 2)])
             ->filter(fn ($row) => $row['balance'] < 0)
             ->values();

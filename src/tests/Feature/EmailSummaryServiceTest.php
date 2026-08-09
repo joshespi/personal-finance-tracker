@@ -118,6 +118,29 @@ class EmailSummaryServiceTest extends TestCase
         $this->assertTrue($data['warnings']['lowBalanceAccounts']->isNotEmpty());
     }
 
+    /**
+     * Regression: a credit-card CashAccount owing money has a negative working balance
+     * by design (see User::creditCardDebts()) — that used to trip the same `balance < 0`
+     * filter as a checking account overdraft, so every summary email would warn about a
+     * card simply carrying a balance. Credit cards must be excluded from this section.
+     */
+    public function test_warnings_section_excludes_credit_card_from_low_balance(): void
+    {
+        $user = User::factory()->create();
+        $card = CashAccount::factory()->for($user)->create(['account_type' => 'credit_card']);
+
+        CashTransaction::factory()->for($card)->withdrawal()->create(['amount' => 500, 'occurred_at' => now()]);
+
+        $data = app(EmailSummaryService::class)->compute(
+            $user,
+            now()->subWeek(),
+            now(),
+            collect([EmailSummarySection::Warnings])
+        );
+
+        $this->assertTrue($data['warnings']['lowBalanceAccounts']->isEmpty());
+    }
+
     public function test_only_requested_sections_are_present_in_output(): void
     {
         $user = User::factory()->create();

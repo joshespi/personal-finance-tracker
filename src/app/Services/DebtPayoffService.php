@@ -193,6 +193,7 @@ class DebtPayoffService
         $totalInterest = 0.0;
         $payoffMonths  = [];
         $timeline      = [];
+        $allCleared    = false;
 
         for ($month = 1; $month <= self::MAX_MONTHS; $month++) {
             foreach ($debtData as $d) {
@@ -245,11 +246,17 @@ class DebtPayoffService
             $timeline[]     = $totalRemaining;
 
             if ($totalRemaining <= 0.01) {
+                $allCleared = true;
                 break;
             }
         }
 
-        $months = empty($payoffMonths) ? self::MAX_MONTHS : max($payoffMonths);
+        // A debt whose minimum payment doesn't cover its own interest never reaches
+        // payoffMonths (see negative_amortization on buildDebtRow()), so the loop runs out
+        // the clock with balance still outstanding. Report MAX_MONTHS in that case rather
+        // than maxing over only the debts that *did* clear, which would silently
+        // under-report "months" while the timeline still shows debt remaining.
+        $months = ($allCleared && ! empty($payoffMonths)) ? max($payoffMonths) : self::MAX_MONTHS;
 
         return [
             'months'          => $months,

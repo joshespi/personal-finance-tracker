@@ -46,6 +46,10 @@ class PortfolioPerformanceService
             $sign             = $t->type->isInflow() ? 1 : -1;
             $cashflows[$date] = ($cashflows[$date] ?? 0) + $sign * $amount;
         }
+        ksort($cashflows);
+        $cashflowDates = array_keys($cashflows);
+        $cfIndex       = 0;
+        $cfCount       = count($cashflowDates);
 
         $twr       = 1.0;
         $prevValue = null;
@@ -56,7 +60,19 @@ class PortfolioPerformanceService
             $date  = $snap->recorded_on->toDateString();
             $value = (float) $snap->market_value + (float) $snap->manual_value;
 
+            // Every cashflow up through this snapshot's date that hasn't already been
+            // attributed to an earlier sub-period — not just one landing on an exact
+            // snapshot date. A deposit/withdrawal falling between two snapshots (a missed
+            // scheduler run, or any gap) would otherwise be silently dropped from the
+            // denominator and misread as investment performance.
+            $cf = 0.0;
+            while ($cfIndex < $cfCount && $cashflowDates[$cfIndex] <= $date) {
+                $cf += $cashflows[$cashflowDates[$cfIndex]];
+                $cfIndex++;
+            }
+
             if ($prevValue === null) {
+                // Cashflows before the first snapshot have no prior sub-period to belong to.
                 $prevValue = $value;
                 $firstDate = $date;
                 $lastDate  = $date;
@@ -64,7 +80,6 @@ class PortfolioPerformanceService
                 continue;
             }
 
-            $cf          = $cashflows[$date] ?? 0;
             $denominator = $prevValue + $cf;
 
             if ($denominator > 0) {

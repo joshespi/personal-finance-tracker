@@ -16,6 +16,14 @@ class CashAccount extends Model
     /** account_type values eligible to hold envelope-linked savings balances (see `envelopes()`). */
     public const SAVINGS_TYPES = ['savings', 'money_market', 'cd'];
 
+    /**
+     * The account_type that models a revolving credit line rather than a deposit account.
+     * These invert the usual sign convention — a negative working balance is money owed
+     * by design, not an overdraft — so callers must opt in (creditCards()) or opt out
+     * (excludingCreditCards()) deliberately rather than treating them as cash.
+     */
+    public const CREDIT_CARD_TYPE = 'credit_card';
+
     protected $fillable = ['user_id', 'name', 'account_type', 'currency', 'notes', 'interest_rate', 'billing_day'];
 
     protected $casts = [
@@ -26,6 +34,23 @@ class CashAccount extends Model
     public function isSavingsType(): bool
     {
         return in_array($this->account_type, self::SAVINGS_TYPES, true);
+    }
+
+    public function isCreditCard(): bool
+    {
+        return $this->account_type === self::CREDIT_CARD_TYPE;
+    }
+
+    /** Revolving credit lines only — the debt side (see User::creditCardDebts()). */
+    public function scopeCreditCards(Builder $query): Builder
+    {
+        return $query->where('account_type', self::CREDIT_CARD_TYPE);
+    }
+
+    /** Deposit accounts only — the exact complement of creditCards(); keep the two in step. */
+    public function scopeExcludingCreditCards(Builder $query): Builder
+    {
+        return $query->where('account_type', '!=', self::CREDIT_CARD_TYPE);
     }
 
     public function user(): BelongsTo

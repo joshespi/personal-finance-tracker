@@ -153,6 +153,37 @@ class DebtPayoffTest extends TestCase
         $this->assertSame(1, $data['negative_amortization_count']);
     }
 
+    /**
+     * Regression: simulate() used to compute `months` as max(payoffMonths) — the max over
+     * only the debts that *did* reach zero — so a small payable debt alongside a debt whose
+     * minimum payment never covers its own interest reported a low, wrong payoff month
+     * instead of "never pays off". Assert it now reports MAX_MONTHS (the view renders
+     * `months >= 600` as "50+ yrs") whenever any balance survives the full simulation.
+     */
+    public function test_months_reports_max_when_a_debt_never_amortizes(): void
+    {
+        $service = new DebtPayoffService;
+
+        $debtData = [
+            // Pays off in month 1: $500 balance, $600/mo min payment. Once cleared, its
+            // $600/mo cascades to the other debt (snowball behavior) — the balance below
+            // is sized so even that cascaded budget can't keep up with its interest.
+            ['id'              => 1, 'name' => 'Small', 'balance' => 500.0, 'apr' => 0.0,
+                'monthly_rate' => 0.0, 'monthly_interest' => 0.0,
+                'min_payment'  => 600.0, 'min_payment_set' => true, 'negative_amortization' => false],
+            // Never pays off: 30% APR on $2,000,000 accrues $50,000/mo interest — far more
+            // than the $650/mo total budget (this debt's $50 min + the other debt's cascaded $600).
+            ['id'              => 2, 'name' => 'Never Amortizes', 'balance' => 2_000_000.0, 'apr' => 30.0,
+                'monthly_rate' => 0.30 / 12, 'monthly_interest' => 50_000.0,
+                'min_payment'  => 50.0, 'min_payment_set' => true, 'negative_amortization' => true],
+        ];
+
+        $result = $service->simulate($debtData, [1, 2], 0.0);
+
+        $this->assertSame(600, $result['months']); // DebtPayoffService::MAX_MONTHS
+        $this->assertGreaterThan(0.01, end($result['timeline']));
+    }
+
     public function test_missing_minimum_payment_uses_estimate(): void
     {
         $user = User::factory()->create();

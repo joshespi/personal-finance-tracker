@@ -106,6 +106,22 @@ class Transaction extends Model
     }
 
     /**
+     * The cash fee spread across the units transacted — folded into cost-per-unit on a
+     * buy, subtracted from the received price on a sell, so both reconcile with the
+     * account's actual cash movement.
+     *
+     * Divides by the real quantity, never max(1, quantity): that is a unit floor, not a
+     * zero guard, and would silently shrink the fee's effect on any sub-1-unit trade
+     * (routine for crypto). Only an exact zero quantity is special-cased.
+     */
+    public function usdFeePerUnit(): float
+    {
+        $qty = (float) $this->quantity;
+
+        return $qty > 0 ? $this->usdFee() / $qty : 0.0;
+    }
+
+    /**
      * Total asset units this transaction removes from the wallet: the stored quantity
      * plus the fee, when the fee was paid in the asset itself rather than in cash.
      */
@@ -149,7 +165,7 @@ class Transaction extends Model
 
         foreach ($transactions->sortBy('transacted_at') as $t) {
             if ($t->type->isInflow()) {
-                $costPerUnit = (float) $t->price_per_unit + ($t->usdFee() / max(1, (float) $t->quantity));
+                $costPerUnit = (float) $t->price_per_unit + $t->usdFeePerUnit();
                 $lots[]      = ['qty' => (float) $t->quantity, 'cost_per_unit' => $costPerUnit];
             } elseif ($t->type->isOutflow()) {
                 $remaining = $t->quantityWithAssetFee();

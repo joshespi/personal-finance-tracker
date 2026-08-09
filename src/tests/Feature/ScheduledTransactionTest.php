@@ -363,6 +363,34 @@ class ScheduledTransactionTest extends TestCase
         $this->assertDatabaseHas('cash_transactions', ['cash_account_id' => $account->id, 'type' => 'withdrawal']);
     }
 
+    /**
+     * Regression: scheduled_transactions.envelope_id is ON DELETE SET NULL, and deleting an
+     * envelope (EnvelopeController::destroy) does a bare delete() with no cleanup of schedules
+     * pointing at it. envelopeFund() used to dereference $s->envelope unconditionally, so an
+     * envelope_fund schedule outliving its envelope fataled materialization — which, since
+     * MaterializeDueScheduledTransactions runs on every authenticated request, would lock the
+     * owning user out of the entire app. It must now skip the entry instead of throwing.
+     */
+    public function test_materialize_envelope_fund_skips_when_envelope_deleted(): void
+    {
+        $user      = User::factory()->create();
+        $envelope  = Envelope::factory()->for($user)->create();
+        $account   = CashAccount::factory()->for($user)->create();
+        $scheduled = ScheduledTransaction::factory()->for($user)->for($envelope, 'envelope')->for($account, 'cashAccount')->pastDue()->create([
+            'type'   => 'envelope_fund',
+            'amount' => 200,
+        ]);
+
+        $envelope->delete();
+
+        app(ScheduledTransactionService::class)->materializeForUser($user->fresh());
+
+        $this->assertDatabaseMissing('envelope_transactions', ['type' => 'fund']);
+        $this->assertDatabaseMissing('cash_transactions', ['cash_account_id' => $account->id]);
+        // The schedule still advances past the missed occurrence rather than retrying forever.
+        $this->assertTrue($scheduled->fresh()->next_due_at->gt(today()));
+    }
+
     public function test_materialize_mortgage_payment_creates_withdrawal_and_paydown(): void
     {
         $user      = User::factory()->create();

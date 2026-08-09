@@ -97,6 +97,16 @@ class ScheduledTransactionService
 
     private function envelopeFund(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
+        // envelope_id is ON DELETE SET NULL, so an envelope_fund schedule can outlive its
+        // envelope. Same skip-don't-fatal rule as cashEntry()'s missing-account guard —
+        // materialization runs on every authenticated request, so one bad row throwing
+        // here would lock the user out of every page.
+        if ($s->envelope === null) {
+            Log::warning('Scheduled transaction has no envelope — materialization skipped', ['id' => $s->id]);
+
+            return;
+        }
+
         $s->envelope->transactions()->create([
             'type'        => 'fund',
             'amount'      => $s->amount,

@@ -7,6 +7,7 @@ use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
 use App\Models\User;
+use App\Services\SpendingTrendsService;
 use Tests\TestCase;
 
 class SpendingTrendsTest extends TestCase
@@ -93,6 +94,23 @@ class SpendingTrendsTest extends TestCase
 
         // The "No spending recorded" message confirms no datasets were returned
         $response->assertSee('No envelope spending recorded');
+    }
+
+    /**
+     * Regression: compute() built the spend-row date range with
+     * `$monthStarts->last()->endOfMonth()`, which mutates Carbon in place — corrupting the
+     * last entry of the `monthStarts` collection that's also returned to the caller. Not
+     * currently exploitable (every consumer only ->format()s the values), but a future one
+     * reading monthStarts as a date would silently get an end-of-month value for the most
+     * recent month instead of its start.
+     */
+    public function test_month_starts_are_not_mutated_to_end_of_month(): void
+    {
+        $user = User::factory()->create();
+
+        $monthStarts = (new SpendingTrendsService)->compute($user, 6)['monthStarts'];
+
+        $this->assertSame(1, $monthStarts->last()->day);
     }
 
     public function test_transactions_outside_range_excluded(): void

@@ -11,25 +11,26 @@ use Tests\TestCase;
 
 class PortfolioPerformanceServiceTest extends TestCase
 {
+    /** Jan 1 at $1,000 and Feb 1 at $febValue — the two-snapshot frame both TWR tests use. */
+    private function snapshotPair(Portfolio $portfolio, float $febValue): void
+    {
+        foreach (['2024-01-01' => 1000.0, '2024-02-01' => $febValue] as $date => $value) {
+            PortfolioSnapshot::create([
+                'portfolio_id' => $portfolio->id,
+                'recorded_on'  => $date,
+                'market_value' => $value,
+                'manual_value' => 0,
+                'cost_basis'   => $value,
+            ]);
+        }
+    }
+
     public function test_twr_ignores_fee_when_fee_in_asset_is_true(): void
     {
         $portfolio = Portfolio::factory()->create();
         $asset     = Asset::factory()->crypto()->create(['symbol' => 'ETH']);
 
-        PortfolioSnapshot::create([
-            'portfolio_id' => $portfolio->id,
-            'recorded_on'  => '2024-01-01',
-            'market_value' => 1000,
-            'manual_value' => 0,
-            'cost_basis'   => 1000,
-        ]);
-        PortfolioSnapshot::create([
-            'portfolio_id' => $portfolio->id,
-            'recorded_on'  => '2024-02-01',
-            'market_value' => 2100,
-            'manual_value' => 0,
-            'cost_basis'   => 2100,
-        ]);
+        $this->snapshotPair($portfolio, 2100.0);
 
         // fee_in_asset buy: the $100 fee left the wallet as units, never as cash — the
         // TWR cashflow denominator must use only quantity*price (usdFee() is zero here),
@@ -48,5 +49,35 @@ class PortfolioPerformanceServiceTest extends TestCase
         // denominator = prevValue(1000) + cashflow(1000, the buy's cash cost with the
         // fee excluded) = 2000; twr = 2100/2000 = 1.05 => +5.00%
         $this->assertEquals(5.0, $result['total_pct']);
+    }
+
+    /**
+     * Regression: the cashflow denominator used to be looked up by an exact match on
+     * each snapshot's own date (`$cashflows[$date] ?? 0`), so a buy landing on a day with
+     * no snapshot — a missed scheduler run, or any gap — was silently dropped from the
+     * denominator. The deposit then read as pure investment gain instead of contributed
+     * capital. Buy here on 2024-01-15, between the two snapshot dates, with no price
+     * change at all — a correct TWR must be 0%, not "the deposit looks like a gain."
+     */
+    public function test_twr_attributes_a_cashflow_between_snapshot_dates_to_its_subperiod(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = Asset::factory()->crypto()->create(['symbol' => 'ETH']);
+
+        // Feb value is exactly Jan + the deposit: no price movement at all.
+        $this->snapshotPair($portfolio, 2000.0);
+
+        // No snapshot exists on this date — the whole point of the regression.
+        Transaction::factory()->for($portfolio)->for($asset)->buy()->create([
+            'quantity'       => 1,
+            'price_per_unit' => 1000,
+            'fees'           => 0,
+            'transacted_at'  => '2024-01-15',
+        ]);
+
+        $portfolio->load('snapshots', 'transactions');
+        $result = (new PortfolioPerformanceService)->computeTwr($portfolio);
+
+        $this->assertEquals(0.0, $result['total_pct']);
     }
 }

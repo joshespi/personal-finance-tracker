@@ -45,7 +45,7 @@
                 </div>
             @endif
 
-            @if ($account->account_type === 'credit_card' && ($account->interest_rate || $account->billing_day))
+            @if ($account->isCreditCard() && ($account->interest_rate || $account->billing_day))
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4 flex flex-wrap gap-6 text-sm">
                     @if ($account->interest_rate)
                         {{-- Same formula as Liability::monthlyInterest() — flagged there, not

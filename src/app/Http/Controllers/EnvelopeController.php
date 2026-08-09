@@ -104,7 +104,7 @@ class EnvelopeController extends Controller
             $this->clearEmergencyFundFlag($request);
         }
 
-        $envelope = $request->user()->envelopes()->create($validated);
+        $request->user()->envelopes()->create($validated);
 
         return redirect()->route('envelopes.index')->with('success', 'Envelope created.');
     }

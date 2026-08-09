@@ -248,7 +248,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function creditCardDebts(): Collection
     {
         return $this->cashAccounts()
-            ->where('account_type', 'credit_card')
+            ->creditCards()
             ->withCurrentBalance()
             ->get()
             ->map(function (CashAccount $a) {

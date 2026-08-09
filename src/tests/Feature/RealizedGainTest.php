@@ -122,6 +122,33 @@ class RealizedGainTest extends TestCase
         $this->assertEquals(480.00, $result['totalGain']);
     }
 
+    /**
+     * Regression: both fee-per-unit divisions (the buy-side fold in buildOpenLots() and
+     * the sell-side reduction in compute()) used to divide by max(1, quantity) — a unit
+     * floor, not a zero guard — silently shrinking the fee on any sub-1-unit trade,
+     * routine for crypto. Now centralised on Transaction::usdFeePerUnit().
+     *
+     * 0.5 units bought at $100 with a $10 fee, sold at $200 with a $4 fee:
+     * cost basis $60 (not $55), proceeds $96 (not $98), gain $36 (not $43).
+     */
+    public function test_fees_fully_applied_on_fractional_quantity_buy_and_sell(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = Asset::factory()->crypto()->create(['symbol' => 'BTC']);
+
+        Transaction::factory()->for($portfolio)->for($asset)->buy()
+            ->create(['quantity' => 0.5, 'price_per_unit' => 100.0, 'fees' => 10.0, 'transacted_at' => '2024-01-01']);
+        Transaction::factory()->for($portfolio)->for($asset)->sell()
+            ->create(['quantity' => 0.5, 'price_per_unit' => 200.0, 'fees' => 4.0, 'transacted_at' => '2024-06-01']);
+
+        $portfolio->load('transactions.asset');
+        $lot = (new RealizedGainService)->compute($portfolio)['lots']->first();
+
+        $this->assertEquals(60.0, $lot['cost_basis']);
+        $this->assertEquals(96.0, $lot['proceeds']);
+        $this->assertEquals(36.0, $lot['gain']);
+    }
+
     public function test_sell_in_asset_fee_does_not_reduce_cash_proceeds(): void
     {
         $portfolio = Portfolio::factory()->create();

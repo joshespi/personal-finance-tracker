@@ -26,9 +26,11 @@ class SpendingTrendsService
         $envelopes   = $user->envelopes()->orderBy('sort_order')->get();
         $envelopeIds = $envelopes->pluck('id');
 
+        // ->copy(): $monthStarts is returned to the caller, so endOfMonth() must not
+        // mutate its last entry in place.
         $spendRows = CashTransaction::whereIn('envelope_id', $envelopeIds)
             ->withdrawals()
-            ->whereBetween('occurred_at', [$monthStarts->first(), $monthStarts->last()->endOfMonth()])
+            ->whereBetween('occurred_at', [$monthStarts->first(), $monthStarts->last()->copy()->endOfMonth()])
             ->get(['envelope_id', 'occurred_at', 'amount']);
 
         $byEnvelopeMonth = [];

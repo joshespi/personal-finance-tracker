@@ -51,12 +51,10 @@ class RealizedGainService
             $sellPrice = (float) $t->price_per_unit;
             // A cash sell fee reduces what was actually received — mirrors the buy-side
             // fee-into-cost-per-unit fold in buildOpenLots() so proceeds/gain reconcile
-            // with the account's actual cash movement. Zero when fee_in_asset is set
-            // (that fee left as units, already reflected via quantityWithAssetFee()).
-            $sellFeePerUnit = $t->usdFee() / max(1, (float) $t->quantity);
-            $netSellPrice   = $sellPrice - $sellFeePerUnit;
-            $sellDate       = $t->transacted_at;
-            $holdingDays    = (int) $lot['date']->diffInDays($sellDate);
+            // with the account's actual cash movement.
+            $netSellPrice = $sellPrice - $t->usdFeePerUnit();
+            $sellDate     = $t->transacted_at;
+            $holdingDays  = (int) $lot['date']->diffInDays($sellDate);
 
             $lots->push([
                 'asset'        => $t->asset,
@@ -140,7 +138,7 @@ class RealizedGainService
             $openLots[$assetId] ??= [];
 
             if ($t->type->isInflow()) {
-                $costPerUnit          = (float) $t->price_per_unit + ($t->usdFee() / max(1, (float) $t->quantity));
+                $costPerUnit          = (float) $t->price_per_unit + $t->usdFeePerUnit();
                 $openLots[$assetId][] = [
                     'qty'           => (float) $t->quantity,
                     'cost_per_unit' => $costPerUnit,
