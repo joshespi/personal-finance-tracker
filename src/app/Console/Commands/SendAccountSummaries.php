@@ -26,12 +26,23 @@ class SendAccountSummaries extends Command
             return self::SUCCESS;
         }
 
+        // A user opted into both a subsumed cadence and the one it's subsumed by would
+        // otherwise get two overlapping emails the day both are due — see
+        // EmailSummaryFrequency::isSubsumedBy().
+        $weeklyDueToday = $dueFrequencies->contains(EmailSummaryFrequency::Weekly);
+
         $sent = 0;
 
         foreach ($dueFrequencies as $frequency) {
             $users = User::whereJsonContains('email_summary_frequencies', $frequency->value)->get();
 
             foreach ($users as $user) {
+                if ($weeklyDueToday
+                    && $frequency->isSubsumedBy(EmailSummaryFrequency::Weekly)
+                    && $user->wantsEmailFrequency(EmailSummaryFrequency::Weekly)) {
+                    continue;
+                }
+
                 $sections = collect($user->email_summary_sections ?? [])
                     ->map(fn (string $value) => EmailSummarySection::tryFrom($value))
                     ->filter();

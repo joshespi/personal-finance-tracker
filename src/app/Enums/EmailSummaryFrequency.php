@@ -44,6 +44,19 @@ enum EmailSummaryFrequency: string
         };
     }
 
+    /**
+     * Whether this cadence's window is always fully covered by $other's whenever both are
+     * due the same day, making this one redundant for a user opted into both. Currently the
+     * only such pair: Daily is subsumed by Weekly, since "today" is always inside the past-week
+     * range. Monthly isn't subsumed by anything here — its overlap with Daily isn't
+     * calendar-guaranteed the same way, and the two summaries cover genuinely different-length
+     * windows.
+     */
+    public function isSubsumedBy(self $other): bool
+    {
+        return $this === self::Daily && $other === self::Weekly;
+    }
+
     /** Flat array of string values — for Rule::in / validation. */
     public static function values(): array
     {

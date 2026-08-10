@@ -126,6 +126,24 @@ class SendAccountSummariesTest extends TestCase
             && str_contains($mail->render(), '$200.00'));
     }
 
+    public function test_skips_daily_when_weekly_also_due_same_day(): void
+    {
+        Mail::fake();
+
+        $this->travelTo(now()->next(Carbon::MONDAY));
+
+        $user = User::factory()->create([
+            'email_summary_frequencies' => ['daily', 'weekly'],
+            'email_summary_sections'    => ['budgeting'],
+        ]);
+
+        $this->artisan('email:send-summaries')->assertSuccessful();
+
+        Mail::assertSentCount(1);
+        Mail::assertSent(AccountChangesSummary::class, fn ($mail) => $mail->hasTo($user->email)
+            && $mail->frequency === EmailSummaryFrequency::Weekly);
+    }
+
     public function test_sends_separate_email_per_opted_in_frequency(): void
     {
         Mail::fake();
