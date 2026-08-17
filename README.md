@@ -66,18 +66,23 @@ docker compose run --rm node npm run build
 
 ## Scheduled commands
 
-| Command               | Frequency     | Description                                   |
-| --------------------- | ------------- | --------------------------------------------- |
-| `assets:fetch-prices` | Hourly        | Fetches latest prices via Finnhub / CoinGecko |
-| `portfolios:snapshot` | Daily @ 00:05 | Records portfolio value snapshots             |
-| `benchmarks:fetch`    | Daily @ 00:10 | Fetches SPY and BTC close prices              |
+| Command                         | Frequency     | Description                                       |
+| ------------------------------- | ------------- | ------------------------------------------------- |
+| `assets:fetch-prices`           | Hourly        | Fetches latest prices via Finnhub / CoinGecko     |
+| `assets:process-backfill-queue` | Hourly        | Drains queued historical-price backfill requests  |
+| `portfolios:snapshot`           | Daily @ 00:05 | Records portfolio value snapshots                 |
+| `transactions:materialize`      | Daily @ 00:10 | Creates due recurring transactions                |
+| `email:send-summaries`          | Daily @ 06:00 | Sends opted-in account-summary emails             |
 
-Recurring transactions (`ScheduledTransaction`) are materialised lazily — when a user visits `/scheduled-transactions`, any due entries are created and `next_due_at` is advanced. No cron entry needed for that path today.
+Recurring transactions (`ScheduledTransaction`) are also materialised lazily on any authenticated request — due entries are created and `next_due_at` advanced. The `transactions:materialize` command above is the backstop for accounts that never open the app, and is the only trigger for the recurring-transaction summary email.
 
-Cron entry:
+**No host crontab is needed.** The scheduler runs in-stack as the `scheduler` compose service
+(`php artisan schedule:work`). Do **not** also add a host cron running `schedule:run` against
+the same stack — two schedulers fire each command twice, which has previously caused duplicate
+summary emails. If you have a leftover line from an older install, remove it:
 
 ```bash
-* * * * * docker compose -f /path/to/laravel-app/docker-compose.yml exec -T app php artisan schedule:run >> /dev/null 2>&1
+crontab -l | grep -v 'artisan schedule:run' | crontab -
 ```
 
 Seed historical benchmarks once:

@@ -43,6 +43,18 @@ class SendAccountSummaries extends Command
                     continue;
                 }
 
+                // One clock reading serves both the duplicate guard and the window below.
+                $until = now();
+
+                // Second layer beyond the scheduler's onOneServer() lock (bootstrap/app.php):
+                // that lock only covers two schedulers racing on one tick, this covers any
+                // repeat run of the command.
+                if ($user->alreadySentEmailSummary($frequency, $until)) {
+                    $this->line("  {$user->email}: {$frequency->label()} summary already sent this period, skipping");
+
+                    continue;
+                }
+
                 $sections = collect($user->email_summary_sections ?? [])
                     ->map(fn (string $value) => EmailSummarySection::tryFrom($value))
                     ->filter();
@@ -52,16 +64,15 @@ class SendAccountSummaries extends Command
                 }
 
                 // Always derive the window from the frequency's own period rather than the
-                // shared last_email_summary_sent_at column — a user with both Weekly and
-                // Monthly enabled would otherwise have the second frequency processed each
-                // run see the first frequency's just-written timestamp as its "since".
-                $until = now();
+                // recorded send timestamps — a user with both Weekly and Monthly enabled
+                // would otherwise have the second frequency processed each run see the first
+                // frequency's just-written timestamp as its "since".
                 $since = $frequency->periodStart($until);
 
                 try {
                     $data = $service->compute($user, $since, $until, $sections);
                     Mail::to($user->email)->send(new AccountChangesSummary($user, $frequency, $data, $since, $until));
-                    $user->update(['last_email_summary_sent_at' => $until]);
+                    $user->recordEmailSummarySent($frequency, $until);
                     $sent++;
                     $this->line("  {$user->email}: {$frequency->label()} summary sent");
                 } catch (\Throwable $e) {

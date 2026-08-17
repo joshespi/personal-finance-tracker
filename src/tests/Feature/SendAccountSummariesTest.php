@@ -31,7 +31,45 @@ class SendAccountSummariesTest extends TestCase
             && $mail->frequency === EmailSummaryFrequency::Daily
             && $mail->data['budgeting']['deposits'] === 250.0);
 
-        $this->assertNotNull($user->refresh()->last_email_summary_sent_at);
+        $this->assertArrayHasKey('daily', $user->refresh()->email_summary_last_sent_at);
+    }
+
+    public function test_does_not_resend_the_same_frequency_twice_in_one_day(): void
+    {
+        Mail::fake();
+
+        // Pinned mid-day so the two runs can't straddle midnight and look like a regression.
+        $this->travelTo(now()->startOfDay()->addHours(6));
+
+        // A second scheduler (e.g. a leftover host crontab alongside the in-stack scheduler)
+        // running the command again the same day must not email the summary a second time.
+        User::factory()->create([
+            'email_summary_frequencies' => ['daily'],
+            'email_summary_sections'    => ['budgeting'],
+        ]);
+
+        $this->artisan('email:send-summaries')->assertSuccessful();
+        $this->artisan('email:send-summaries')->assertSuccessful();
+
+        Mail::assertSentCount(1);
+    }
+
+    public function test_resends_the_next_day(): void
+    {
+        Mail::fake();
+
+        $this->travelTo(now()->startOfDay()->addHours(6));
+
+        User::factory()->create([
+            'email_summary_frequencies' => ['daily'],
+            'email_summary_sections'    => ['budgeting'],
+        ]);
+
+        $this->artisan('email:send-summaries')->assertSuccessful();
+        $this->travel(1)->days();
+        $this->artisan('email:send-summaries')->assertSuccessful();
+
+        Mail::assertSentCount(2);
     }
 
     public function test_skips_user_with_no_frequency_selected(): void

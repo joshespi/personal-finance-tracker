@@ -16,17 +16,20 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withSchedule(function (Schedule $schedule): void {
-        // withoutOverlapping: a slow run (provider degraded, many retries) shouldn't overlap
-        // the next hourly tick and double up on price fetching/quota against the same hour.
-        $schedule->command('assets:fetch-prices')->hourly()->withoutOverlapping();
-        // A large backfill's write phase can now span multiple hourly ticks (chunked by
-        // --day-limit) — withoutOverlapping() stops a slow-running tick from colliding with
-        // the next hour's invocation and corrupting the request's write_cursor/status.
-        $schedule->command('assets:process-backfill-queue')->hourly()->withoutOverlapping();
-        $schedule->command('portfolios:snapshot')->dailyAt('00:05');
-        $schedule->command('transactions:materialize')->dailyAt('00:10');
+        // Two independent guards, hence both on the hourly entries. onOneServer(): the scheduler
+        // is meant to run only in the in-stack `scheduler` service, but a leftover host crontab
+        // running `schedule:run` against the same stack makes two schedulers fire the same command
+        // in the same minute — that's how duplicate summary emails got sent; the shared lock
+        // (CACHE_STORE=database, so the mutex is visible across containers) lets only the first
+        // process claim each run. withoutOverlapping(): stops one slow run from colliding with its
+        // own next tick — doubled price fetching/quota against the same hour, or a corrupted
+        // write_cursor/status when a large backfill's write phase spans multiple ticks.
+        $schedule->command('assets:fetch-prices')->hourly()->onOneServer()->withoutOverlapping();
+        $schedule->command('assets:process-backfill-queue')->hourly()->onOneServer()->withoutOverlapping();
+        $schedule->command('portfolios:snapshot')->dailyAt('00:05')->onOneServer();
+        $schedule->command('transactions:materialize')->dailyAt('00:10')->onOneServer();
         // After the snapshot/materialize jobs above so the summary reflects that day's data.
-        $schedule->command('email:send-summaries')->dailyAt('06:00');
+        $schedule->command('email:send-summaries')->dailyAt('06:00')->onOneServer();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: env('TRUSTED_PROXIES', null));

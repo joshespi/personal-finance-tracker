@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\DashboardWidget;
 use App\Enums\EmailSummaryFrequency;
 use App\Enums\EmailSummarySection;
+use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,11 +17,12 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 
-// is_admin deliberately excluded: it must never be mass-assignable, even though every
-// current write path already passes a validated array rather than $request->all() — this
-// is defense-in-depth against a future call site introducing that mistake. The one
-// legitimate write path (Admin\UserController::update) sets it explicitly instead.
-#[Fillable(['name', 'email', 'password', 'emergency_fund_target_months', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'notify_scheduled_transactions', 'dashboard_preferences', 'email_summary_frequencies', 'email_summary_sections', 'last_email_summary_sent_at'])]
+// is_admin and email_summary_last_sent_at deliberately excluded: neither is ever user-submitted,
+// even though every current write path already passes a validated array rather than
+// $request->all() — this is defense-in-depth against a future call site introducing that
+// mistake. Their legitimate writers (Admin\UserController::update, recordEmailSummarySent)
+// set them explicitly instead.
+#[Fillable(['name', 'email', 'password', 'emergency_fund_target_months', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'notify_scheduled_transactions', 'dashboard_preferences', 'email_summary_frequencies', 'email_summary_sections'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -42,7 +44,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'dashboard_preferences'         => 'array',
             'email_summary_frequencies'     => 'array',
             'email_summary_sections'        => 'array',
-            'last_email_summary_sent_at'    => 'datetime',
+            'email_summary_last_sent_at'    => 'array',
         ];
     }
 
@@ -64,6 +66,27 @@ class User extends Authenticatable implements MustVerifyEmail
         $value = $frequency instanceof EmailSummaryFrequency ? $frequency->value : $frequency;
 
         return in_array($value, $this->email_summary_frequencies ?? [], true);
+    }
+
+    /** Whether this user has already been sent $frequency's summary for the period $at falls in. */
+    public function alreadySentEmailSummary(EmailSummaryFrequency $frequency, CarbonInterface $at): bool
+    {
+        return ($this->email_summary_last_sent_at[$frequency->value] ?? null) === $frequency->periodKey($at);
+    }
+
+    /**
+     * Records a summary send so a repeat run in the same period is recognised as a duplicate.
+     * forceFill because the column is deliberately not mass-assignable (see above) — this is
+     * its only writer, and nothing user-submitted may clear a user's own dedupe record.
+     */
+    public function recordEmailSummarySent(EmailSummaryFrequency $frequency, CarbonInterface $at): void
+    {
+        $this->forceFill([
+            'email_summary_last_sent_at' => [
+                ...($this->email_summary_last_sent_at ?? []),
+                $frequency->value => $frequency->periodKey($at),
+            ],
+        ])->save();
     }
 
     /** Whether this user opted into a given email-summary content section. Off by default (opt-in). */

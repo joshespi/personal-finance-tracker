@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
 
+## [1.11.1] - 2026-08-17
+
+### Fixed
+
+- **Duplicate account-summary emails.** Two identical weekly summaries went out on 2026-08-17. The scheduled commands had no cross-process guard, so a second scheduler running against the same stack (a leftover host crontab running `schedule:run` alongside the in-stack `scheduler` service) fired `email:send-summaries` twice in the same minute and both runs sent. Fixed in two layers: every entry in `bootstrap/app.php`'s schedule now carries `onOneServer()`, so only the first process to claim the shared lock runs a given tick; and `SendAccountSummaries` now records each send against the cadence's own period (new `users.email_summary_last_sent_at` JSON map of frequency → period key, replacing the write-only `last_email_summary_sent_at` timestamp, which couldn't distinguish "this cadence already went out today" from "a different cadence did") and skips a user whose cadence was already sent for that period. A send that failed is never recorded, so retries still work. The README's stale "add this cron entry" instruction — the reason a host crontab existed at all — is gone.
+
 ## [1.11.0] - 2026-08-04
 
 ### Added

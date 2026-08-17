@@ -45,6 +45,21 @@ enum EmailSummaryFrequency: string
     }
 
     /**
+     * Identifies the single occurrence of this cadence that $at falls inside — '2026-08-17',
+     * '2026-W34', '2026-08'. Recorded when a summary is sent so a repeat run of the command
+     * recognises it as a duplicate. Keyed at the cadence's own granularity rather than by day,
+     * so it stays correct on its own terms if isDueToday()'s calendar rule ever changes.
+     */
+    public function periodKey(CarbonInterface $at): string
+    {
+        return match ($this) {
+            self::Daily   => $at->format('Y-m-d'),
+            self::Weekly  => $at->format('o-\WW'),
+            self::Monthly => $at->format('Y-m'),
+        };
+    }
+
+    /**
      * Whether this cadence's window is always fully covered by $other's whenever both are
      * due the same day, making this one redundant for a user opted into both. Currently the
      * only such pair: Daily is subsumed by Weekly, since "today" is always inside the past-week
