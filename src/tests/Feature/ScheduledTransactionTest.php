@@ -114,6 +114,56 @@ class ScheduledTransactionTest extends TestCase
         ])->assertSessionHasErrors('envelope_id');
     }
 
+    /**
+     * Regression: envelope_id used to be validated as a bare 'nullable' whenever the submitted
+     * type's needsEnvelope() was false, so a type that merely *accepts* an envelope could be
+     * pointed at someone else's. mortgage_payment is the dangerous one — it isn't user-creatable,
+     * but update() re-admits an existing row's type, and its materialization tags the withdrawal
+     * with envelope_id, which debits that envelope for its real owner.
+     */
+    public function test_update_rejects_another_users_envelope_on_a_type_that_does_not_need_one(): void
+    {
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
+        $foreign  = Envelope::factory()->create();
+        $schedule = ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->create([
+            'type' => 'mortgage_payment',
+        ]);
+
+        $this->actingAs($user)->put(route('scheduled-transactions.update', $schedule), [
+            'description'     => 'Mortgage',
+            'amount'          => '1900',
+            'type'            => 'mortgage_payment',
+            'recurrence'      => 'monthly',
+            'next_due_at'     => today()->addMonth()->toDateString(),
+            'cash_account_id' => $account->id,
+            'envelope_id'     => $foreign->id,
+        ])->assertSessionHasErrors('envelope_id');
+
+        $this->assertNull($schedule->fresh()->envelope_id);
+    }
+
+    /** Backstop for rows written before the validation above existed. */
+    public function test_materializing_never_tags_a_cash_transaction_with_a_foreign_envelope(): void
+    {
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
+        $foreign  = Envelope::factory()->create();
+        $schedule = ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->pastDue()->create([
+            'type' => 'envelope_spend',
+        ]);
+        // Non-fillable path on purpose — simulates a row tampered with before the fix.
+        $schedule->forceFill(['envelope_id' => $foreign->id])->save();
+
+        app(ScheduledTransactionService::class)->materializeForUser($user);
+
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $account->id,
+            'envelope_id'     => null,
+        ]);
+        $this->assertDatabaseMissing('cash_transactions', ['envelope_id' => $foreign->id]);
+    }
+
     public function test_store_rejects_system_managed_mortgage_type(): void
     {
         $user    = User::factory()->create();

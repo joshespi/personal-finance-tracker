@@ -45,7 +45,10 @@
                     </div>
                     <div class="flex items-center gap-3 shrink-0">
                         <form method="POST" action="{{ route('scheduled-transactions.enter-now', $s) }}"
-                              onsubmit="return confirm('Record &quot;{{ $s->description }}&quot; (${{ $demo->amt((float)$s->amount) }}) now and advance to the next cycle?')">
+                              {{-- @js(), not {{ }}: this is a JS string literal, and the HTML parser
+                                   decodes &#039; back to a quote before the JS parser runs, so HTML
+                                   escaping alone does not contain a description here. --}}
+                              onsubmit="return confirm('Record ' + @js($s->description) + ' (${{ $demo->amt((float)$s->amount) }}) now and advance to the next cycle?')">
                             @csrf
                             <button type="submit"
                                     class="inline-flex items-center px-2.5 py-1 bg-indigo-600 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-indigo-500 transition">

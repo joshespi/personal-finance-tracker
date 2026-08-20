@@ -106,9 +106,13 @@ class ScheduledTransactionController extends Controller
             'type'        => ['required', Rule::in($allowedTypes)],
             'recurrence'  => ['required', Rule::in(Recurrence::values())],
             'next_due_at' => 'required|date',
+            // The ownership rule belongs in BOTH branches — only required/nullable varies.
+            // Types that don't need an envelope still *accept* one (mortgage_payment tags its
+            // withdrawal with envelope_id), so leaving this branch unscoped let a caller point
+            // a schedule they own at another user's envelope and debit it.
             'envelope_id' => $type?->needsEnvelope()
-                ? ['required', $envelopeRule]
-                : 'nullable',
+                ? ['required', 'integer', $envelopeRule]
+                : ['nullable', 'integer', $envelopeRule],
             'cash_account_id' => $type?->requiresCashAccount()
                 ? ['required', $cashAccountRule]
                 : ['nullable', $cashAccountRule],

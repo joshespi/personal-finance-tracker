@@ -139,7 +139,24 @@ class ScheduledTransactionService
 
     private function envelopeSpend(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
-        $this->cashEntry($s, $date, $cleared, 'withdrawal', $s->envelope_id);
+        $this->cashEntry($s, $date, $cleared, 'withdrawal', $this->ownedEnvelopeId($s));
+    }
+
+    /**
+     * The schedule's envelope, but only when it belongs to the same user as the schedule.
+     *
+     * Validation is the real gate; this is the backstop for rows written before that gate
+     * existed. A withdrawal tagged with a foreign envelope_id debits the *other* user's
+     * envelope — Envelope::spendTransactions() joins on envelope_id alone — so an untrusted
+     * value has to be dropped here rather than carried into the ledger.
+     */
+    private function ownedEnvelopeId(ScheduledTransaction $s): ?int
+    {
+        if ($s->envelope_id === null) {
+            return null;
+        }
+
+        return $s->envelope?->user_id === $s->user_id ? $s->envelope_id : null;
     }
 
     private function cashDeposit(ScheduledTransaction $s, Carbon $date, bool $cleared): void
@@ -154,7 +171,7 @@ class ScheduledTransactionService
 
     private function liabilityPayment(ScheduledTransaction $s, Carbon $date, bool $cleared): void
     {
-        $this->cashEntry($s, $date, $cleared, 'withdrawal', $s->envelope_id);
+        $this->cashEntry($s, $date, $cleared, 'withdrawal', $this->ownedEnvelopeId($s));
 
         if ($s->liability) {
             $liability = $s->liability;
