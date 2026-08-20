@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\AllTransactions;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\User;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class CashTransferTest extends TestCase
@@ -148,7 +150,8 @@ class CashTransferTest extends TestCase
             ->assertSessionHasErrors('amount');
     }
 
-    public function test_deleting_one_leg_nulls_the_link_on_the_other(): void
+    /** The raw FK is ON DELETE SET NULL — the database-level fallback under the app behaviour below. */
+    public function test_deleting_one_leg_at_the_model_level_nulls_the_link_on_the_other(): void
     {
         $user = User::factory()->create();
         $from = CashAccount::factory()->for($user)->create();
@@ -162,5 +165,107 @@ class CashTransferTest extends TestCase
         $withdrawal->delete();
 
         $this->assertNull($deposit->fresh()->linked_transaction_id);
+    }
+
+    /**
+     * A transfer is one event. Removing a single leg used to leave the other behind as a
+     * standalone deposit/withdrawal, silently moving the user's net cash by the amount.
+     */
+    public function test_deleting_a_transfer_leg_removes_both_legs(): void
+    {
+        $user = User::factory()->create();
+        $from = CashAccount::factory()->for($user)->create();
+        $to   = CashAccount::factory()->for($user)->create();
+
+        $this->actingAs($user)->post(route('cash-transfers.store'), $this->transferPayload($from, $to));
+
+        $deposit = CashTransaction::where('type', 'deposit')->firstOrFail();
+
+        $this->actingAs($user)
+            ->delete(route('cash-accounts.transactions.destroy', $deposit))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseCount('cash_transactions', 0);
+    }
+
+    public function test_deleting_a_transfer_leg_from_the_ledger_removes_both_legs(): void
+    {
+        $user = User::factory()->create();
+        $from = CashAccount::factory()->for($user)->create();
+        $to   = CashAccount::factory()->for($user)->create();
+
+        $this->actingAs($user)->post(route('cash-transfers.store'), $this->transferPayload($from, $to));
+
+        $withdrawal = CashTransaction::where('type', 'withdrawal')->firstOrFail();
+
+        Livewire::actingAs($user)
+            ->test(AllTransactions::class)
+            ->call('deleteTransaction', $withdrawal->id);
+
+        $this->assertDatabaseCount('cash_transactions', 0);
+    }
+
+    public function test_editing_a_transfer_leg_syncs_amount_and_date_to_the_other(): void
+    {
+        $user = User::factory()->create();
+        $from = CashAccount::factory()->for($user)->create();
+        $to   = CashAccount::factory()->for($user)->create();
+
+        $this->actingAs($user)->post(route('cash-transfers.store'), $this->transferPayload($from, $to));
+
+        $withdrawal = CashTransaction::where('type', 'withdrawal')->firstOrFail();
+        $deposit    = CashTransaction::where('type', 'deposit')->firstOrFail();
+
+        Livewire::actingAs($user)
+            ->test(AllTransactions::class)
+            ->call('startEdit', $withdrawal->id)
+            ->set('editAmount', '750')
+            ->set('editOccurredAt', '2026-07-15')
+            ->call('saveEdit');
+
+        $deposit = $deposit->fresh();
+        $this->assertEquals('750.00000000', $deposit->amount);
+        $this->assertSame('2026-07-15', $deposit->occurred_at->toDateString());
+    }
+
+    public function test_a_transfer_leg_cannot_have_its_direction_flipped(): void
+    {
+        $user = User::factory()->create();
+        $from = CashAccount::factory()->for($user)->create();
+        $to   = CashAccount::factory()->for($user)->create();
+
+        $this->actingAs($user)->post(route('cash-transfers.store'), $this->transferPayload($from, $to));
+
+        $withdrawal = CashTransaction::where('type', 'withdrawal')->firstOrFail();
+
+        Livewire::actingAs($user)
+            ->test(AllTransactions::class)
+            ->call('startEdit', $withdrawal->id)
+            ->set('editType', 'deposit')
+            ->call('saveEdit')
+            ->assertHasErrors('editType');
+
+        $this->assertSame('withdrawal', $withdrawal->fresh()->type);
+    }
+
+    public function test_a_transfer_leg_cannot_be_moved_to_another_account(): void
+    {
+        $user  = User::factory()->create();
+        $from  = CashAccount::factory()->for($user)->create();
+        $to    = CashAccount::factory()->for($user)->create();
+        $other = CashAccount::factory()->for($user)->create();
+
+        $this->actingAs($user)->post(route('cash-transfers.store'), $this->transferPayload($from, $to));
+
+        $withdrawal = CashTransaction::where('type', 'withdrawal')->firstOrFail();
+
+        Livewire::actingAs($user)
+            ->test(AllTransactions::class)
+            ->call('startEdit', $withdrawal->id)
+            ->set('editAccountId', $other->id)
+            ->call('saveEdit')
+            ->assertHasErrors('editAccountId');
+
+        $this->assertSame($from->id, $withdrawal->fresh()->cash_account_id);
     }
 }

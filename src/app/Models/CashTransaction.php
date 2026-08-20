@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 
 class CashTransaction extends Model
 {
@@ -78,10 +79,62 @@ class CashTransaction extends Model
         return $this->hasOne(CashTransaction::class, 'linked_transaction_id');
     }
 
-    /** The other leg of the transfer this transaction is part of, if any. */
+    /**
+     * The other leg of the transfer this transaction is part of, if any.
+     *
+     * linked_transaction_id already says which side we're on, so only that one relation is
+     * worth reading — loading both cost two queries to use one. loadMissing() rather than a
+     * bare relation read: callers reached via route-model binding have nothing eager-loaded,
+     * and Model::preventLazyLoading() is on outside production, so the implicit lazy read
+     * would throw.
+     */
     public function transferCounterpart(): ?self
     {
-        return $this->linkedTo ?? $this->linkedFrom;
+        $relation = $this->linked_transaction_id !== null ? 'linkedFrom' : 'linkedTo';
+
+        return $this->loadMissing($relation)->{$relation};
+    }
+
+    /** Whether this transaction is one leg of a two-sided transfer. */
+    public function isTransferLeg(): bool
+    {
+        return $this->transferCounterpart() !== null;
+    }
+
+    /**
+     * Delete this transaction and, when it's one leg of a transfer, the other leg with it.
+     *
+     * The FK is ON DELETE SET NULL (see the linked_transaction_id migration), so removing a
+     * single leg used to leave the counterpart behind as a standalone deposit/withdrawal —
+     * silently moving the user's net cash by the transfer amount. A transfer is one event;
+     * deleting it removes both sides.
+     *
+     * Returns whether a counterpart went with it, so callers don't have to probe for one
+     * before the delete just to phrase their confirmation message.
+     */
+    public function deleteWithCounterpart(): bool
+    {
+        return DB::transaction(function () {
+            $counterpart = $this->transferCounterpart();
+            $counterpart?->delete();
+            $this->delete();
+
+            return $counterpart !== null;
+        });
+    }
+
+    /**
+     * Push the fields that describe the transfer *event* onto the other leg, so editing one
+     * side can't leave the two halves disagreeing about how much moved and when. `cleared`
+     * is deliberately excluded — the two accounts clear independently at their own banks.
+     */
+    public function syncTransferCounterpart(): void
+    {
+        $this->transferCounterpart()?->update([
+            'amount'      => $this->amount,
+            'description' => $this->description,
+            'occurred_at' => $this->occurred_at,
+        ]);
     }
 
     public function toBackupArray(): array

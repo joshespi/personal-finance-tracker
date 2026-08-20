@@ -6,6 +6,7 @@ use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\IncomeCategory;
+use App\Support\Sql;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -96,8 +97,7 @@ trait ManagesCashTransactionForm
             $query->whereRaw('ABS(amount - ?) < 0.005', [$asNum]);
         } else {
             // Escape LIKE wildcards so a filter like "50%" matches literally, not everything.
-            $escaped = addcslashes($f, '%_\\');
-            $query->whereRaw('LOWER(description) LIKE ?', ['%'.$escaped.'%']);
+            $query->whereRaw('LOWER(description) LIKE ? '.Sql::LIKE_ESCAPE, ['%'.Sql::escapeLike($f).'%']);
         }
 
         return $query;
@@ -178,6 +178,23 @@ trait ManagesCashTransactionForm
 
         $account = $this->resolveWriteAccount($data, 'edit');
 
+        // A transfer is one event recorded as two mirrored legs. Its direction and the pair of
+        // accounts it spans define it, so neither can be edited from a single side without
+        // desyncing the pair (same rule TransactionController applies to portfolio transfers);
+        // the shared amount/description/date are editable and pushed to the other leg below.
+        if ($t->isTransferLeg()) {
+            if ($data['editType'] !== $t->type) {
+                $this->addError('editType', "A transfer's direction can't be changed. Delete the transfer and re-enter it.");
+
+                return;
+            }
+            if ($account->id !== $t->cash_account_id) {
+                $this->addError('editAccountId', "A transfer leg can't be moved to a different account. Delete the transfer and re-enter it.");
+
+                return;
+            }
+        }
+
         $t->update([
             'cash_account_id'    => $account->id,
             'type'               => $data['editType'],
@@ -188,6 +205,8 @@ trait ManagesCashTransactionForm
             'income_category_id' => $this->resolveIncomeCategoryId($data['editIncomeCategoryId'], $data['editType']),
             'cleared'            => $this->editCleared,
         ]);
+
+        $t->syncTransferCounterpart();
 
         $this->editingId = null;
     }
@@ -207,12 +226,13 @@ trait ManagesCashTransactionForm
         $this->resetErrorBag();
     }
 
+    /** Deletes both legs when the row is part of a transfer — see CashTransaction::deleteWithCounterpart(). */
     public function deleteTransaction(int $id): void
     {
         $t = $this->ownedTransaction($id);
         Gate::authorize('delete', $t);
 
-        $t->delete();
+        $t->deleteWithCounterpart();
 
         if ($this->editingId === $id) {
             $this->editingId = null;

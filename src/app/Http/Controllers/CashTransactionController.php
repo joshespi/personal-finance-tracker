@@ -12,9 +12,10 @@ class CashTransactionController extends Controller
     {
         $this->authorize('delete', $transaction);
 
-        $accountId = $transaction->cash_account_id;
-        $transaction->delete();
+        $accountId   = $transaction->cash_account_id;
+        $wasTransfer = $transaction->deleteWithCounterpart();
 
-        return redirect()->route('cash-accounts.show', $accountId)->with('success', 'Transaction deleted.');
+        return redirect()->route('cash-accounts.show', $accountId)
+            ->with('success', $wasTransfer ? 'Transfer deleted from both accounts.' : 'Transaction deleted.');
     }
 }
