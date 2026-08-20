@@ -26,10 +26,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // write_cursor/status when a large backfill's write phase spans multiple ticks.
         $schedule->command('assets:fetch-prices')->hourly()->onOneServer()->withoutOverlapping();
         $schedule->command('assets:process-backfill-queue')->hourly()->onOneServer()->withoutOverlapping();
-        $schedule->command('portfolios:snapshot')->dailyAt('00:05')->onOneServer();
-        $schedule->command('transactions:materialize')->dailyAt('00:10')->onOneServer();
+        // withoutOverlapping() on the daily entries too: onOneServer() only stops two schedulers
+        // colliding on the same tick, it does nothing about a snapshot run on a long history
+        // still working when the next day's tick fires.
+        $schedule->command('portfolios:snapshot')->dailyAt('00:05')->onOneServer()->withoutOverlapping();
+        $schedule->command('transactions:materialize')->dailyAt('00:10')->onOneServer()->withoutOverlapping();
         // After the snapshot/materialize jobs above so the summary reflects that day's data.
-        $schedule->command('email:send-summaries')->dailyAt('06:00')->onOneServer();
+        $schedule->command('email:send-summaries')->dailyAt('06:00')->onOneServer()->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: env('TRUSTED_PROXIES', null));

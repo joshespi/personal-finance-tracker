@@ -28,7 +28,11 @@ x-app-env: &app-env
   MAIL_PASSWORD: ${MAIL_PASSWORD}
   MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
   MAIL_FROM_NAME: ${MAIL_FROM_NAME}
-  TRUSTED_PROXIES: ${TRUSTED_PROXIES}
+  # Defaulted, not bare: an unset host var expands to "", which Laravel's TrustProxies reads
+  # as "no proxies configured" — so X-Forwarded-For is ignored and every request appears to
+  # come from the nginx container, poisoning LoginHistory/ActivityLog IPs. The stack always
+  # sits behind its own nginx, so '*' is the correct default here.
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-*}
 
 services:
   app:
