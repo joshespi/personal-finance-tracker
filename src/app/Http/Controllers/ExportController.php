@@ -10,6 +10,33 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExportController extends Controller
 {
+    /**
+     * Cell values that a spreadsheet would evaluate as a formula rather than display as
+     * text. Portfolio/asset names and notes are free text, so a name like `=cmd|...` or
+     * `+HYPERLINK(...)` becomes live code the moment the export is opened in Excel or
+     * Sheets. Prefixing with an apostrophe is the standard neutralization: spreadsheets
+     * treat the cell as text and don't render the apostrophe itself.
+     */
+    private const FORMULA_PREFIXES = ['=', '+', '-', '@', "\t", "\r"];
+
+    private static function csvSafe(mixed $value): mixed
+    {
+        // is_numeric() first: Eloquent's decimal casts hand back *strings*, so a negative
+        // quantity arrives as "-1.50000000" and would otherwise be quoted into text and
+        // break every numeric column in the export.
+        if (! is_string($value) || $value === '' || is_numeric($value)) {
+            return $value;
+        }
+
+        return in_array($value[0], self::FORMULA_PREFIXES, true) ? "'".$value : $value;
+    }
+
+    /** fputcsv() with every cell run through csvSafe() first. */
+    private static function putRow($handle, array $row): void
+    {
+        fputcsv($handle, array_map(self::csvSafe(...), $row));
+    }
+
     public function index(): View
     {
         return view('export.index');
@@ -27,10 +54,10 @@ class ExportController extends Controller
         return response()->streamDownload(function () use ($transactions) {
             $out = fopen('php://output', 'w');
 
-            fputcsv($out, ['Date', 'Portfolio', 'Symbol', 'Type', 'Quantity', 'Price Per Unit', 'Fees', 'Currency', 'Total']);
+            self::putRow($out, ['Date', 'Portfolio', 'Symbol', 'Type', 'Quantity', 'Price Per Unit', 'Fees', 'Currency', 'Total']);
 
             foreach ($transactions as $t) {
-                fputcsv($out, [
+                self::putRow($out, [
                     $t->transacted_at->format('Y-m-d'),
                     $t->portfolio->name,
                     $t->asset->symbol,
@@ -56,14 +83,14 @@ class ExportController extends Controller
         return response()->streamDownload(function () use ($allLots) {
             $out = fopen('php://output', 'w');
 
-            fputcsv($out, [
+            self::putRow($out, [
                 'Symbol', 'Portfolio', 'Quantity',
                 'Buy Date', 'Sell Date', 'Days Held', 'Term',
                 'Cost Basis', 'Proceeds', 'Gain / Loss',
             ]);
 
             foreach ($allLots as $lot) {
-                fputcsv($out, [
+                self::putRow($out, [
                     $lot['asset']->symbol,
                     $lot['portfolio']->name,
                     $lot['quantity'],
