@@ -26,7 +26,12 @@ class CsvImportService
     {
         $parsed   = $this->parseCsv($uploadedPath);
         $jsonPath = "csv-imports/parsed-{$userId}.json";
-        Storage::put($jsonPath, json_encode($parsed));
+
+        // JSON_THROW_ON_ERROR so a file we somehow still can't encode fails loudly here.
+        // Without it json_encode() returns false, Storage::put() writes an empty file, and
+        // the user gets an inexplicably blank preview two steps later. parseCsv() already
+        // transcodes non-UTF-8 input, so reaching this is a bug, not a bad upload.
+        Storage::put($jsonPath, json_encode($parsed, JSON_THROW_ON_ERROR));
 
         return [$jsonPath, $parsed];
     }
@@ -137,23 +142,20 @@ class CsvImportService
             return $header !== '' ? trim($raw[$header] ?? '') : '';
         };
 
-        // A single signed amount column wins; otherwise fall back to an inflow/outflow pair.
-        if (($columns['amount'] ?? '') !== '') {
-            $signed = $this->parseSignedAmount($get('amount'));
-            if ($signed === 0.0) {
-                return null;
-            }
-            $type   = $signed >= 0 ? 'deposit' : 'withdrawal';
-            $amount = abs($signed);
-        } else {
-            $inflow  = $this->parseAmount($get('inflow'));
-            $outflow = $this->parseAmount($get('outflow'));
-            if ($inflow == 0.0 && $outflow == 0.0) {
-                return null;
-            }
-            $type   = $inflow > 0 ? 'deposit' : 'withdrawal';
-            $amount = $inflow > 0 ? $inflow : $outflow;
+        // A single signed amount column wins; otherwise net an inflow/outflow pair. Sources
+        // using the pair populate exactly one per row — when both carry a value the row is a
+        // net movement, not two events, so net them rather than taking inflow and silently
+        // dropping the outflow. Either way a row that moves nothing isn't a transaction.
+        $signed = ($columns['amount'] ?? '') !== ''
+            ? $this->parseSignedAmount($get('amount'))
+            : $this->parseAmount($get('inflow')) - $this->parseAmount($get('outflow'));
+
+        if ($signed == 0.0) {
+            return null;
         }
+
+        $type   = $signed > 0 ? 'deposit' : 'withdrawal';
+        $amount = abs($signed);
 
         $date = $this->parseDate($get('date'), $dateFormat);
         if ($date === null) {
@@ -222,6 +224,10 @@ class CsvImportService
     {
         $handle = fopen($path, 'r');
 
+        if ($handle === false) {
+            throw new \RuntimeException("Could not open uploaded CSV for reading: {$path}");
+        }
+
         $bom = fread($handle, 3);
         if ($bom !== "\xEF\xBB\xBF") {
             fseek($handle, 0);
@@ -231,6 +237,8 @@ class CsvImportService
         $rows         = [];
         $lineNumbers  = [];
         $physicalLine = 0;
+        // Bound once, not per row — a large import parses tens of thousands of lines.
+        $normalize = $this->normalizeCell(...);
 
         while (($line = fgetcsv($handle)) !== false) {
             $physicalLine++;
@@ -239,8 +247,10 @@ class CsvImportService
                 continue;
             }
 
+            $line = array_map($normalize, $line);
+
             if ($headers === null) {
-                $headers = array_map('trim', $line);
+                $headers = $line;
 
                 continue;
             }
@@ -249,12 +259,30 @@ class CsvImportService
             $width = count($headers);
             $line  = array_pad(array_slice($line, 0, $width), $width, '');
 
-            $rows[]        = array_combine($headers, array_map('trim', $line));
+            $rows[]        = array_combine($headers, $line);
             $lineNumbers[] = $physicalLine;
         }
 
         fclose($handle);
 
         return ['headers' => $headers ?? [], 'rows' => $rows, 'lineNumbers' => $lineNumbers];
+    }
+
+    /**
+     * Trim a cell and force it to valid UTF-8. Bank exports are routinely Windows-1252
+     * (a currency symbol or an accented payee is enough), which json_encode() cannot
+     * represent — it returns false, the parsed file is written empty, and the failure
+     * only surfaces as an unexplained blank preview. Transcoding at the source keeps
+     * every downstream consumer on clean UTF-8.
+     */
+    private function normalizeCell(?string $value): string
+    {
+        $value ??= '';
+
+        if (! mb_check_encoding($value, 'UTF-8')) {
+            $value = mb_convert_encoding($value, 'UTF-8', 'Windows-1252');
+        }
+
+        return trim($value);
     }
 }

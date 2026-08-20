@@ -68,6 +68,10 @@ class CsvImportController extends Controller
             'account_map'     => ['array'],
             'account_map.*'   => ['string'],
             'default_account' => ['nullable', 'string'],
+            // Becomes a CashAccount name when the user picks "create a new account", so it
+            // needs the same cap the account form applies — it used to reach the importer
+            // unvalidated because import() was handed $request->only() instead of this array.
+            'default_account_name' => ['nullable', 'string', 'max:200'],
         ]);
 
         $columns = $validated['columns'];
@@ -87,9 +91,7 @@ class CsvImportController extends Controller
         }
 
         $rows  = $importer->load($jsonPath)['rows'];
-        $count = $importer->import($rows, $request->only([
-            'columns', 'date_format', 'account_map', 'default_account', 'default_account_name',
-        ]), $request->user());
+        $count = $importer->import($rows, $validated, $request->user());
 
         Storage::delete($jsonPath);
         session()->forget('csv_import_path');

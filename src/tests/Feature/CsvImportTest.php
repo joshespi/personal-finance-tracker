@@ -290,4 +290,60 @@ class CsvImportTest extends TestCase
 
         return new UploadedFile($tmp, 'import.csv', 'text/csv', null, true);
     }
+
+    /**
+     * Regression: a row carrying both an inflow and an outflow took the inflow and silently
+     * discarded the outflow, importing $100 where the row described a net $70 deposit.
+     */
+    public function test_commit_nets_a_row_that_carries_both_inflow_and_outflow(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+
+        $csv = $this->ynabCsv([
+            ['Checking', '01/15/2025', 'Refund minus fee', '', '', '$30.00', '$100.00'],
+        ]);
+
+        $this->actingAs($user)->post(route('import.csv.upload'), ['csv_file' => $csv]);
+        $this->actingAs($user)->post(route('import.csv.commit'), $this->ynabMapping(['Checking' => (string) $account->id]));
+
+        $this->assertDatabaseCount('cash_transactions', 1);
+        $this->assertDatabaseHas('cash_transactions', ['type' => 'deposit', 'amount' => 70.00]);
+    }
+
+    public function test_commit_skips_a_row_whose_inflow_and_outflow_cancel_out(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create();
+
+        $csv = $this->ynabCsv([
+            ['Checking', '01/15/2025', 'Wash', '', '', '$50.00', '$50.00'],
+        ]);
+
+        $this->actingAs($user)->post(route('import.csv.upload'), ['csv_file' => $csv]);
+        $this->actingAs($user)->post(route('import.csv.commit'), $this->ynabMapping(['Checking' => (string) $account->id]));
+
+        $this->assertDatabaseCount('cash_transactions', 0);
+    }
+
+    /**
+     * Bank exports are routinely Windows-1252. json_encode() cannot represent those bytes and
+     * returns false, so the parsed file was written empty and the preview came back blank with
+     * no explanation. parseCsv() now transcodes on the way in.
+     */
+    public function test_upload_accepts_a_non_utf8_csv(): void
+    {
+        $user = User::factory()->create();
+
+        // 0xE9 is "é" in Windows-1252 and invalid on its own as UTF-8.
+        $csv = $this->uploadedCsv("Date,Description,Amount\n01/15/2025,Caf\xE9 Ren\xE9,\"-12.00\"\n");
+
+        $this->actingAs($user)
+            ->post(route('import.csv.upload'), ['csv_file' => $csv])
+            ->assertRedirect(route('import.csv.preview'));
+
+        $this->actingAs($user)->get(route('import.csv.preview'))
+            ->assertOk()
+            ->assertSee('Café René');
+    }
 }
