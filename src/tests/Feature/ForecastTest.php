@@ -190,4 +190,26 @@ class ForecastTest extends TestCase
 
         $response->assertSee('Year 0');
     }
+
+    /**
+     * Regression: a non-round fire_target was used as a raw float array key. PHP truncates
+     * those (a deprecation since 8.1), and the code compared `(int) $fireTarget` against the
+     * standard thresholds while storing the untruncated float — so $1,000,000.50 was skipped
+     * as "already a standard milestone" and then resolved against the $1M entry.
+     */
+    public function test_fractional_fire_target_is_reported_against_itself(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get($this->trajectory([
+                'starting_nw'     => 1_200_000,
+                'monthly_savings' => 0,
+                'annual_return'   => 0,
+                'fire_target'     => 1000000.50,
+                'years'           => 10,
+            ]))
+            ->assertOk()
+            ->assertSee('FIRE Target');
+    }
 }

@@ -80,4 +80,34 @@ class PortfolioPerformanceServiceTest extends TestCase
 
         $this->assertEquals(0.0, $result['total_pct']);
     }
+
+    /**
+     * Regression: the cash fee was always *added* to the trade value, which is only right
+     * on a buy. On a sell the investor receives (qty x price - fee), so adding the fee to a
+     * negatively-signed cashflow overstated the withdrawal by twice the fee and dragged the
+     * measured return down. Sell 1 unit at $500 with a $50 cash fee out of a $1,000 book
+     * that ends at $550: cash actually taken out is $450, so the denominator is
+     * 1000 - 450 = 550 and TWR is 550/550 = 0%. The old code used 1000 - 550 = 450 and
+     * reported a spurious +22.22%.
+     */
+    public function test_twr_subtracts_a_cash_fee_from_sale_proceeds(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = Asset::factory()->stock()->create(['symbol' => 'MSFT']);
+
+        $this->snapshotPair($portfolio, 550.0);
+
+        Transaction::factory()->for($portfolio)->for($asset)->sell()->create([
+            'quantity'       => 1,
+            'price_per_unit' => 500,
+            'fees'           => 50,
+            'fee_in_asset'   => false,
+            'transacted_at'  => '2024-02-01',
+        ]);
+
+        $portfolio->load('snapshots', 'transactions');
+        $result = (new PortfolioPerformanceService)->computeTwr($portfolio);
+
+        $this->assertEquals(0.0, $result['total_pct']);
+    }
 }

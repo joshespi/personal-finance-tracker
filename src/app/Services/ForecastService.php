@@ -55,7 +55,14 @@ class ForecastService
 
         $standardThresholds = [500_000, 1_000_000, 2_000_000, 5_000_000];
         $allThresholds      = $standardThresholds;
-        if ($fireTarget !== null && ! in_array((int) $fireTarget, $standardThresholds)) {
+
+        // Normalize to an int once, up front: these values become array keys below, and PHP
+        // silently truncates a float key (a deprecation since 8.1). Casting at the in_array()
+        // check but pushing the raw float — as this did — also meant a $1,000,000.50 target
+        // was skipped as "already standard" yet then looked up under the truncated key.
+        $fireTarget = $fireTarget !== null ? (int) round($fireTarget) : null;
+
+        if ($fireTarget !== null && ! in_array($fireTarget, $standardThresholds, true)) {
             $allThresholds[] = $fireTarget;
         }
 
@@ -91,7 +98,8 @@ class ForecastService
             $standardThresholds
         );
 
-        $fireMilestone = ($fireTarget !== null) ? ($hitMap[$fireTarget] ?? null) : null;
+        // $hitMap is keyed by $allThresholds, which always contains $fireTarget by here.
+        $fireMilestone = $fireTarget !== null ? $hitMap[$fireTarget] : null;
 
         return [$projection, $standardMilestones, $fireMilestone];
     }

@@ -17,7 +17,10 @@ class Finance
      */
     public static function futureValue(float $pv, float $pmt, float $r, int $months): float
     {
-        if ($r > 0) {
+        // Any non-zero rate compounds — including a negative one. The guard is only here to
+        // avoid dividing by zero at r = 0, where the annuity formula degenerates to pv + pmt*n;
+        // testing `$r > 0` instead sent every negative rate down the no-growth branch.
+        if (abs($r) > 1e-12) {
             $gf = pow(1 + $r, $months);
 
             return $pv * $gf + $pmt * ($gf - 1) / $r;

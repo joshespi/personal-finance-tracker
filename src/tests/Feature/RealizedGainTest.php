@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use App\Services\RealizedGainService;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class RealizedGainTest extends TestCase
@@ -182,5 +183,40 @@ class RealizedGainTest extends TestCase
             ->assertOk()
             ->assertSee('Realized Gains')
             ->assertSee('2,000.00');
+    }
+
+    /**
+     * The IRS long-term threshold is *more than* one year, so the boundary sits between
+     * day 365 (short) and day 366 (long) — a `>=` comparison put day 365 in the wrong
+     * bracket and understated tax on a position sold exactly one year after purchase.
+     *
+     * @return array<string, array{0: string, 1: int, 2: string}>
+     */
+    public static function holdingPeriodProvider(): array
+    {
+        // Bought 2023-01-01 — a non-leap year, so the anniversary really is 365 days out.
+        return [
+            'one day short of a year' => ['2023-12-31', 364, 'short'],
+            'exactly one year'        => ['2024-01-01', 365, 'short'],
+            'one day over a year'     => ['2024-01-02', 366, 'long'],
+        ];
+    }
+
+    #[DataProvider('holdingPeriodProvider')]
+    public function test_long_term_requires_more_than_a_year(string $sellDate, int $expectedDays, string $expectedTerm): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = Asset::factory()->stock()->create(['symbol' => 'VOO']);
+
+        Transaction::factory()->for($portfolio)->for($asset)->buy()
+            ->create(['quantity' => 1, 'price_per_unit' => 100, 'transacted_at' => '2023-01-01']);
+        Transaction::factory()->for($portfolio)->for($asset)->sell()
+            ->create(['quantity' => 1, 'price_per_unit' => 150, 'transacted_at' => $sellDate]);
+
+        $portfolio->load('transactions.asset');
+        $lot = (new RealizedGainService)->compute($portfolio)['lots']->first();
+
+        $this->assertSame($expectedDays, $lot['holding_days']);
+        $this->assertSame($expectedTerm, $lot['term']);
     }
 }

@@ -41,10 +41,14 @@ class PortfolioPerformanceService
 
         $cashflows = [];
         foreach ($txns as $t) {
-            $date             = $t->transacted_at->toDateString();
-            $amount           = (float) $t->quantity * (float) $t->price_per_unit + $t->usdFee();
-            $sign             = $t->type->isInflow() ? 1 : -1;
-            $cashflows[$date] = ($cashflows[$date] ?? 0) + $sign * $amount;
+            $date = $t->transacted_at->toDateString();
+            $sign = $t->type->isInflow() ? 1 : -1;
+            // The fee always leaves the account, whichever way the trade goes: a buy costs
+            // (qty x price + fee), a sale returns (qty x price - fee). Signing the fee with
+            // the flow instead of always adding it keeps a sale's cashflow equal to the cash
+            // actually received — adding it made every sale overstate the outflow by 2x the fee.
+            $gross            = (float) $t->quantity * (float) $t->price_per_unit;
+            $cashflows[$date] = ($cashflows[$date] ?? 0) + $sign * $gross + $t->usdFee();
         }
         ksort($cashflows);
         $cashflowDates = array_keys($cashflows);

@@ -17,7 +17,11 @@ use Illuminate\Support\Collection;
  */
 class RealizedGainService
 {
-    /** IRS long-term capital gains threshold: held for more than one year. */
+    /**
+     * IRS long-term capital gains threshold: the holding period must be *more than*
+     * one year, so a sale exactly 365 days after the buy is still short-term — hence
+     * the strict `>` at the tagging site below, not `>=`.
+     */
     private const LONG_TERM_HOLDING_DAYS = 365;
 
     /** Realized-gain lots across every non-tax-advantaged portfolio a user owns, each tagged with its source portfolio. */
@@ -70,7 +74,7 @@ class RealizedGainService
                 // IRS long-term/short-term threshold: held > 1 year. Tagged here so
                 // consumers (tax summary, realized-gains export) don't each re-derive
                 // the 365-day rule from holding_days themselves.
-                'term' => $holdingDays >= self::LONG_TERM_HOLDING_DAYS ? 'long' : 'short',
+                'term' => $holdingDays > self::LONG_TERM_HOLDING_DAYS ? 'long' : 'short',
             ]);
         });
 
