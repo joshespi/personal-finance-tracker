@@ -156,6 +156,7 @@ Route::middleware('auth')->group(function () {
         ->name('scheduled-transactions.skip');
 
     Route::post('envelopes/assign-one', [EnvelopeController::class, 'assignOne'])->name('envelopes.assign-one');
+    Route::post('envelopes/copy-previous-month', [EnvelopeController::class, 'copyPreviousMonth'])->name('envelopes.copy-previous-month');
     Route::resource('envelopes', EnvelopeController::class);
 
     Route::post('envelopes/{envelope}/transactions', [EnvelopeTransactionController::class, 'store'])

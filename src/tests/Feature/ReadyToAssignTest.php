@@ -179,6 +179,40 @@ class ReadyToAssignTest extends TestCase
         $this->assertEquals($pastMonth.'-01', $tx->occurred_at->format('Y-m-d'));
     }
 
+    public function test_assign_one_dates_fund_in_future_month(): void
+    {
+        $user     = User::factory()->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        $futureMonth = now()->addMonths(2)->format('Y-m');
+
+        $this->actingAs($user)->postJson(route('envelopes.assign-one'), [
+            'envelope_id' => $envelope->id,
+            'amount'      => 100,
+            'month'       => $futureMonth,
+        ])->assertOk();
+
+        $tx = EnvelopeTransaction::where('envelope_id', $envelope->id)->latest('id')->first();
+        $this->assertEquals($futureMonth.'-01', $tx->occurred_at->format('Y-m-d'));
+    }
+
+    public function test_assign_one_future_month_edits_replace_rather_than_stack(): void
+    {
+        $user        = User::factory()->create();
+        $envelope    = Envelope::factory()->for($user)->create();
+        $futureMonth = now()->addMonth()->format('Y-m');
+
+        foreach ([100, 250, 175] as $amount) {
+            $this->actingAs($user)->postJson(route('envelopes.assign-one'), [
+                'envelope_id' => $envelope->id,
+                'amount'      => $amount,
+                'month'       => $futureMonth,
+            ])->assertOk();
+        }
+
+        $this->assertEquals(175.0, $envelope->fresh()->balance());
+    }
+
     public function test_assign_one_current_month_param_still_dates_today(): void
     {
         $user     = User::factory()->create();

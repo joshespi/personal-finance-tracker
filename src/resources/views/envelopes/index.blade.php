@@ -12,12 +12,18 @@
                        class="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                     </a>
-                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[96px] text-center">{{ $month->format('M Y') }}</span>
                     @if ($isCurrentMonth)
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[96px] text-center">{{ $month->format('M Y') }}</span>
                         <span class="p-1.5 rounded-md text-gray-300 dark:text-gray-600 cursor-not-allowed">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         </span>
                     @else
+                        <a href="{{ route('envelopes.index') }}"
+                           title="Back to {{ now()->format('M Y') }}"
+                           aria-label="Jump to current month"
+                           class="inline-block text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[96px] text-center rounded px-1 py-0.5 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                            {{ $month->format('M Y') }}
+                        </a>
                         <a href="{{ route('envelopes.index', ['month' => $nextMonth]) }}"
                            aria-label="Next month"
                            class="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
@@ -25,6 +31,18 @@
                         </a>
                     @endif
                 </div>
+                @if ($canCopyPreviousMonth)
+                    @php $sourceMonth = $month->copy()->subMonth(); @endphp
+                    <form method="POST" action="{{ route('envelopes.copy-previous-month') }}"
+                          onsubmit="return confirm('Set every envelope\'s assigned amount for {{ $month->format('M Y') }} to match {{ $sourceMonth->format('M Y') }}?')">
+                        @csrf
+                        <input type="hidden" name="month" value="{{ $month->format('Y-m') }}">
+                        <x-secondary-button type="submit"
+                                title="Start {{ $month->format('M Y') }} from {{ $sourceMonth->format('M Y') }}'s assigned amounts">
+                            Copy {{ $sourceMonth->format('M') }}
+                        </x-secondary-button>
+                    </form>
+                @endif
                 <a href="{{ route('envelopes.create') }}"
                    class="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 dark:hover:bg-gray-600 transition">
                     + Add Envelope
@@ -67,6 +85,12 @@
                         <p class="text-sm text-white/80">Assign this to your envelopes below.</p>
                     @endif
                 </div>
+
+                @if ($isFutureMonth)
+                    <p class="text-xs text-gray-500 dark:text-gray-400 px-6 sm:px-0">
+                        Budgeting ahead for {{ $month->format('M Y') }}. Money assigned here is committed straight away, so it leaves Ready to Assign now.
+                    </p>
+                @endif
 
                 {{-- Summary stats --}}
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -189,26 +213,20 @@
                                                 @endif
                                             </div>
 
-                                            {{-- Assigned (input editable for current + past months; read-only for future) --}}
+                                            {{-- Assigned (editable in every month — future months are budgeted ahead) --}}
                                             <div class="hidden sm:block text-right">
-                                                @if (! $isFutureMonth)
-                                                    <div class="relative inline-flex items-center">
-                                                        <span class="absolute left-2.5 text-gray-400 text-sm pointer-events-none">$</span>
-                                                        <input type="number" step="0.01"
-                                                               x-model="inputs[{{ $e->id }}]"
-                                                               class="rta-input w-32 rounded-md border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm text-right pl-6 pr-2 py-1"
-                                                               :class="saved[{{ $e->id }}] ? 'border-green-400 dark:border-green-500 bg-green-50 dark:bg-green-900/20' : ''"
-                                                               @focus="onFocus({{ $e->id }}, $el)"
-                                                               @blur="onBlur({{ $e->id }}, $el)"
-                                                               @keydown.arrow-down.prevent="navigate($el, 1)"
-                                                               @keydown.arrow-up.prevent="navigate($el, -1)"
-                                                               @keydown.enter.prevent="onBlur({{ $e->id }}, $el)">
-                                                    </div>
-                                                @else
-                                                    <span class="text-sm font-mono text-gray-500 dark:text-gray-400">
-                                                        {{ ($funded > 0 ? '+' : '') . '$' . $demo->amt($funded) }}
-                                                    </span>
-                                                @endif
+                                                <div class="relative inline-flex items-center">
+                                                    <span class="absolute left-2.5 text-gray-400 text-sm pointer-events-none">$</span>
+                                                    <input type="number" step="0.01"
+                                                           x-model="inputs[{{ $e->id }}]"
+                                                           class="rta-input w-32 rounded-md border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm text-right pl-6 pr-2 py-1"
+                                                           :class="saved[{{ $e->id }}] ? 'border-green-400 dark:border-green-500 bg-green-50 dark:bg-green-900/20' : ''"
+                                                           @focus="onFocus({{ $e->id }}, $el)"
+                                                           @blur="onBlur({{ $e->id }}, $el)"
+                                                           @keydown.arrow-down.prevent="navigate($el, 1)"
+                                                           @keydown.arrow-up.prevent="navigate($el, -1)"
+                                                           @keydown.enter.prevent="onBlur({{ $e->id }}, $el)">
+                                                </div>
                                             </div>
 
                                             {{-- Activity --}}

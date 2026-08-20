@@ -310,7 +310,7 @@ class EnvelopeTest extends TestCase
             ->assertSee('rta-input w-32', false);
     }
 
-    public function test_index_future_month_hides_assign_input(): void
+    public function test_index_future_month_shows_assign_input(): void
     {
         $envelope    = Envelope::factory()->create();
         $futureMonth = now()->addMonths(2)->format('Y-m');
@@ -318,7 +318,155 @@ class EnvelopeTest extends TestCase
         $this->actingAs($envelope->user)
             ->get(route('envelopes.index', ['month' => $futureMonth]))
             ->assertOk()
-            ->assertDontSee('rta-input w-32', false);
+            ->assertSee('rta-input w-32', false)
+            ->assertSee('Budgeting ahead for '.now()->addMonths(2)->format('M Y'));
+    }
+
+    public function test_index_month_label_links_back_to_current_month(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('envelopes.index', ['month' => now()->subMonths(2)->format('Y-m')]))
+            ->assertOk()
+            ->assertSee('Jump to current month');
+    }
+
+    public function test_index_current_month_label_is_not_a_link(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('envelopes.index'))
+            ->assertOk()
+            ->assertDontSee('Jump to current month');
+    }
+
+    public function test_index_shows_copy_button_when_previous_month_has_assignments(): void
+    {
+        $envelope = Envelope::factory()->create();
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create([
+            'amount'      => 150,
+            'occurred_at' => now()->subMonth()->startOfMonth(),
+        ]);
+
+        $this->actingAs($envelope->user)
+            ->get(route('envelopes.index'))
+            ->assertOk()
+            ->assertSee('Copy '.now()->subMonth()->format('M'));
+    }
+
+    public function test_index_hides_copy_button_when_previous_month_is_empty(): void
+    {
+        $envelope = Envelope::factory()->create();
+
+        $this->actingAs($envelope->user)
+            ->get(route('envelopes.index'))
+            ->assertOk()
+            ->assertDontSee(route('envelopes.copy-previous-month'));
+    }
+
+    public function test_index_hides_copy_button_on_past_months(): void
+    {
+        $envelope = Envelope::factory()->create();
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create([
+            'amount'      => 150,
+            'occurred_at' => now()->subMonths(3)->startOfMonth(),
+        ]);
+
+        $this->actingAs($envelope->user)
+            ->get(route('envelopes.index', ['month' => now()->subMonths(2)->format('Y-m')]))
+            ->assertOk()
+            ->assertDontSee(route('envelopes.copy-previous-month'));
+    }
+
+    public function test_copy_previous_month_seeds_a_future_month(): void
+    {
+        $user = User::factory()->create();
+        $rent = Envelope::factory()->for($user)->create();
+        $food = Envelope::factory()->for($user)->create();
+
+        EnvelopeTransaction::factory()->for($rent)->fund()->create(['amount' => 1200, 'occurred_at' => now()->startOfMonth()]);
+        EnvelopeTransaction::factory()->for($food)->fund()->create(['amount' => 400, 'occurred_at' => now()->startOfMonth()]);
+
+        $nextMonth = now()->addMonth()->startOfMonth();
+
+        $this->actingAs($user)
+            ->post(route('envelopes.copy-previous-month'), ['month' => $nextMonth->format('Y-m')])
+            ->assertRedirect(route('envelopes.index', ['month' => $nextMonth->format('Y-m')]));
+
+        $this->assertEquals(1200.0, $this->assignedIn($rent, $nextMonth));
+        $this->assertEquals(400.0, $this->assignedIn($food, $nextMonth));
+
+        // Dated to the 1st of the month it was budgeted for.
+        $this->assertEquals(
+            $nextMonth->toDateString(),
+            EnvelopeTransaction::where('envelope_id', $rent->id)->latest('id')->first()->occurred_at->toDateString()
+        );
+    }
+
+    public function test_copy_previous_month_is_idempotent(): void
+    {
+        $user     = User::factory()->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 300, 'occurred_at' => now()->startOfMonth()]);
+
+        $nextMonth = now()->addMonth()->startOfMonth();
+
+        foreach (range(1, 3) as $ignored) {
+            $this->actingAs($user)->post(route('envelopes.copy-previous-month'), ['month' => $nextMonth->format('Y-m')]);
+        }
+
+        $this->assertEquals(300.0, $this->assignedIn($envelope, $nextMonth));
+    }
+
+    public function test_copy_previous_month_tops_up_a_partially_budgeted_month(): void
+    {
+        $user     = User::factory()->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        $nextMonth = now()->addMonth()->startOfMonth();
+
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 500, 'occurred_at' => now()->startOfMonth()]);
+        EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 200, 'occurred_at' => $nextMonth]);
+
+        $this->actingAs($user)->post(route('envelopes.copy-previous-month'), ['month' => $nextMonth->format('Y-m')]);
+
+        $this->assertEquals(500.0, $this->assignedIn($envelope, $nextMonth));
+    }
+
+    public function test_copy_previous_month_rejects_past_months(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('envelopes.copy-previous-month'), ['month' => now()->subMonth()->format('Y-m')])
+            ->assertStatus(422);
+
+        $this->assertDatabaseCount('envelope_transactions', 0);
+    }
+
+    public function test_copy_previous_month_ignores_other_users_envelopes(): void
+    {
+        $user  = User::factory()->create();
+        $other = Envelope::factory()->create();
+
+        EnvelopeTransaction::factory()->for($other)->fund()->create(['amount' => 900, 'occurred_at' => now()->startOfMonth()]);
+
+        $this->actingAs($user)
+            ->post(route('envelopes.copy-previous-month'), ['month' => now()->addMonth()->format('Y-m')])
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('envelope_transactions', 1);
+    }
+
+    private function assignedIn(Envelope $envelope, $month): float
+    {
+        return round((float) EnvelopeTransaction::where('envelope_id', $envelope->id)
+            ->where('type', 'fund')
+            ->whereBetween('occurred_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])
+            ->sum('amount'), 2);
     }
 
     public function test_index_month_param_scopes_fund_totals(): void

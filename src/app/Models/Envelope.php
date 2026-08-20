@@ -70,11 +70,14 @@ class Envelope extends Model
      * given month. The single definition of "assigned this month" — the budget
      * grid and the inline-assign endpoint must agree on it, since the grid seeds
      * inputs from it and assignOne diffs the desired total against it.
+     *
+     * $as renames the aggregate so one query can carry two months at once (the
+     * copy-previous-month action needs source and target side by side).
      */
-    public function scopeWithMonthFundTotal($query, CarbonInterface $month)
+    public function scopeWithMonthFundTotal($query, CarbonInterface $month, string $as = 'month_fund_total')
     {
         return $query->withSum([
-            'transactions as month_fund_total' => fn ($q) => $q
+            "transactions as {$as}" => fn ($q) => $q
                 ->where('type', 'fund')
                 ->whereBetween('occurred_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()]),
         ], 'amount');
