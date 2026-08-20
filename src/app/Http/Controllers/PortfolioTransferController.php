@@ -40,7 +40,7 @@ class PortfolioTransferController extends Controller
             'notes'             => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $symbol     = strtoupper(trim($validated['symbol']));
+        $symbol     = AssetService::normalizeSymbol($validated['symbol']);
         $asset      = AssetService::findOrCreateBySymbol($symbol, $validated['asset_type']);
         $fees       = (float) ($validated['fees'] ?? 0);
         $feeInAsset = (bool) ($validated['fee_in_asset'] ?? false);

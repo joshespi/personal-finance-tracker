@@ -105,12 +105,14 @@ class TransactionController extends Controller
     {
         $this->authorize('update', $transaction);
 
-        $portfolioIds = $request->user()->portfolios()->pluck('id');
+        // Fetched once with closed_at: the Rule::in below and the closed-portfolio check
+        // further down both need this set, and it's the same rows either way.
+        $portfolios = $request->user()->portfolios()->get(['id', 'closed_at']);
 
         $validated = $request->validate(
             Arr::only(Transaction::fieldRules(), ['type', 'quantity', 'price_per_unit', 'fees', 'currency'])
             + [
-                'portfolio_id'  => ['required', 'integer', Rule::in($portfolioIds)],
+                'portfolio_id'  => ['required', 'integer', Rule::in($portfolios->pluck('id'))],
                 'fee_in_asset'  => ['nullable', 'boolean'],
                 'transacted_at' => ['required', 'date'],
                 'notes'         => ['nullable', 'string', 'max:1000'],
@@ -125,6 +127,14 @@ class TransactionController extends Controller
         // moving one leg independently would desync the pair, so the account can't be changed for them
         if ($type->isTransfer() && (int) $validated['portfolio_id'] !== $transaction->portfolio_id) {
             return back()->withInput()->with('error', 'Transfer transactions can\'t be moved to a different account.');
+        }
+
+        // store() refuses to add activity to a closed portfolio; moving an existing transaction
+        // into one is the same thing by another route. Editing in place stays allowed — that's
+        // correcting history, not adding to it.
+        if ((int) $validated['portfolio_id'] !== $transaction->portfolio_id
+            && $portfolios->firstWhere('id', (int) $validated['portfolio_id'])?->isClosed()) {
+            return back()->withInput()->with('error', 'That portfolio is closed. Reopen it to move transactions into it.');
         }
 
         // quantity field on transfer_out edit shows gross (sent + fee); strip fee back out for storage
