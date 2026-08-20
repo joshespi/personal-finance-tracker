@@ -14,7 +14,10 @@ class JournalEntryController extends Controller
     {
         $this->authorize('view', $portfolio);
 
-        $entries = $portfolio->journalEntries()->get();
+        $entries = $portfolio->journalEntries()
+            ->orderByDesc('entry_date')
+            ->orderByDesc('id')
+            ->get();
 
         return view('journal.index', compact('portfolio', 'entries'));
     }
@@ -37,7 +40,9 @@ class JournalEntryController extends Controller
 
     public function edit(Request $request, Portfolio $portfolio, JournalEntry $entry): View
     {
-        $this->authorize('view', $portfolio);
+        // 'update', not 'view' — this renders the form whose submit target (update()) checks
+        // 'update'. Authorizing the weaker ability here handed read-only users a dead form.
+        $this->authorize('update', $portfolio);
         abort_if($entry->portfolio_id !== $portfolio->id, 403);
 
         return view('journal.edit', compact('portfolio', 'entry'));

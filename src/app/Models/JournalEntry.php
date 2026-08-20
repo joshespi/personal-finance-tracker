@@ -22,12 +22,17 @@ class JournalEntry extends Model
         return $this->belongsTo(Portfolio::class);
     }
 
+    /** Built once and shared: the index page renders every entry, and the converter is stateless. */
+    private static ?CommonMarkConverter $converter = null;
+
     public function getRenderedBodyAttribute(): string
     {
-        return (new CommonMarkConverter([
+        self::$converter ??= new CommonMarkConverter([
             'html_input'         => 'strip',
             'allow_unsafe_links' => false,
-        ]))->convert($this->body ?? '')->getContent();
+        ]);
+
+        return self::$converter->convert($this->body ?? '')->getContent();
     }
 
     public function toBackupArray(): array
