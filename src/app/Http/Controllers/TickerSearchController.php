@@ -2,25 +2,37 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssetType;
 use App\Models\Asset;
 use App\Services\CoinGeckoClient;
 use App\Services\FinnhubClient;
+use App\Support\Sql;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class TickerSearchController extends Controller
 {
     public function __invoke(Request $request, FinnhubClient $finnhub, CoinGeckoClient $coinGecko): JsonResponse
     {
-        $query     = trim($request->input('q', ''));
-        $assetType = $request->input('type', 'stock');
+        $validated = $request->validate([
+            'q'    => ['nullable', 'string', 'max:50'],
+            'type' => ['nullable', Rule::enum(AssetType::class)],
+        ]);
+
+        $query     = trim($validated['q'] ?? '');
+        $assetType = $validated['type'] ?? 'stock';
 
         if (strlen($query) < 1) {
             return response()->json([]);
         }
 
-        $local = Asset::where('symbol', 'like', strtoupper($query).'%')
+        // A '%' or '_' typed into the search box is a LIKE wildcard, so an unescaped prefix
+        // match silently returns unrelated symbols.
+        $prefix = Sql::escapeLike(strtoupper($query));
+
+        $local = Asset::whereRaw('symbol LIKE ? '.Sql::LIKE_ESCAPE, [$prefix.'%'])
             ->where('asset_type', $assetType)
             ->limit(5)
             ->get(['symbol', 'name', 'asset_type'])
