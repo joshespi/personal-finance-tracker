@@ -85,23 +85,38 @@ class FetchAssetPrices extends Command
             return;
         }
 
-        $coinMap     = collect($response->json())->keyBy(fn ($c) => strtoupper($c['symbol']));
-        $now         = now();
-        $newGeckoIds = [];
-        $rows        = [];
+        $coins = collect($response->json());
+
+        // Two lookups, deliberately in this order. coingecko_id is the provider's own unique
+        // key and is what the symbol match below records the first time it succeeds; symbols
+        // are *not* unique across the top 250 (several tokens share a ticker) and keyBy keeps
+        // only the last of a collision, so resolving by symbol alone can lock an asset onto
+        // the wrong coin's price forever. Once an id is stored, it wins.
+        $byGeckoId = $coins->keyBy('id');
+        $bySymbol  = $coins->keyBy(fn ($c) => strtoupper($c['symbol']));
+
+        $now  = now();
+        $rows = [];
 
         foreach ($assets as $asset) {
-            $coin = $coinMap->get(strtoupper($asset->symbol));
+            $coin = $asset->coingecko_id
+                ? $byGeckoId->get($asset->coingecko_id)
+                : $bySymbol->get(strtoupper($asset->symbol));
 
             if (! $coin) {
-                $this->warn("  {$asset->symbol}: not found in top 250 coins — set coingecko_id manually if needed");
+                $this->warn("  {$asset->symbol}: not found in top 250 coins — check coingecko_id if set, or set it manually");
                 Log::warning('CoinGecko price fetch: symbol not found', ['symbol' => $asset->symbol]);
 
                 continue;
             }
 
             if (! $asset->coingecko_id) {
-                $newGeckoIds[] = ['id' => $asset->id, 'coingecko_id' => $coin['id']];
+                // Record the provider's unique id so the next run resolves by id, not symbol.
+                // Plain update(), not upsert(): upsert() compiles to INSERT ... ON CONFLICT and
+                // a payload of just id + coingecko_id trips the NOT NULL on assets.symbol under
+                // SQLite before the conflict clause is reached. The row already exists — it was
+                // read above — so there is nothing to insert.
+                Asset::whereKey($asset->id)->update(['coingecko_id' => $coin['id']]);
             }
 
             $rows[] = [
@@ -119,10 +134,6 @@ class FetchAssetPrices extends Command
         if ($rows !== []) {
             AssetPrice::insert($rows);
         }
-
-        if ($newGeckoIds !== []) {
-            Asset::upsert($newGeckoIds, ['id'], ['coingecko_id']);
-        }
     }
 
     private function fetchStockPrices(Collection $assets): void
@@ -135,6 +146,7 @@ class FetchAssetPrices extends Command
 
         $now  = now();
         $rows = [];
+        $last = $assets->last();
 
         foreach ($assets as $asset) {
             $ticker = $asset->polygon_ticker ?: $asset->symbol;
@@ -189,7 +201,11 @@ class FetchAssetPrices extends Command
 
             $this->line("  {$asset->symbol}: \${$price}");
 
-            usleep(1000000); // 1s between calls — free tier: 60/min
+            // 1s between calls — free tier: 60/min. No call follows the last asset, so
+            // sleeping after it was a free second on every run.
+            if (! $asset->is($last)) {
+                usleep(1000000);
+            }
         }
 
         if ($rows !== []) {

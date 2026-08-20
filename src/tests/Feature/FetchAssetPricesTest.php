@@ -72,4 +72,49 @@ class FetchAssetPricesTest extends TestCase
 
         $this->assertDatabaseMissing('asset_prices', ['asset_id' => $stock->id]);
     }
+
+    /** Two top-250 coins sharing the ticker "SOL" — keyBy() keeps the last of a collision. */
+    private function collidingMarketsResponse(): array
+    {
+        return [
+            ['id' => 'solana', 'symbol' => 'sol', 'current_price' => 150.0],
+            ['id' => 'solar-token', 'symbol' => 'SOL', 'current_price' => 0.02],
+        ];
+    }
+
+    /**
+     * Regression: symbols are not unique across the top 250, so resolving by symbol alone
+     * picked whichever coin came last and could price an asset off an unrelated token
+     * forever. A stored coingecko_id is the provider's own unique key and must win.
+     */
+    public function test_crypto_price_resolves_by_stored_coingecko_id_over_symbol(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = Asset::factory()->crypto()->create(['symbol' => 'SOL', 'coingecko_id' => 'solana']);
+        Transaction::factory()->for($portfolio)->for($asset)->buy()->create(['transacted_at' => now()]);
+
+        config(['services.finnhub.key' => null]);
+        Http::fake(['api.coingecko.com/*' => Http::response($this->collidingMarketsResponse())]);
+
+        $this->artisan('assets:fetch-prices')->assertExitCode(0);
+
+        $this->assertDatabaseHas('asset_prices', ['asset_id' => $asset->id, 'price' => 150.0]);
+    }
+
+    public function test_first_symbol_match_records_the_coingecko_id_for_next_time(): void
+    {
+        $portfolio = Portfolio::factory()->create();
+        $asset     = Asset::factory()->crypto()->create(['symbol' => 'BTC', 'coingecko_id' => null]);
+        Transaction::factory()->for($portfolio)->for($asset)->buy()->create(['transacted_at' => now()]);
+
+        config(['services.finnhub.key' => null]);
+        Http::fake(['api.coingecko.com/*' => Http::response([
+            ['id' => 'bitcoin', 'symbol' => 'btc', 'current_price' => 60000.0],
+        ])]);
+
+        $this->artisan('assets:fetch-prices')->assertExitCode(0);
+
+        $this->assertSame('bitcoin', $asset->fresh()->coingecko_id);
+        $this->assertDatabaseHas('asset_prices', ['asset_id' => $asset->id, 'price' => 60000.0]);
+    }
 }
