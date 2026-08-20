@@ -12,15 +12,45 @@ class DebtPayoffService
 
     private const DEFAULT_MIN_PCT = 0.02; // 2% of balance when min_payment not set
 
+    /**
+     * The user's liabilities that still owe something.
+     *
+     * orderBy('name') is load-bearing, not cosmetic: payoffOrders() sorts by balance/APR and
+     * sortBy/sortByDesc are stable, so without a deterministic base ordering two debts with
+     * equal balances (snowball) or equal APRs (avalanche) would be paid off in one order on
+     * the planning page and another in the what-if slider's resimulate().
+     */
+    private function liabilitiesWithBalance(User $user): Collection
+    {
+        return $user->liabilities()->with('latestBalance')->orderBy('name')->get()
+            ->filter(fn ($l) => $l->currentBalance() > 0);
+    }
+
+    /** Simulator rows for every revolving debt, from both models that carry one. */
+    private function revolvingDebtData(Collection $withBalance, User $user): array
+    {
+        return array_merge(
+            $this->buildDebtData($withBalance->filter(fn ($l) => $l->isRevolving())->values()),
+            $this->buildCreditCardDebtData($user)
+        );
+    }
+
+    /** @return array{0: array<int, mixed>, 1: array<int, mixed>} snowball then avalanche payoff order */
+    private function payoffOrders(array $debtData): array
+    {
+        return [
+            collect($debtData)->sortBy('balance')->pluck('id')->values()->all(),
+            collect($debtData)->sortByDesc('apr')->pluck('id')->values()->all(),
+        ];
+    }
+
     public function compute(User $user): array
     {
-        $liabilities = $user->liabilities()->with('latestBalance')->orderBy('name')->get();
-        $withBalance = $liabilities->filter(fn ($l) => $l->currentBalance() > 0);
+        $withBalance = $this->liabilitiesWithBalance($user);
 
-        $mortgages     = $withBalance->filter(fn ($l) => ! $l->isRevolving())->values();
-        $liabilityDebt = $withBalance->filter(fn ($l) => $l->isRevolving())->values();
+        $mortgages = $withBalance->filter(fn ($l) => ! $l->isRevolving())->values();
 
-        $debtData = array_merge($this->buildDebtData($liabilityDebt), $this->buildCreditCardDebtData($user));
+        $debtData = $this->revolvingDebtData($withBalance, $user);
 
         if (empty($debtData) && $mortgages->isEmpty()) {
             return ['has_data' => false, 'debts' => [], 'mortgages' => []];
@@ -49,8 +79,7 @@ class DebtPayoffService
             2
         );
 
-        $snowballOrder  = collect($debtData)->sortBy('balance')->pluck('id')->values()->all();
-        $avalancheOrder = collect($debtData)->sortByDesc('apr')->pluck('id')->values()->all();
+        [$snowballOrder, $avalancheOrder] = $this->payoffOrders($debtData);
 
         $snowball  = empty($debtData) ? $this->emptySimulation() : $this->simulate($debtData, $snowballOrder, 0.0);
         $avalanche = empty($debtData) ? $this->emptySimulation() : $this->simulate($debtData, $avalancheOrder, 0.0);
@@ -78,15 +107,13 @@ class DebtPayoffService
      */
     public function resimulate(User $user, float $extraPayment): array
     {
-        $liabilityDebt = $user->liabilities()->with('latestBalance')->get()->filter(fn ($l) => $l->currentBalance() > 0 && $l->isRevolving())->values();
-        $debtData      = array_merge($this->buildDebtData($liabilityDebt), $this->buildCreditCardDebtData($user));
+        $debtData = $this->revolvingDebtData($this->liabilitiesWithBalance($user), $user);
 
         if (empty($debtData)) {
             return ['snowball' => $this->emptySimulation(), 'avalanche' => $this->emptySimulation()];
         }
 
-        $snowballOrder  = collect($debtData)->sortBy('balance')->pluck('id')->values()->all();
-        $avalancheOrder = collect($debtData)->sortByDesc('apr')->pluck('id')->values()->all();
+        [$snowballOrder, $avalancheOrder] = $this->payoffOrders($debtData);
 
         return [
             'snowball'  => $this->simulate($debtData, $snowballOrder, $extraPayment),
