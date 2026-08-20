@@ -17,23 +17,35 @@ class ScheduledTransactionService
     /** Materialize all due transactions for a user. Returns the ScheduledTransaction models that fired. */
     public function materializeForUser(User $user): Collection
     {
-        $due = $user->scheduledTransactions()
+        $dueQuery = fn () => $user->scheduledTransactions()
             ->where('is_active', true)
-            ->where('next_due_at', '<=', today())
-            ->with(['envelope', 'cashAccount', 'liability.latestBalance'])
-            ->get();
+            ->where('next_due_at', '<=', today());
 
-        if ($due->isEmpty()) {
-            return $due;
+        // Cheap unlocked probe first: this runs on every authenticated request (see
+        // MaterializeDueScheduledTransactions), and the overwhelming majority find nothing
+        // due — opening a write transaction each time to discover that would be pure cost.
+        // exists() rather than get(), so the common no-op path never hydrates a model.
+        if (! $dueQuery()->exists()) {
+            return collect();
         }
 
-        DB::transaction(function () use ($due) {
+        return DB::transaction(function () use ($dueQuery) {
+            // Re-read under a row lock. Without it, two concurrent requests from the same
+            // user (a page load racing a Livewire poll) both see the same due row and both
+            // materialize it, double-posting the transaction and double-advancing nothing —
+            // next_due_at is written from whichever finishes last. The lock makes the second
+            // request wait and re-read a row that is no longer due.
+            $due = $dueQuery()
+                ->with(['envelope', 'cashAccount', 'liability.latestBalance'])
+                ->lockForUpdate()
+                ->get();
+
             foreach ($due as $scheduled) {
                 $this->materializeOne($scheduled);
             }
-        });
 
-        return $due;
+            return $due;
+        });
     }
 
     /**
@@ -147,7 +159,11 @@ class ScheduledTransactionService
         if ($s->liability) {
             $liability = $s->liability;
             $balance   = $liability->currentBalance();
-            $piPayment = (float) ($liability->minimum_payment ?? 0);
+            // Principal comes off the payment that was actually debited above ($s->amount),
+            // not off minimum_payment — the two are user-editable independently, and taking
+            // cash out at one figure while paying the balance down at another let the ledger
+            // and the balance history disagree.
+            $piPayment = $liability->principalAndInterestPortion((float) $s->amount);
             $interest  = round($liability->monthlyInterest(), 2);
             // Negative when the payment doesn't cover interest — balance grows (negative amortization)
             // instead of silently freezing, which matters once any liability type can be scheduled here.

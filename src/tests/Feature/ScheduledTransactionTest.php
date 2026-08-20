@@ -571,4 +571,73 @@ class ScheduledTransactionTest extends TestCase
 
         $this->assertDatabaseCount('cash_transactions', 3);
     }
+
+    /**
+     * Regression: the cash leg was debited at the schedule's amount while the principal was
+     * computed from the liability's minimum_payment. The two are edited independently, so an
+     * overpayment left the ledger and the balance history telling different stories.
+     */
+    public function test_materialize_liability_payment_pays_down_at_the_scheduled_amount(): void
+    {
+        $user      = User::factory()->create();
+        $account   = CashAccount::factory()->for($user)->create();
+        $liability = Liability::factory()->for($user)->create([
+            'liability_type'  => 'mortgage',
+            'interest_rate'   => 6,
+            'minimum_payment' => 1500,
+            'escrow_amount'   => null,
+        ]);
+        LiabilityBalance::factory()->for($liability)->create([
+            'balance'     => 200000,
+            'recorded_at' => today()->subMonth(),
+        ]);
+        // Paying $2,000 against a $1,500 minimum.
+        ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->for($liability, 'liability')->pastDue()->create([
+            'type'   => 'mortgage_payment',
+            'amount' => 2000,
+        ]);
+
+        app(ScheduledTransactionService::class)->materializeForUser($user);
+
+        $this->assertDatabaseHas('cash_transactions', ['amount' => 2000, 'type' => 'withdrawal']);
+
+        // interest = 200000 * 6% / 12 = 1000; principal = 2000 - 1000 = 1000; balance = 199000.
+        // Under the old rule the balance only fell to 199500 while $2,000 left the account.
+        $this->assertDatabaseHas('liability_balances', [
+            'liability_id' => $liability->id,
+            'balance'      => 199000,
+        ]);
+    }
+
+    /** Escrow rides along in the scheduled amount but funds the escrow account, not the loan. */
+    public function test_materialize_liability_payment_excludes_escrow_from_principal(): void
+    {
+        $user      = User::factory()->create();
+        $account   = CashAccount::factory()->for($user)->create();
+        $liability = Liability::factory()->for($user)->create([
+            'liability_type'  => 'mortgage',
+            'interest_rate'   => 6,
+            'minimum_payment' => 1500,
+            'escrow_amount'   => 400,
+        ]);
+        LiabilityBalance::factory()->for($liability)->create([
+            'balance'     => 200000,
+            'recorded_at' => today()->subMonth(),
+        ]);
+        // LiabilityController seeds the schedule at totalMonthlyPayment() = 1500 + 400.
+        ScheduledTransaction::factory()->for($user)->for($account, 'cashAccount')->for($liability, 'liability')->pastDue()->create([
+            'type'   => 'mortgage_payment',
+            'amount' => 1900,
+        ]);
+
+        app(ScheduledTransactionService::class)->materializeForUser($user);
+
+        $this->assertDatabaseHas('cash_transactions', ['amount' => 1900, 'type' => 'withdrawal']);
+
+        // P&I = 1900 - 400 = 1500; interest = 1000; principal = 500; balance = 199500.
+        $this->assertDatabaseHas('liability_balances', [
+            'liability_id' => $liability->id,
+            'balance'      => 199500,
+        ]);
+    }
 }

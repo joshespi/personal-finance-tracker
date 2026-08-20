@@ -40,9 +40,17 @@ class Liability extends Model
         return $this->hasMany(LiabilityBalance::class);
     }
 
+    /**
+     * `id` breaks ties on recorded_at. Several balances can share a date — a scheduled
+     * payment materializing on a day the user also recorded a manual balance — and a
+     * single-column latestOfMany() leaves which one wins up to the database.
+     */
     public function latestBalance(): HasOne
     {
-        return $this->hasOne(LiabilityBalance::class)->latestOfMany('recorded_at');
+        return $this->hasOne(LiabilityBalance::class)->ofMany([
+            'recorded_at' => 'max',
+            'id'          => 'max',
+        ]);
     }
 
     public function paymentEnvelope(): BelongsTo
@@ -65,6 +73,16 @@ class Liability extends Model
         return (float) ($this->minimum_payment ?? 0) + (float) ($this->escrow_amount ?? 0);
     }
 
+    /**
+     * The share of a payment that actually reaches the loan — the inverse of
+     * totalMonthlyPayment(), kept beside it so the escrow convention has one home.
+     * Escrow is stripped back out because it funds the escrow account, not the loan.
+     */
+    public function principalAndInterestPortion(float $payment): float
+    {
+        return max(0.0, $payment - (float) ($this->escrow_amount ?? 0));
+    }
+
     public function isRevolving(): bool
     {
         return self::isRevolvingType($this->liability_type);
@@ -84,13 +102,11 @@ class Liability extends Model
     /**
      * Unrounded monthly interest accrual on the current balance at the stored APR.
      *
-     * FLAGGED, not fixed: a credit-card CashAccount computes the identical formula
-     * independently in resources/views/cash-accounts/show.blade.php (it isn't a
-     * Liability row, so it can't call this method) — the debt-payoff/allocator
-     * calculators only ever see Liability, so a credit card tracked purely as a
-     * CashAccount is invisible to them. Reconciling the two "debt with an APR" models
-     * is a product decision (e.g. should every credit-card CashAccount imply a
-     * shadow Liability?), not a mechanical dedup — left as-is pending that decision.
+     * A credit-card CashAccount computes the identical formula independently (it isn't a
+     * Liability row, so it can't call this method) — see User::creditCardDebts(), which is
+     * what now feeds those accounts into DebtPayoffService and AllocatorService alongside
+     * Liability rows. The two models still aren't unified; whether a credit-card CashAccount
+     * should imply a shadow Liability remains a product decision, not a mechanical dedup.
      */
     public function monthlyInterest(): float
     {
