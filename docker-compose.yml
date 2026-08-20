@@ -28,11 +28,21 @@ x-app-env: &app-env
   MAIL_PASSWORD: ${MAIL_PASSWORD}
   MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
   MAIL_FROM_NAME: ${MAIL_FROM_NAME}
-  # Defaulted, not bare: an unset host var expands to "", which Laravel's TrustProxies reads
-  # as "no proxies configured" — so X-Forwarded-For is ignored and every request appears to
-  # come from the nginx container, poisoning LoginHistory/ActivityLog IPs. The stack always
-  # sits behind its own nginx, so '*' is the correct default here.
-  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-*}
+  # Empty by default, and deliberately NOT '*'.
+  #
+  # The earlier '*' here was based on a wrong premise: it assumed that without trusted proxies
+  # every request would look like it came from the nginx container. That is true of a proxy_pass
+  # setup, but nginx reaches PHP over fastcgi_pass, and the stock fastcgi_params already sets
+  # REMOTE_ADDR to the real client IP — so LoginHistory/ActivityLog were never broken.
+  #
+  # '*' made things worse, not better: it told Laravel to trust X-Forwarded-* from *any* caller,
+  # so a client could name its own IP. That forges the audit trail and, worse, defeats the
+  # per-IP login lockout (LoginRequest::throttleKey() is email|ip) — rotating the header gives
+  # a fresh throttle bucket per attempt and unlimited password guessing.
+  #
+  # Set this only if a genuine external reverse proxy fronts the stack, and then to that
+  # proxy's IP/CIDR — never '*'.
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
 
 services:
   app:

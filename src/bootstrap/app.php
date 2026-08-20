@@ -8,6 +8,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -35,7 +36,23 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('email:send-summaries')->dailyAt('06:00')->onOneServer()->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->trustProxies(at: env('TRUSTED_PROXIES', null));
+        // headers: is explicit because Laravel's default set includes X_FORWARDED_HOST, which
+        // feeds $request->root() and therefore every generated absolute URL — including the
+        // password-reset and email-verification links. A request that can name its own host
+        // can have a real reset mail sent to a victim pointing at an attacker's domain.
+        // Host is never taken from a header; scheme/port/IP still are, so HTTPS detection and
+        // client-IP recording keep working behind a real proxy.
+        $middleware->trustProxies(
+            at: env('TRUSTED_PROXIES', null),
+            headers: Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO,
+        );
+        // Pins the accepted Host to APP_URL. nginx has a single default server block that
+        // answers to any Host and passes it through verbatim, and forceScheme() below rewrites
+        // only the scheme — so without this nothing constrains the host at all. Automatically
+        // a no-op in local/testing (see TrustHosts::shouldSpecifyTrustedHosts()).
+        $middleware->trustHosts();
         $middleware->alias(['admin' => EnsureUserIsAdmin::class]);
         $middleware->appendToGroup('web', HandleImpersonation::class);
         $middleware->appendToGroup('web', ShareDemoMode::class);
