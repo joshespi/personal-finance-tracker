@@ -57,12 +57,17 @@ document.addEventListener('alpine:init', () => {
                 if (v === null || v === undefined) return '—';
                 return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
             },
+            // Both guard null/undefined like the formatters above: a missing quantity or
+            // percentage used to throw inside the `sorted` getter, which takes the whole
+            // Alpine component down rather than blanking one cell.
             fmtQty(v) {
                 if (demo) return DEMO_MASK;
-                return parseFloat(v.toFixed(8)).toString();
+                if (v === null || v === undefined) return '—';
+                return parseFloat(Number(v).toFixed(8)).toString();
             },
             fmtPct(v) {
-                return v.toFixed(1) + '%';
+                if (v === null || v === undefined) return '—';
+                return Number(v).toFixed(1) + '%';
             },
             plFmt(v) {
                 if (demo) return DEMO_MASK;
