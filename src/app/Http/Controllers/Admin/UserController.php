@@ -55,6 +55,14 @@ class UserController extends Controller
         // is_admin is deliberately not mass-assignable (see User::$fillable) — set explicitly.
         $user->fill(['name' => $validated['name'], 'email' => $validated['email']]);
         $user->is_admin = $request->boolean('is_admin');
+
+        // Same rule as ProfileController::update() — a changed address hasn't been proven to
+        // belong to the user, so carrying the old verification over would mark an unverified
+        // mailbox as verified. verify() below is the deliberate way to re-grant it.
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
         $user->save();
 
         return redirect()->route('admin.users.index')->with('success', 'User updated.');
