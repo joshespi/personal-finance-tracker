@@ -110,7 +110,7 @@
                             <div>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Actually holds</p>
                                 <p class="mt-0.5 font-mono font-semibold text-gray-900 dark:text-gray-100">${{ $demo->amt($account->current_balance) }}</p>
-                                @php($uncleared = round($account->current_balance - $account->cleared_balance, 2))
+                                @php $uncleared = round($account->current_balance - $account->cleared_balance, 2); @endphp
                                 @if ($uncleared != 0.0)
                                     {{-- Working balance, so uncleared activity is already counted — say so, otherwise
                                          the difference below looks wrong against what the bank currently reports. --}}
