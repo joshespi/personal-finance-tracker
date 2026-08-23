@@ -38,7 +38,7 @@ use App\Http\Controllers\TransactionImportController;
 use App\Services\DemoMode;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('login'));
+Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : view('home'))->name('home');
 
 Route::get('/about', fn () => view('about'))->middleware('auth')->name('about');
 Route::get('/donate', fn () => view('donate', ['btcAddress' => config('donate.btc_address')]))->middleware('auth')->name('donate');
