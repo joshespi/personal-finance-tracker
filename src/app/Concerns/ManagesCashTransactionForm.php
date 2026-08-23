@@ -69,6 +69,29 @@ trait ManagesCashTransactionForm
         //
     }
 
+    /**
+     * Friendly field names for validation messages. Without these the prefixed property
+     * names leak into the UI ("The edit amount field must be greater than 0"), which the
+     * inline edit row now surfaces in a full-width error strip under the row.
+     */
+    protected function validationAttributes(): array
+    {
+        $labels = [
+            'Type'             => 'type',
+            'Amount'           => 'amount',
+            'Description'      => 'description',
+            'OccurredAt'       => 'date',
+            'EnvelopeId'       => 'envelope',
+            'IncomeCategoryId' => 'category',
+            'Cleared'          => 'cleared status',
+            'AccountId'        => 'account',
+        ];
+
+        return collect($labels)
+            ->mapWithKeys(fn (string $label, string $suffix) => ["new{$suffix}" => $label, "edit{$suffix}" => $label])
+            ->all();
+    }
+
     /** Validation rules shared by add/edit, keyed with the given field prefix ('new'/'edit'). */
     private function transactionRules(string $prefix): array
     {

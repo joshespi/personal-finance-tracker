@@ -102,6 +102,27 @@ class CashTransaction extends Model
     }
 
     /**
+     * Whether this transfer leg is a credit-card payment rather than a plain transfer —
+     * true when the money *lands* on a credit line. Only the receiving side counts:
+     * reversed (paid *from* a credit line) the same pair is a cash advance, not a payment.
+     *
+     * Pass the counterpart when the caller already resolved it; transferCounterpart()
+     * is not memoized, so re-deriving it repeats a loadMissing() per row.
+     */
+    public function isCardPayment(?self $counterpart = null): bool
+    {
+        $counterpart ??= $this->transferCounterpart();
+
+        if (! $counterpart) {
+            return false;
+        }
+
+        $receiving = $this->type === 'deposit' ? $this : $counterpart;
+
+        return $receiving->cashAccount->isCreditCard();
+    }
+
+    /**
      * Delete this transaction and, when it's one leg of a transfer, the other leg with it.
      *
      * The FK is ON DELETE SET NULL (see the linked_transaction_id migration), so removing a

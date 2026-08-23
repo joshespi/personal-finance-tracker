@@ -114,9 +114,12 @@ class CashAccountController extends Controller
         ]);
 
         // Reconcile against the cleared balance — that's the figure your bank reports.
+        // balanceSign() converts a credit card's positive "amount owed" statement figure
+        // into the ledger's negative debt convention; identity for every other type.
         $current    = $cashAccount->clearedBalance();
         $actual     = (float) $validated['actual_balance'];
-        $difference = round($actual - $current, 2);
+        $target     = $cashAccount->balanceSign() * $actual;
+        $difference = round($target - $current, 2);
 
         if ($difference == 0.0) {
             return redirect()->route('cash-accounts.show', $cashAccount)

@@ -275,7 +275,7 @@ class User extends Authenticatable implements MustVerifyEmail
             ->withCurrentBalance()
             ->get()
             ->map(function (CashAccount $a) {
-                $balance = round(-$a->currentBalanceFromSums(), 2);
+                $balance = round($a->balanceSign() * $a->currentBalanceFromSums(), 2);
                 $apr     = (float) ($a->interest_rate ?? 0);
 
                 return [

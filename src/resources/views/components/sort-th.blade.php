@@ -11,7 +11,7 @@
 @endphp
 
 <th @class([
-        'px-6 py-3 text-xs font-medium uppercase',
+        'px-4 py-3 text-xs font-medium uppercase',
         'text-left'  => $align === 'left',
         'text-right' => $align === 'right',
         'text-gray-900 dark:text-gray-100'  => $active,

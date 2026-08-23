@@ -41,6 +41,26 @@ class CashAccount extends Model
         return $this->account_type === self::CREDIT_CARD_TYPE;
     }
 
+    /**
+     * ±1 between the ledger's signed balance (card debt is stored negative) and the
+     * positive "amount owed" a statement reports; identity for every other type.
+     * Multiplying by it converts either direction.
+     */
+    public function balanceSign(): int
+    {
+        return $this->isCreditCard() ? -1 : 1;
+    }
+
+    /**
+     * Which side of the transfer form this account pre-fills. Money normally leaves a
+     * deposit account and lands on a credit line — that landing *is* the card payment.
+     * A default only: both dropdowns stay free and the form can swap the pair.
+     */
+    public function transferPrefillSide(): string
+    {
+        return $this->isCreditCard() ? 'to_account_id' : 'from_account_id';
+    }
+
     /** Revolving credit lines only — the debt side (see User::creditCardDebts()). */
     public function scopeCreditCards(Builder $query): Builder
     {

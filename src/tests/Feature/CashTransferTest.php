@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Livewire\AllTransactions;
+use App\Livewire\TransactionList;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\User;
@@ -267,5 +268,117 @@ class CashTransferTest extends TestCase
             ->assertHasErrors('editAccountId');
 
         $this->assertSame($from->id, $withdrawal->fresh()->cash_account_id);
+    }
+
+    /**
+     * Which side an account pre-fills is only a default: money normally leaves a deposit
+     * account and lands on a credit line, and that landing is the card payment. Both
+     * dropdowns stay free either way.
+     */
+    public function test_transfer_link_prefills_the_side_that_matches_the_account_type(): void
+    {
+        $user     = User::factory()->create();
+        $checking = CashAccount::factory()->for($user)->create(['account_type' => 'checking']);
+        $card     = CashAccount::factory()->for($user)->create(['account_type' => 'credit_card']);
+
+        $this->assertSame('from_account_id', $checking->transferPrefillSide());
+        $this->assertSame('to_account_id', $card->transferPrefillSide());
+
+        $this->actingAs($user)->get(route('cash-accounts.show', $checking))
+            ->assertOk()
+            ->assertSee(route('cash-transfers.create', ['from_account_id' => $checking->id]), false);
+
+        $this->actingAs($user)->get(route('cash-accounts.show', $card))
+            ->assertOk()
+            ->assertSee('Pay Card')
+            ->assertSee(route('cash-transfers.create', ['to_account_id' => $card->id]), false);
+    }
+
+    public function test_create_page_honours_a_prefilled_from_account(): void
+    {
+        $user     = User::factory()->create();
+        $checking = CashAccount::factory()->for($user)->create(['name' => 'Checking']);
+        CashAccount::factory()->for($user)->create(['name' => 'Visa Card', 'account_type' => 'credit_card']);
+
+        $this->actingAs($user)
+            ->get(route('cash-transfers.create', ['from_account_id' => $checking->id]))
+            ->assertOk()
+            ->assertSee('<option value="'.$checking->id.'" selected>Checking</option>', false);
+    }
+
+    /** Either account can be the sender — reversed, the same pair is a cash advance. */
+    public function test_store_accepts_a_transfer_sent_from_a_credit_card(): void
+    {
+        $user     = User::factory()->create();
+        $card     = CashAccount::factory()->for($user)->create(['account_type' => 'credit_card']);
+        $checking = CashAccount::factory()->for($user)->create(['account_type' => 'checking']);
+
+        $this->actingAs($user)
+            ->post(route('cash-transfers.store'), $this->transferPayload($card, $checking, ['description' => 'Cash advance']))
+            ->assertSessionHasNoErrors();
+
+        $withdrawal = CashTransaction::where('type', 'withdrawal')->firstOrFail();
+        $deposit    = CashTransaction::where('type', 'deposit')->firstOrFail();
+
+        $this->assertEquals($card->id, $withdrawal->cash_account_id);
+        $this->assertEquals($checking->id, $deposit->cash_account_id);
+        $this->assertEquals(-500.0, $card->fresh()->balance());
+        $this->assertEquals(500.0, $checking->fresh()->balance());
+    }
+
+    public function test_ledger_labels_both_legs_of_a_card_payment_as_a_payment(): void
+    {
+        $user     = User::factory()->create();
+        $checking = CashAccount::factory()->for($user)->create(['name' => 'Checking']);
+        $card     = CashAccount::factory()->for($user)->create(['name' => 'Visa Card', 'account_type' => 'credit_card']);
+
+        $this->actingAs($user)->post(route('cash-transfers.store'), $this->transferPayload($checking, $card));
+
+        Livewire::actingAs($user)->test(AllTransactions::class)
+            ->assertSee('Payment to')
+            ->assertSee('Payment from')
+            ->assertDontSee('Transfer to')
+            ->assertDontSee('Transfer from');
+
+        // The single-account ledger reaches the row's own account by a different eager
+        // load than the cross-account one, so it's worth asserting separately.
+        Livewire::actingAs($user)->test(TransactionList::class, ['account' => $card])
+            ->assertSee('Payment from')
+            ->assertSee('Checking');
+    }
+
+    /** A cash advance is the same pair reversed, so it stays a plain transfer on both legs. */
+    public function test_ledger_labels_a_cash_advance_as_a_transfer(): void
+    {
+        $user     = User::factory()->create();
+        $card     = CashAccount::factory()->for($user)->create(['name' => 'Visa Card', 'account_type' => 'credit_card']);
+        $checking = CashAccount::factory()->for($user)->create(['name' => 'Checking']);
+
+        $this->actingAs($user)->post(route('cash-transfers.store'), $this->transferPayload($card, $checking));
+
+        Livewire::actingAs($user)->test(AllTransactions::class)
+            ->assertSee('Transfer to')
+            ->assertSee('Transfer from')
+            ->assertDontSee('Payment to')
+            ->assertDontSee('Payment from');
+    }
+
+    public function test_ledger_labels_a_transfer_between_deposit_accounts_as_a_transfer(): void
+    {
+        $user    = User::factory()->create();
+        $savings = CashAccount::factory()->for($user)->create(['name' => 'Savings', 'account_type' => 'savings']);
+        $check   = CashAccount::factory()->for($user)->create(['name' => 'Checking']);
+
+        // Neutral description: the payload's default one says "Credit card payment", which
+        // would land in the ledger's description column and defeat the assertion below.
+        $this->actingAs($user)->post(
+            route('cash-transfers.store'),
+            $this->transferPayload($savings, $check, ['description' => 'Moving savings'])
+        );
+
+        Livewire::actingAs($user)->test(AllTransactions::class)
+            ->assertSee('Transfer to')
+            ->assertSee('Transfer from')
+            ->assertDontSee('Payment');
     }
 }

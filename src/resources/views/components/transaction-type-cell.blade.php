@@ -2,12 +2,18 @@
 
 {{-- Type column for a cash-ledger row. A transfer leg (one that has a linked
      counterpart) shows a "Transfer to/from <account>" badge linking to the other
-     account; everything else shows a plain Deposit or Withdrawal badge. --}}
-@php $counterpart = $transaction->transferCounterpart(); @endphp
-<td class="px-6 py-3">
+     account; everything else shows a plain Deposit or Withdrawal badge.
+
+     A transfer landing on a credit line is a card payment rather than a plain
+     transfer — see CashTransaction::isCardPayment() for the receiving-side rule. --}}
+@php
+    $counterpart = $transaction->transferCounterpart();
+    $isPayment   = $counterpart && $transaction->isCardPayment($counterpart);
+@endphp
+<td class="px-4 py-3">
     @if ($counterpart)
         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300">
-            Transfer {{ $transaction->type === 'withdrawal' ? 'to' : 'from' }}
+            {{ $isPayment ? 'Payment' : 'Transfer' }} {{ $transaction->type === 'withdrawal' ? 'to' : 'from' }}
         </span>
         <a href="{{ route('cash-accounts.show', $counterpart->cash_account_id) }}"
            wire:click.stop

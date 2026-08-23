@@ -28,11 +28,17 @@ class TransactionList extends Component
         $query = $this->filteredQuery()
             ->with([
                 'envelope:id,name', 'incomeCategory:id,name,color',
-                'linkedFrom:id,cash_account_id', 'linkedFrom.cashAccount:id,name',
-                'linkedTo:id,cash_account_id,linked_transaction_id', 'linkedTo.cashAccount:id,name',
+                'linkedFrom:id,cash_account_id', 'linkedFrom.cashAccount:id,name,account_type',
+                'linkedTo:id,cash_account_id,linked_transaction_id', 'linkedTo.cashAccount:id,name,account_type',
             ]);
 
-        return $this->applySort($query)->paginate(self::PER_PAGE);
+        $paginated = $this->applySort($query)->paginate(self::PER_PAGE);
+
+        // Every row belongs to $this->account (see filteredQuery()) — attach it directly
+        // instead of eager-loading a relation whose target row this component already holds.
+        $paginated->getCollection()->each(fn (CashTransaction $t) => $t->setRelation('cashAccount', $this->account));
+
+        return $paginated;
     }
 
     /** Account transactions narrowed by the current filter (amount match or description search). */

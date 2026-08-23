@@ -54,9 +54,9 @@ class AllTransactions extends Component
     {
         $query = $this->filteredQuery()
             ->with([
-                'cashAccount:id,name', 'envelope:id,name', 'incomeCategory:id,name,color',
-                'linkedFrom:id,cash_account_id', 'linkedFrom.cashAccount:id,name',
-                'linkedTo:id,cash_account_id,linked_transaction_id', 'linkedTo.cashAccount:id,name',
+                'cashAccount:id,name,account_type', 'envelope:id,name', 'incomeCategory:id,name,color',
+                'linkedFrom:id,cash_account_id', 'linkedFrom.cashAccount:id,name,account_type',
+                'linkedTo:id,cash_account_id,linked_transaction_id', 'linkedTo.cashAccount:id,name,account_type',
             ]);
 
         return $this->applySort($query)->paginate(self::PER_PAGE);

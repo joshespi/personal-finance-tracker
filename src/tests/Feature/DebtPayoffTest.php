@@ -263,6 +263,32 @@ class DebtPayoffTest extends TestCase
         $this->assertFalse($data['has_data']);
     }
 
+    /**
+     * End-to-end regression for the reconcile sign bug: entering a card's statement
+     * balance (what's owed, positive) used to write it into the ledger at face value,
+     * flipping a real debt into an apparent credit and dropping it out of payoff data
+     * entirely — see test_credit_card_with_positive_balance_not_treated_as_debt() above,
+     * which is exactly the state that bug produced.
+     */
+    public function test_reconciling_a_credit_card_keeps_it_visible_as_debt(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create([
+            'name' => 'Chase Freedom', 'account_type' => 'credit_card', 'interest_rate' => 24.0,
+        ]);
+
+        $this->actingAs($user)->post(route('cash-accounts.reconcile', $account), [
+            'actual_balance' => '741.36',
+            'occurred_at'    => '2026-05-17',
+        ]);
+
+        $data = (new DebtPayoffService)->compute($user->fresh());
+
+        $this->assertTrue($data['has_data']);
+        $this->assertCount(1, $data['debts']);
+        $this->assertSame(741.36, $data['debts'][0]['balance']);
+    }
+
     public function test_page_renders_credit_card_debt_linked_to_cash_account(): void
     {
         $user    = User::factory()->create();

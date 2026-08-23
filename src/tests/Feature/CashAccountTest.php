@@ -265,6 +265,74 @@ class CashAccountTest extends TestCase
         $this->assertCount(1, $account->fresh()->transactions);
     }
 
+    /**
+     * A card's statement reports what you owe as a positive number, but the ledger holds
+     * debt as negative (User::creditCardDebts() negates the balance). Reconcile must invert
+     * before comparing, or every reconciliation flips the sign of what's tracked.
+     */
+    public function test_reconcile_on_a_credit_card_treats_the_entered_amount_as_debt_owed(): void
+    {
+        $card = CashAccount::factory()->create(['account_type' => 'credit_card']);
+        CashTransaction::factory()->for($card, 'cashAccount')->withdrawal()->cleared()->create(['amount' => 500]);
+
+        $this->assertEquals(-500.0, $card->fresh()->clearedBalance());
+
+        // Statement says you now owe 550 — more debt than tracked, so it's a charge
+        // (withdrawal leg), and afterward the ledger balance should read -550, not +550.
+        $this->actingAs($card->user)
+            ->post(route('cash-accounts.reconcile', $card), [
+                'actual_balance' => '550.00',
+                'occurred_at'    => '2026-05-17',
+            ])
+            ->assertRedirect(route('cash-accounts.show', $card));
+
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $card->id,
+            'type'            => 'withdrawal',
+            'amount'          => '50.00',
+            'description'     => 'Reconciliation adjustment',
+        ]);
+        $this->assertEquals(-550.0, $card->fresh()->clearedBalance());
+    }
+
+    public function test_reconcile_on_a_credit_card_records_a_payoff_as_a_deposit(): void
+    {
+        $card = CashAccount::factory()->create(['account_type' => 'credit_card']);
+        CashTransaction::factory()->for($card, 'cashAccount')->withdrawal()->cleared()->create(['amount' => 500]);
+
+        // Statement says only 300 owed now — less debt than tracked, so a payment landed
+        // that wasn't in the ledger yet (deposit leg raises the balance toward zero).
+        $this->actingAs($card->user)
+            ->post(route('cash-accounts.reconcile', $card), [
+                'actual_balance' => '300.00',
+                'occurred_at'    => '2026-05-17',
+            ]);
+
+        $this->assertDatabaseHas('cash_transactions', [
+            'cash_account_id' => $card->id,
+            'type'            => 'deposit',
+            'amount'          => '200.00',
+            'description'     => 'Reconciliation adjustment',
+        ]);
+        $this->assertEquals(-300.0, $card->fresh()->clearedBalance());
+    }
+
+    /** Paid off in full: entering 0 owed must zero the ledger, not leave it at face value. */
+    public function test_reconcile_on_a_credit_card_paid_to_zero(): void
+    {
+        $card = CashAccount::factory()->create(['account_type' => 'credit_card']);
+        CashTransaction::factory()->for($card, 'cashAccount')->withdrawal()->cleared()->create(['amount' => 500]);
+
+        $this->actingAs($card->user)
+            ->post(route('cash-accounts.reconcile', $card), [
+                'actual_balance' => '0.00',
+                'occurred_at'    => '2026-05-17',
+            ]);
+
+        $this->assertEquals(0.0, $card->fresh()->clearedBalance());
+        $this->assertEmpty($card->fresh()->user->creditCardDebts());
+    }
+
     public function test_reconcile_forbidden_for_other_user(): void
     {
         $account = CashAccount::factory()->create();

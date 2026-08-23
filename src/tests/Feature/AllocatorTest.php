@@ -127,6 +127,30 @@ class AllocatorTest extends TestCase
             ->assertSee('500.00');
     }
 
+    /**
+     * Regression for the reconcile sign bug: entering a card's statement balance (what's
+     * owed, positive) used to write it into the ledger at face value, flipping real debt
+     * into an apparent credit — which the allocator would then skip entirely.
+     */
+    public function test_allocates_to_a_credit_card_debt_recorded_via_reconcile(): void
+    {
+        $user    = User::factory()->create();
+        $account = CashAccount::factory()->for($user)->create([
+            'name' => 'Store Card', 'account_type' => 'credit_card', 'interest_rate' => 24.0,
+        ]);
+
+        $this->actingAs($user)->post(route('cash-accounts.reconcile', $account), [
+            'actual_balance' => '500.00',
+            'occurred_at'    => '2026-05-17',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('planning', ['tab' => 'allocator', 'amount' => 700]))
+            ->assertOk()
+            ->assertSee('Store Card')
+            ->assertSee('500.00');
+    }
+
     public function test_ranks_credit_card_debt_by_apr_alongside_liability_debt(): void
     {
         $user = User::factory()->create();

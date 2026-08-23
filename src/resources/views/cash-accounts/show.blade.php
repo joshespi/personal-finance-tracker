@@ -11,9 +11,9 @@
                 </p>
             </div>
             <div class="flex items-center gap-2">
-                <a href="{{ route('cash-transfers.create', ['to_account_id' => $account->id]) }}"
+                <a href="{{ route('cash-transfers.create', [$account->transferPrefillSide() => $account->id]) }}"
                    class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
-                    Transfer
+                    {{ $account->isCreditCard() ? 'Pay Card' : 'Transfer' }}
                 </a>
                 <button type="button" @click="$store.reconcile.open = true"
                         class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
@@ -149,13 +149,23 @@
         </div>
     </div>
 
+    @php
+        // A card's cleared balance is negative debt; balanceSign() restates it as the
+        // positive figure the statement shows (identity for every other account type).
+        $isCard  = $account->isCreditCard();
+        $owed    = round($account->balanceSign() * $account->cleared_balance, 2);
+        $upWord  = $isCard ? 'payment' : 'deposit';
+        $lowWord = $isCard ? 'charge' : 'withdrawal';
+    @endphp
     <div x-data="{
             close() { $store.reconcile.open = false; $store.reconcile.actualBalance = '' },
             get diff() {
                 const a = parseFloat($store.reconcile.actualBalance);
                 const c = {{ round($demo->scaleScalar($account->cleared_balance), 2) }};
                 if (isNaN(a)) return null;
-                return Math.round((a - c) * 100) / 100;
+                // Mirrors CashAccountController::reconcile()'s $target — same sign,
+                // sourced from CashAccount::balanceSign() rather than re-derived here.
+                return Math.round(({{ $account->balanceSign() }} * a - c) * 100) / 100;
             }
          }"
          x-show="$store.reconcile.open"
@@ -167,9 +177,9 @@
             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Reconcile Account</h3>
 
             <div class="flex items-center justify-between text-sm">
-                <span class="text-gray-500 dark:text-gray-400">Cleared balance</span>
-                <span class="font-mono font-semibold text-gray-900 dark:text-gray-100">
-                    {{ $account->cleared_balance < 0 ? '−' : '' }}${{ $demo->amt(abs($account->cleared_balance)) }}
+                <span class="text-gray-500 dark:text-gray-400">{{ $isCard ? 'Currently owed' : 'Cleared balance' }}</span>
+                <span class="font-mono font-semibold {{ $isCard && $owed > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100' }}">
+                    {{ $owed < 0 ? '−' : '' }}${{ $demo->amt(abs($owed)) }}
                 </span>
             </div>
 
@@ -178,18 +188,23 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Actual balance
+                        {{ $isCard ? 'Balance owed (from your statement)' : 'Actual balance' }}
                     </label>
                     <input type="number" name="actual_balance" step="0.01" placeholder="0.00" required
                            x-model="$store.reconcile.actualBalance"
                            class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm font-mono" />
+                    @if ($isCard)
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            Enter what you owe as a positive number, same as it appears on your statement.
+                        </p>
+                    @endif
                 </div>
 
                 <div x-show="diff !== null && diff !== 0" class="rounded-md px-3 py-2 text-sm"
                      :class="diff > 0 ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'">
                     Will record a
                     <span class="font-semibold font-mono" x-text="'$' + Math.abs(diff).toFixed(2)"></span>
-                    <span x-text="diff > 0 ? 'deposit' : 'withdrawal'"></span>
+                    <span x-text="diff > 0 ? '{{ $upWord }}' : '{{ $lowWord }}'"></span>
                     adjustment.
                 </div>
                 <div x-show="diff === 0" class="rounded-md px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400">

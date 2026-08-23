@@ -37,3 +37,15 @@ html:not(.dark) .bg-white {
 .dark .EasyMDEContainer .editor-statusbar {
     color: #9ca3af;
 }
+
+/* Numeric inputs in dense table rows (the cash ledger's inline edit row): the native
+   spinner steals horizontal width from an already-tight column and adds visual noise. */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.no-spinner {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
