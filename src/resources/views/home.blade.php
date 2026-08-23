@@ -71,7 +71,7 @@
         </section>
 
         {{-- Feature columns --}}
-        <section class="bg-gray-50 dark:bg-gray-800/50 border-y border-gray-100 dark:border-gray-800">
+        <section class="bg-gray-50 dark:bg-gray-800 border-y border-gray-100 dark:border-gray-800">
             <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 grid sm:grid-cols-2 gap-10">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Investing</h2>
