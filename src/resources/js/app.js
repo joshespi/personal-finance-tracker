@@ -18,6 +18,11 @@ function fmtWhole(v) {
 // 'alpine:init' instead, which Alpine dispatches before it walks the DOM.
 
 document.addEventListener('alpine:init', () => {
+    // `$money(v)` — the demo-aware money formatter for inline Alpine on any page, the
+    // JS twin of DemoMode::amt(). Use it for real account figures rather than a
+    // hand-rolled formatter, so demo mode masks them like the server-rendered ones.
+    window.Alpine.magic('money', () => (v) => (window.__demoMode ? DEMO_MASK : fmtFull(Number(v) || 0)));
+
     window.Alpine.data('budgetCalculator', (income, mandatoryPct, discretionaryPct, savingsPct) => ({
         income,
         mandatoryPct,

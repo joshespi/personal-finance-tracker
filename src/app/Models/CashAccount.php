@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use App\Concerns\HasOwnershipRule;
+use App\Support\Finance;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class CashAccount extends Model
 {
@@ -51,6 +53,18 @@ class CashAccount extends Model
         return $this->isCreditCard() ? -1 : 1;
     }
 
+    /** Positive amount owed for a signed ledger balance — 0 for a card in credit or a non-card. */
+    public function amountOwed(float $balance): float
+    {
+        return $this->isCreditCard() ? max(0.0, -$balance) : 0.0;
+    }
+
+    /** Unrounded monthly interest on an amount owed at this card's APR (same rate as Liability). */
+    public function monthlyInterest(float $owed): float
+    {
+        return $owed * Finance::aprMonthlyRate((float) ($this->interest_rate ?? 0));
+    }
+
     /**
      * Which side of the transfer form this account pre-fills. Money normally leaves a
      * deposit account and lands on a credit line — that landing *is* the card payment.
@@ -59,6 +73,56 @@ class CashAccount extends Model
     public function transferPrefillSide(): string
     {
         return $this->isCreditCard() ? 'to_account_id' : 'from_account_id';
+    }
+
+    /**
+     * The most recent statement close on or before $today, from billing_day — null for
+     * non-cards or cards without a billing day. billing_day is capped at 28 on input, so
+     * setting the day never overflows a short month.
+     */
+    public function lastStatementClose(?Carbon $today = null): ?Carbon
+    {
+        if (! $this->isCreditCard() || ! $this->billing_day) {
+            return null;
+        }
+
+        $today ??= Carbon::today();
+        $close = $today->copy()->startOfDay()->day($this->billing_day);
+
+        return $today->day >= $this->billing_day ? $close : $close->subMonthNoOverflow();
+    }
+
+    /**
+     * What's due on a card: the amount owed at its last statement close, less whatever has
+     * been deposited onto it since. Takes the current signed balance (already loaded by
+     * callers) and backs out post-close activity, so only rows after the close are scanned.
+     * Null when the card has no billing day (or isn't a card).
+     *
+     * @return array{closedOn: string, balance: float, paidSince: float, remaining: float}|null
+     */
+    public function statementSummary(float $balance, ?Carbon $today = null): ?array
+    {
+        $close = $this->lastStatementClose($today);
+        if (! $close) {
+            return null;
+        }
+
+        $since = $this->transactions()
+            ->whereDate('occurred_at', '>', $close)
+            ->toBase()
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = 'deposit' THEN amount ELSE -amount END), 0) AS net")
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = 'deposit' THEN amount ELSE 0 END), 0) AS paid")
+            ->first();
+
+        $owedAtClose = $this->amountOwed($balance - (float) $since->net);
+        $paidSince   = (float) $since->paid;
+
+        return [
+            'closedOn'  => $close->format('M j'),
+            'balance'   => round($owedAtClose, 2),
+            'paidSince' => round($paidSince, 2),
+            'remaining' => round(max(0.0, $owedAtClose - $paidSince), 2),
+        ];
     }
 
     /** Revolving credit lines only — the debt side (see User::creditCardDebts()). */

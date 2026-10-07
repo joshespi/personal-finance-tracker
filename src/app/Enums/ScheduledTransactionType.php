@@ -63,6 +63,16 @@ enum ScheduledTransactionType: string
         };
     }
 
+    /**
+     * Direction of the effect on the paired cash account, unlike isInflow() which is from the
+     * envelope's side: funding an envelope from an account *withdraws* the cash
+     * (ScheduledTransactionService::envelopeFund). Only a cash deposit adds to the account.
+     */
+    public function cashSign(): int
+    {
+        return $this === self::CashDeposit ? 1 : -1;
+    }
+
     /** Flat array of string values — for Eloquent whereIn, Rule::in, validation. */
     public static function values(): array
     {

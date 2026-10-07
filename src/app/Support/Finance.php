@@ -10,6 +10,12 @@ class Finance
         return pow(1 + $annualPct / 100, 1 / 12) - 1;
     }
 
+    /** Simple (non-compounding) monthly rate for a debt APR given in percent. */
+    public static function aprMonthlyRate(float $aprPct): float
+    {
+        return $aprPct / 100 / 12;
+    }
+
     /**
      * Future value of a starting balance plus a level monthly contribution,
      * compounded at monthly rate $r. Shared by the retirement (Planning),

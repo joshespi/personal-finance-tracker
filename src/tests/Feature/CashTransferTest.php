@@ -6,7 +6,9 @@ use App\Livewire\AllTransactions;
 use App\Livewire\TransactionList;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
+use App\Models\ScheduledTransaction;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -53,7 +55,7 @@ class CashTransferTest extends TestCase
         $card     = CashAccount::factory()->for($user)->create(['account_type' => 'credit_card']);
 
         $this->actingAs($user)->post(route('cash-transfers.store'), $this->transferPayload($checking, $card))
-            ->assertRedirect(route('cash-accounts.all'))
+            ->assertRedirect(route('cash-accounts.show', $card))
             ->assertSessionHas('success');
 
         $this->assertDatabaseCount('cash_transactions', 2);
@@ -380,5 +382,78 @@ class CashTransferTest extends TestCase
             ->assertSee('Transfer to')
             ->assertSee('Transfer from')
             ->assertDontSee('Payment');
+    }
+
+    public function test_create_page_summarizes_balances_statement_and_upcoming(): void
+    {
+        $this->travelTo('2026-10-06');
+
+        $user     = User::factory()->create();
+        $checking = CashAccount::factory()->for($user)->create(['account_type' => 'checking']);
+        $card     = CashAccount::factory()->for($user)->create(['account_type' => 'credit_card', 'billing_day' => 15]);
+
+        CashTransaction::factory()->for($checking)->deposit()->create(['amount' => 1000, 'occurred_at' => '2026-09-01']);
+        // Statement closed 2026-09-15: $300 on it, $50 charged after, $100 paid since.
+        CashTransaction::factory()->for($card)->withdrawal()->create(['amount' => 300, 'occurred_at' => '2026-09-10']);
+        CashTransaction::factory()->for($card)->withdrawal()->create(['amount' => 50, 'occurred_at' => '2026-09-20']);
+        CashTransaction::factory()->for($card)->deposit()->create(['amount' => 100, 'occurred_at' => '2026-09-25']);
+
+        ScheduledTransaction::factory()->for($user)->create([
+            'cash_account_id' => $checking->id, 'type' => 'cash_withdrawal', 'description' => 'Rent',
+            'amount'          => 800, 'next_due_at' => '2026-10-10',
+        ]);
+        // Outside the 30-day window — left out.
+        ScheduledTransaction::factory()->for($user)->create([
+            'cash_account_id' => $checking->id, 'type' => 'cash_withdrawal', 'next_due_at' => '2026-11-20',
+        ]);
+        ScheduledTransaction::factory()->for($user)->create([
+            'cash_account_id' => $checking->id, 'type' => 'envelope_fund', 'amount' => 150, 'next_due_at' => '2026-10-12',
+        ]);
+
+        $this->actingAs($user)->get(route('cash-transfers.create'))
+            ->assertOk()
+            ->assertViewHas('summaries', function ($summaries) use ($checking, $card) {
+                $c = $summaries[$checking->id];
+                $v = $summaries[$card->id];
+
+                return $c['balance'] == 1000.0
+                    && $c['statement'] === null
+                    && $c['upcoming']->count() === 2
+                    && $c['upcoming'][0]['description'] === 'Rent'
+                    && $c['upcoming'][0]['amount'] == -800.0
+                    // Funding an envelope from the account withdraws the cash, so it's an outflow here.
+                    && $c['upcoming'][1]['amount'] == -150.0
+                    && $v['balance'] == -250.0
+                    && $v['statement']['closedOn'] === 'Sep 15'
+                    && $v['statement']['balance'] == 300.0
+                    && $v['statement']['paidSince'] == 100.0
+                    && $v['statement']['remaining'] == 200.0;
+            });
+    }
+
+    public function test_store_returns_to_the_account_the_form_was_opened_from(): void
+    {
+        $user     = User::factory()->create();
+        $checking = CashAccount::factory()->for($user)->create(['account_type' => 'checking']);
+        $savings  = CashAccount::factory()->for($user)->create(['account_type' => 'savings']);
+        $other    = CashAccount::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('cash-transfers.store'), $this->transferPayload($checking, $savings, ['return_account_id' => $checking->id]))
+            ->assertRedirect(route('cash-accounts.show', $checking));
+
+        // Someone else's account can't be used as the return target.
+        $this->actingAs($user)
+            ->post(route('cash-transfers.store'), $this->transferPayload($checking, $savings, ['return_account_id' => $other->id]))
+            ->assertSessionHasErrors('return_account_id');
+    }
+
+    public function test_last_statement_close_rolls_back_a_month_before_billing_day(): void
+    {
+        $card = CashAccount::factory()->make(['account_type' => 'credit_card', 'billing_day' => 15]);
+
+        $this->assertSame('2026-09-15', $card->lastStatementClose(Carbon::parse('2026-10-06'))->toDateString());
+        $this->assertSame('2026-10-15', $card->lastStatementClose(Carbon::parse('2026-10-15'))->toDateString());
+        $this->assertNull(CashAccount::factory()->make(['account_type' => 'checking', 'billing_day' => 15])->lastStatementClose());
     }
 }

@@ -123,6 +123,25 @@ class CashTransaction extends Model
     }
 
     /**
+     * Record a transfer as a linked withdrawal/deposit pair — the creation-side twin of
+     * deleteWithCounterpart(). Callers must already have confirmed both account ids belong
+     * to the user; $attrs carries the shared amount/description/occurred_at/cleared.
+     */
+    public static function recordTransfer(int $fromAccountId, int $toAccountId, array $attrs): void
+    {
+        DB::transaction(function () use ($fromAccountId, $toAccountId, $attrs) {
+            $withdrawal = self::create([...$attrs, 'cash_account_id' => $fromAccountId, 'type' => 'withdrawal']);
+
+            self::create([
+                ...$attrs,
+                'cash_account_id'       => $toAccountId,
+                'type'                  => 'deposit',
+                'linked_transaction_id' => $withdrawal->id,
+            ]);
+        });
+    }
+
+    /**
      * Delete this transaction and, when it's one leg of a transfer, the other leg with it.
      *
      * The FK is ON DELETE SET NULL (see the linked_transaction_id migration), so removing a

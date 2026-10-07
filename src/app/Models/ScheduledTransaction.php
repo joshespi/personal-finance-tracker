@@ -57,6 +57,26 @@ class ScheduledTransaction extends Model
         return $this->type->isInflow();
     }
 
+    /** Signed amount as it will hit the paired cash account (see ScheduledTransactionType::cashSign()). */
+    public function signedCashAmount(): float
+    {
+        return (float) $this->amount * $this->type->cashSign();
+    }
+
+    /**
+     * ±1 for ledger display. Paired with a cash account, it's the cash-side direction (funding
+     * an envelope from checking reads as money out); unpaired, the envelope-side one.
+     */
+    public function displaySign(): int
+    {
+        return $this->cash_account_id ? $this->type->cashSign() : ($this->isInflow() ? 1 : -1);
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
+    }
+
     /**
      * Secondary ordering that sorts inflows below outflows — the SQL twin of
      * isInflow(), kept here so the two stay in lockstep with the enum.
