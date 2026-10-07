@@ -39,34 +39,29 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
-            @if (session('success'))
-                <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-300 rounded-md px-4 py-3 text-sm">
-                    {{ session('success') }}
-                </div>
-            @endif
+            <x-flash />
 
             @if ($account->isCreditCard() && ($account->interest_rate || $account->billing_day))
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4 flex flex-wrap gap-6 text-sm">
                     @if ($account->interest_rate)
-                        {{-- Same formula as Liability::monthlyInterest() — flagged there, not
-                             fixed: a credit-card CashAccount isn't a Liability row, so the
-                             debt-payoff/allocator calculators never see it. --}}
-                        @php $monthlyInterest = round(abs($account->current_balance) * ((float)$account->interest_rate / 100) / 12, 2); @endphp
+                        @php
+                            $owed = $account->amountOwed($account->current_balance);
+                        @endphp
                         <div>
                             <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">APR</p>
                             <p class="mt-0.5 font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $account->interest_rate }}%</p>
                         </div>
-                        @if ($account->current_balance < 0)
+                        @if ($owed > 0)
                             <div>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Est. monthly interest</p>
-                                <p class="mt-0.5 font-mono font-semibold text-red-600 dark:text-red-400">${{ $demo->amt($monthlyInterest) }}</p>
+                                <p class="mt-0.5 font-mono font-semibold text-red-600 dark:text-red-400">${{ $demo->amt($account->monthlyInterest($owed)) }}</p>
                             </div>
                         @endif
                     @endif
                     @if ($account->billing_day)
                         <div>
                             <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Statement closes</p>
-                            <p class="mt-0.5 font-semibold text-gray-900 dark:text-gray-100">{{ $account->billing_day }}{{ match(true) { $account->billing_day === 1 => 'st', $account->billing_day === 2 => 'nd', $account->billing_day === 3 => 'rd', default => 'th' } }} of month</p>
+                            <p class="mt-0.5 font-semibold text-gray-900 dark:text-gray-100">{{ today()->day($account->billing_day)->ordinal('day') }} of month</p>
                         </div>
                     @endif
                 </div>

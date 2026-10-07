@@ -54,11 +54,7 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-5">
 
-            @if (session('success'))
-                <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-300 rounded-md px-4 py-3 text-sm">
-                    {{ session('success') }}
-                </div>
-            @endif
+            <x-flash />
 
             @if ($envelopes->isNotEmpty())
 
@@ -73,7 +69,7 @@
                     <div>
                         <p class="text-xs text-white/70 uppercase tracking-wide font-medium">Ready to Assign</p>
                         <p class="mt-0.5 text-3xl font-bold font-mono text-white"
-                           x-text="(rta < 0 ? '−' : '') + '$' + Math.abs(rta).toFixed(2)">
+                           x-text="$money(rta)">
                             @if ($readyToAssign < 0)−@endif${{ $demo->amt(abs($readyToAssign)) }}
                         </p>
                     </div>
@@ -240,7 +236,7 @@
                                             <div class="text-right">
                                                 <span class="inline-flex items-center justify-end min-w-[72px] px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold transition"
                                                       :class="pillClass(balances[{{ $e->id }}] ?? {{ $balance }})"
-                                                      x-text="formatMoney(balances[{{ $e->id }}] ?? {{ $balance }})">
+                                                      x-text="$money(balances[{{ $e->id }}] ?? {{ $balance }})">
                                                     {{ $balance < 0 ? '−' : '' }}${{ $demo->amt(abs($balance)) }}
                                                 </span>
                                             </div>
@@ -386,10 +382,6 @@
                 if (val > 0.005)  return 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300';
                 if (val < -0.005) return 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
                 return 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400';
-            },
-
-            formatMoney(val) {
-                return (val < -0.005 ? '−' : '') + '$' + Math.abs(val).toFixed(2);
             },
 
             onFocus(id, el) {

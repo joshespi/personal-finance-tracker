@@ -7,11 +7,7 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 space-y-6">
 
-                @if (session('success'))
-                    <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-300 rounded-md px-4 py-3 text-sm">
-                        {{ session('success') }}
-                    </div>
-                @endif
+                <x-flash />
 
                 <div>
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Email</h3>
