@@ -18,7 +18,7 @@ class ScheduledTransactionService
     public function materializeForUser(User $user): Collection
     {
         $dueQuery = fn () => $user->scheduledTransactions()
-            ->where('is_active', true)
+            ->active()
             ->where('next_due_at', '<=', today());
 
         // Cheap unlocked probe first: this runs on every authenticated request (see

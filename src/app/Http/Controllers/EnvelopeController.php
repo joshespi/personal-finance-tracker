@@ -68,7 +68,9 @@ class EnvelopeController extends Controller
             2
         );
 
-        $readyToAssign = $request->user()->readyToAssign();
+        // Same figure as User::readyToAssign(), from the envelope totals already loaded above
+        // instead of re-aggregating every fund and spend row.
+        $readyToAssign = round($request->user()->totalCash() - $totalBalance, 2);
 
         ['prevMonth' => $prevMonth, 'nextMonth' => $nextMonth, 'isCurrentMonth' => $isCurrentMonth] = $this->monthNav($month);
 

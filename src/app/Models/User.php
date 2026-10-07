@@ -130,11 +130,6 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(LoginHistory::class);
     }
 
-    public function activityLogs(): HasMany
-    {
-        return $this->hasMany(ActivityLog::class);
-    }
-
     public function liabilities(): HasMany
     {
         return $this->hasMany(Liability::class);
@@ -182,11 +177,17 @@ class User extends Authenticatable implements MustVerifyEmail
     public function incomeForTrailingMonths(int $months): float
     {
         return (float) $this->cashDeposits()
-            ->whereBetween('cash_transactions.occurred_at', [
-                now()->subMonths($months)->startOfMonth(),
-                now()->subMonth()->endOfMonth(),
-            ])
+            ->whereBetween('cash_transactions.occurred_at', self::trailingMonthsWindow($months))
             ->sum('cash_transactions.amount');
+    }
+
+    /** Envelope-tagged withdrawals across all of this user's envelopes — the spend twin of cashDeposits(). */
+    public function envelopeSpends(): Builder
+    {
+        return CashTransaction::query()
+            ->join('envelopes', 'envelopes.id', '=', 'cash_transactions.envelope_id')
+            ->where('envelopes.user_id', $this->id)
+            ->where('cash_transactions.type', 'withdrawal');
     }
 
     /**
@@ -197,15 +198,15 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function spendForTrailingMonths(int $months): float
     {
-        return (float) CashTransaction::query()
-            ->join('envelopes', 'envelopes.id', '=', 'cash_transactions.envelope_id')
-            ->where('envelopes.user_id', $this->id)
-            ->where('cash_transactions.type', 'withdrawal')
-            ->whereBetween('cash_transactions.occurred_at', [
-                now()->subMonths($months)->startOfMonth(),
-                now()->subMonth()->endOfMonth(),
-            ])
+        return (float) $this->envelopeSpends()
+            ->whereBetween('cash_transactions.occurred_at', self::trailingMonthsWindow($months))
             ->sum('cash_transactions.amount');
+    }
+
+    /** [start, end] of the last $months complete calendar months (the current month excluded). */
+    private static function trailingMonthsWindow(int $months): array
+    {
+        return [now()->subMonths($months)->startOfMonth(), now()->subMonth()->endOfMonth()];
     }
 
     public function readyToAssign(): float
@@ -216,11 +217,7 @@ class User extends Authenticatable implements MustVerifyEmail
             ->where('envelope_transactions.type', 'fund')
             ->sum('envelope_transactions.amount');
 
-        $spent = (float) CashTransaction::query()
-            ->join('envelopes', 'envelopes.id', '=', 'cash_transactions.envelope_id')
-            ->where('envelopes.user_id', $this->id)
-            ->where('cash_transactions.type', 'withdrawal')
-            ->sum('cash_transactions.amount');
+        $spent = (float) $this->envelopeSpends()->sum('cash_transactions.amount');
 
         return round($this->totalCash() - ($funded - $spent), 2);
     }
@@ -275,14 +272,13 @@ class User extends Authenticatable implements MustVerifyEmail
             ->withCurrentBalance()
             ->get()
             ->map(function (CashAccount $a) {
-                $balance = round($a->balanceSign() * $a->currentBalanceFromSums(), 2);
-                $apr     = (float) ($a->interest_rate ?? 0);
+                $balance = round($a->amountOwed($a->currentBalanceFromSums()), 2);
 
                 return [
                     'account'          => $a,
                     'balance'          => $balance,
-                    'apr'              => $apr,
-                    'monthly_interest' => round($balance * ($apr / 100 / 12), 2),
+                    'apr'              => (float) ($a->interest_rate ?? 0),
+                    'monthly_interest' => round($a->monthlyInterest($balance), 2),
                 ];
             })
             ->filter(fn (array $row) => $row['balance'] > 0.01)
@@ -290,7 +286,15 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /** Sum of (market_value + manual_value) across each portfolio's most recent snapshot. */
+    private ?float $latestPortfolioValueCache = null;
+
+    /** Memoized like totalCash() — the Retirement tab reads it from both the controller and ForecastService. */
     public function latestPortfolioValue(): float
+    {
+        return $this->latestPortfolioValueCache ??= $this->queryLatestPortfolioValue();
+    }
+
+    private function queryLatestPortfolioValue(): float
     {
         $portfolioIds = $this->portfolios()->pluck('id');
 

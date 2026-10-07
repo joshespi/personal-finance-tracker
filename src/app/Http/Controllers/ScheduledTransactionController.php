@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\Recurrence;
 use App\Enums\ScheduledTransactionType;
+use App\Models\CashAccount;
 use App\Models\Envelope;
 use App\Models\ScheduledTransaction;
 use App\Services\ScheduledTransactionService;
@@ -16,10 +17,7 @@ class ScheduledTransactionController extends Controller
 {
     public function create(Request $request): View
     {
-        $envelopes    = $request->user()->envelopes()->orderBy('sort_order')->get();
-        $cashAccounts = $request->user()->cashAccounts()->orderBy('name')->get();
-
-        return view('scheduled-transactions.create', compact('envelopes', 'cashAccounts'));
+        return view('scheduled-transactions.create', $this->formData($request));
     }
 
     public function store(Request $request): RedirectResponse
@@ -34,10 +32,11 @@ class ScheduledTransactionController extends Controller
     public function edit(Request $request, ScheduledTransaction $scheduledTransaction): View
     {
         $this->authorize('update', $scheduledTransaction);
-        $envelopes    = $request->user()->envelopes()->orderBy('sort_order')->get();
-        $cashAccounts = $request->user()->cashAccounts()->orderBy('name')->get();
 
-        return view('scheduled-transactions.edit', compact('scheduledTransaction', 'envelopes', 'cashAccounts'));
+        return view('scheduled-transactions.edit', [
+            'scheduledTransaction' => $scheduledTransaction,
+            ...$this->formData($request),
+        ]);
     }
 
     public function update(Request $request, ScheduledTransaction $scheduledTransaction): RedirectResponse
@@ -84,13 +83,18 @@ class ScheduledTransactionController extends Controller
         return back()->with('success', "Skipped — next due {$scheduledTransaction->next_due_at->format('M j, Y')}.");
     }
 
+    private function formData(Request $request): array
+    {
+        return [
+            'envelopes'    => $request->user()->envelopes()->orderBy('sort_order')->get(),
+            'cashAccounts' => $request->user()->cashAccounts()->orderBy('name')->get(),
+        ];
+    }
+
     private function validated(Request $request, ?ScheduledTransaction $existing = null): array
     {
         $type   = ScheduledTransactionType::tryFrom($request->input('type'));
         $userId = $request->user()->id;
-
-        $envelopeRule    = Envelope::ownershipRule($userId);
-        $cashAccountRule = Rule::exists('cash_accounts', 'id')->where('user_id', $userId);
 
         // Users may never create system-managed types (mortgage payments come from
         // LiabilityController::syncSchedule), but re-saving an existing mortgage
@@ -110,12 +114,8 @@ class ScheduledTransactionController extends Controller
             // Types that don't need an envelope still *accept* one (mortgage_payment tags its
             // withdrawal with envelope_id), so leaving this branch unscoped let a caller point
             // a schedule they own at another user's envelope and debit it.
-            'envelope_id' => $type?->needsEnvelope()
-                ? ['required', 'integer', $envelopeRule]
-                : ['nullable', 'integer', $envelopeRule],
-            'cash_account_id' => $type?->requiresCashAccount()
-                ? ['required', $cashAccountRule]
-                : ['nullable', $cashAccountRule],
+            'envelope_id'     => [$type?->needsEnvelope() ? 'required' : 'nullable', 'integer', Envelope::ownershipRule($userId)],
+            'cash_account_id' => [$type?->requiresCashAccount() ? 'required' : 'nullable', CashAccount::ownershipRule($userId)],
             'is_active' => 'boolean',
         ]);
     }

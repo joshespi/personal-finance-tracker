@@ -18,7 +18,7 @@ class TransactionList extends Component
 
     public function mount(CashAccount $account): void
     {
-        abort_unless($account->user_id === auth()->id(), 403);
+        Gate::authorize('view', $account);
         $this->account       = $account;
         $this->newOccurredAt = now()->format('Y-m-d');
     }
@@ -56,7 +56,7 @@ class TransactionList extends Component
     public function getScheduledProperty()
     {
         return $this->account->scheduledTransactions()
-            ->where('is_active', true)
+            ->active()
             ->with('envelope:id,name,color')
             ->orderBy('next_due_at')
             ->get();

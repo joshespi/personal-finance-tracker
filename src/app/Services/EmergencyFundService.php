@@ -108,7 +108,7 @@ class EmergencyFundService
         // (e.g. a monthly mortgage with only one payment in the actuals) count at
         // its full monthly value instead of being diluted across the 6-month window.
         $scheduledByEnvelope = ScheduledTransaction::where('user_id', $user->id)
-            ->where('is_active', true)
+            ->active()
             ->whereIn('envelope_id', $mandatoryEnvelopes->pluck('id'))
             ->whereIn('type', [ScheduledTransactionType::EnvelopeSpend, ScheduledTransactionType::LiabilityPayment])
             ->get(['envelope_id', 'amount', 'recurrence'])

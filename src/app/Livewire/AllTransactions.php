@@ -86,7 +86,7 @@ class AllTransactions extends Component
     public function getScheduledProperty()
     {
         return auth()->user()->scheduledTransactions()
-            ->where('is_active', true)
+            ->active()
             ->with(['envelope:id,name,color', 'cashAccount:id,name'])
             ->orderByDesc('next_due_at')
             // Within the same day, list outgoing first and inflows below them, since
@@ -112,7 +112,7 @@ class AllTransactions extends Component
 
     protected function resolveWriteAccount(array $data, string $prefix): CashAccount
     {
-        $account = $this->ownedAccount($data["{$prefix}AccountId"]);
+        $account = CashAccount::findOrFail($data["{$prefix}AccountId"]);
         Gate::authorize('update', $account);
 
         return $account;
@@ -129,15 +129,6 @@ class AllTransactions extends Component
         abort_unless($t, 404);
 
         return $t;
-    }
-
-    /** Fetch one of the user's cash accounts or 403. */
-    private function ownedAccount(int $id): CashAccount
-    {
-        $account = CashAccount::find($id);
-        abort_unless($account && $account->user_id === auth()->id(), 403);
-
-        return $account;
     }
 
     public function render()

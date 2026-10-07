@@ -182,7 +182,7 @@ class EmailSummaryService
         $horizon = $until->copy()->addDays(max(1, (int) $since->diffInDays($until)));
 
         return $user->scheduledTransactions()
-            ->where('is_active', true)
+            ->active()
             ->where('next_due_at', '<=', $horizon)
             ->orderBy('next_due_at')
             ->get();
@@ -231,12 +231,16 @@ class EmailSummaryService
     /** @return array{overBudgetEnvelopes: Collection, lowBalanceAccounts: Collection, upcomingBills: Collection, emergencyFundBelowTarget: bool} */
     private function warnings(User $user): array
     {
-        // Eager-load spendTransactions so spentInMonth()'s relationLoaded() fast path
-        // (see Envelope::spentInMonth()) filters in memory instead of querying per envelope.
-        $envelopes = $user->envelopes()->with('spendTransactions')->get();
+        // One bounded aggregate for this month's spend per envelope, rather than hydrating
+        // every spend row ever recorded just to filter the month in PHP.
+        $envelopes = $user->envelopes()
+            ->withSum(['spendTransactions as month_spend_total' => fn ($q) => $q
+                ->whereBetween('occurred_at', [now()->startOfMonth(), now()->endOfMonth()]),
+            ], 'amount')
+            ->get();
 
         $overBudget = $envelopes
-            ->map(fn ($e) => ['envelope' => $e->name, 'spent' => round($e->spentInMonth(), 2), 'target' => round((float) $e->monthly_target, 2)])
+            ->map(fn ($e) => ['envelope' => $e->name, 'spent' => round((float) ($e->month_spend_total ?? 0), 2), 'target' => round((float) $e->monthly_target, 2)])
             ->filter(fn ($row) => $row['target'] > 0 && $row['spent'] > $row['target'])
             ->values();
 

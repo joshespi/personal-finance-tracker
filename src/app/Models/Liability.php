@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Finance;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -53,16 +54,6 @@ class Liability extends Model
         ]);
     }
 
-    public function paymentEnvelope(): BelongsTo
-    {
-        return $this->belongsTo(Envelope::class, 'payment_envelope_id');
-    }
-
-    public function paymentCashAccount(): BelongsTo
-    {
-        return $this->belongsTo(CashAccount::class, 'payment_cash_account_id');
-    }
-
     public function linkedSchedule(): HasOne
     {
         return $this->hasOne(ScheduledTransaction::class);
@@ -102,15 +93,14 @@ class Liability extends Model
     /**
      * Unrounded monthly interest accrual on the current balance at the stored APR.
      *
-     * A credit-card CashAccount computes the identical formula independently (it isn't a
-     * Liability row, so it can't call this method) — see User::creditCardDebts(), which is
-     * what now feeds those accounts into DebtPayoffService and AllocatorService alongside
-     * Liability rows. The two models still aren't unified; whether a credit-card CashAccount
-     * should imply a shadow Liability remains a product decision, not a mechanical dedup.
+     * Credit-card CashAccounts share the rate via CashAccount::monthlyInterest() (they
+     * aren't Liability rows) — see User::creditCardDebts(), which feeds those accounts into
+     * DebtPayoffService and AllocatorService alongside Liability rows. Whether a credit-card
+     * CashAccount should imply a shadow Liability remains a product decision.
      */
     public function monthlyInterest(): float
     {
-        return $this->currentBalance() * ((float) ($this->interest_rate ?? 0) / 100 / 12);
+        return $this->currentBalance() * Finance::aprMonthlyRate((float) ($this->interest_rate ?? 0));
     }
 
     public function toBackupArray(): array

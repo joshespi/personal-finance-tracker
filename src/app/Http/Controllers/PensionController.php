@@ -36,7 +36,6 @@ class PensionController extends Controller
         return view('pensions.index', [
             'computed'    => $computed,
             'incomeFloor' => $incomeFloor,
-            'overrides'   => $overrides,
         ]);
     }
 

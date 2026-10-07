@@ -25,7 +25,7 @@ class MaterializeScheduledTransactions extends Command
 
     public function handle(ScheduledTransactionService $service): int
     {
-        $userIds = ScheduledTransaction::where('is_active', true)
+        $userIds = ScheduledTransaction::active()
             ->where('next_due_at', '<=', today())
             ->distinct()
             ->pluck('user_id');

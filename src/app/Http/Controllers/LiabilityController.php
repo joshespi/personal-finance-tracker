@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ScheduledTransactionType;
+use App\Models\CashAccount;
 use App\Models\Envelope;
 use App\Models\Liability;
 use App\Models\ManualAsset;
@@ -10,7 +11,6 @@ use App\Models\ScheduledTransaction;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class LiabilityController extends Controller
@@ -120,7 +120,7 @@ class LiabilityController extends Controller
             'escrow_amount'           => ['nullable', 'numeric', 'gte:0'],
             'payment_day'             => ['nullable', 'integer', 'min:1', 'max:28'],
             'payment_envelope_id'     => ['nullable', 'integer', Envelope::ownershipRule($userId)],
-            'payment_cash_account_id' => ['nullable', 'integer', Rule::exists('cash_accounts', 'id')->where('user_id', $userId)],
+            'payment_cash_account_id' => ['nullable', 'integer', CashAccount::ownershipRule($userId)],
             'notes'                   => ['nullable', 'string', 'max:1000'],
             'currency'                => ['required', 'string', 'size:3'],
         ]);

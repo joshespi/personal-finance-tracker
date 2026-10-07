@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Liability;
 use App\Models\User;
+use App\Support\Finance;
 use Illuminate\Support\Collection;
 
 class DebtPayoffService
@@ -127,7 +128,7 @@ class DebtPayoffService
         return $debts->map(function ($l) {
             $balance     = $l->currentBalance();
             $apr         = (float) ($l->interest_rate ?? 0);
-            $monthlyRate = $apr / 100 / 12;
+            $monthlyRate = Finance::aprMonthlyRate($apr);
 
             return $this->buildDebtRow(
                 // Kept as the raw int (not namespaced like the cash_account rows below) —
@@ -163,7 +164,7 @@ class DebtPayoffService
             liabilityType: 'credit_card',
             balance: $row['balance'],
             apr: $row['apr'],
-            monthlyRate: $row['apr'] / 100 / 12,
+            monthlyRate: Finance::aprMonthlyRate($row['apr']),
             monthlyInterest: $row['monthly_interest'],
             explicitMinPayment: null,
         ))->values()->all();

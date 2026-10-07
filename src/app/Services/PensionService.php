@@ -113,9 +113,7 @@ class PensionService
         $expectedReturn = max(0, min(30, (float) ($overrides['expected_return'] ?? 7.0)));
         $swr            = max(0, min(20, (float) ($overrides['swr'] ?? 4.0)));
         $monthly        = max(0, (float) ($overrides['monthly_contribution'] ?? 0));
-        $annualExpenses = isset($overrides['annual_expenses']) && $overrides['annual_expenses'] !== null
-            ? max(0, (float) $overrides['annual_expenses'])
-            : null;
+        $annualExpenses = isset($overrides['annual_expenses']) ? max(0, (float) $overrides['annual_expenses']) : null;
 
         $r      = Finance::monthlyRate($expectedReturn);
         $months = max(0, $yearsToRetirement) * 12;
