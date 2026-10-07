@@ -494,4 +494,56 @@ class CashAccountTest extends TestCase
             ->assertSee('Net Worth')
             ->assertSee('$4,000.00');
     }
+
+    public function test_quick_add_records_a_withdrawal_tagged_to_an_envelope(): void
+    {
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        $this->actingAs($user)->post(route('cash-accounts.transactions.store', $account), [
+            'type'               => 'withdrawal',
+            'amount'             => '42.50',
+            'description'        => 'Groceries',
+            'occurred_at'        => '2026-10-01',
+            'envelope_id'        => $envelope->id,
+            'income_category_id' => '',
+        ])->assertRedirect(route('cash-accounts.show', $account));
+
+        $t = $account->transactions()->sole();
+        $this->assertSame('withdrawal', $t->type);
+        $this->assertEquals(42.5, (float) $t->amount);
+        $this->assertSame($envelope->id, $t->envelope_id);
+        $this->assertNull($t->income_category_id);
+    }
+
+    public function test_quick_add_drops_the_envelope_on_a_deposit(): void
+    {
+        $user     = User::factory()->create();
+        $account  = CashAccount::factory()->for($user)->create();
+        $envelope = Envelope::factory()->for($user)->create();
+
+        $this->actingAs($user)->post(route('cash-accounts.transactions.store', $account), [
+            'type' => 'deposit', 'amount' => '100', 'occurred_at' => '2026-10-01', 'envelope_id' => $envelope->id,
+        ])->assertRedirect();
+
+        $this->assertNull($account->transactions()->sole()->envelope_id);
+    }
+
+    public function test_quick_add_rejects_another_users_account_and_envelope(): void
+    {
+        $user          = User::factory()->create();
+        $mine          = CashAccount::factory()->for($user)->create();
+        $theirs        = CashAccount::factory()->create();
+        $theirEnvelope = Envelope::factory()->create();
+        $payload       = ['type' => 'withdrawal', 'amount' => '10', 'occurred_at' => '2026-10-01'];
+
+        $this->actingAs($user)->post(route('cash-accounts.transactions.store', $theirs), $payload)->assertForbidden();
+
+        $this->actingAs($user)
+            ->post(route('cash-accounts.transactions.store', $mine), [...$payload, 'envelope_id' => $theirEnvelope->id])
+            ->assertSessionHasErrors('envelope_id');
+
+        $this->assertDatabaseCount('cash_transactions', 0);
+    }
 }

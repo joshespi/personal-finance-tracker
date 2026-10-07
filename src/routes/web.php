@@ -80,7 +80,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{entry}', [JournalEntryController::class, 'destroy'])->name('destroy');
     });
 
-    Route::resource('portfolios.transactions', TransactionController::class)->shallow();
+    Route::resource('portfolios.transactions', TransactionController::class)->except(['show'])->shallow();
 
     Route::get('portfolios/{portfolio}/transactions/import/template', [TransactionImportController::class, 'template'])
         ->name('portfolios.transactions.import.template');
@@ -122,6 +122,8 @@ Route::middleware('auth')->group(function () {
 
     Route::post('cash-accounts/{cashAccount}/reconcile', [CashAccountController::class, 'reconcile'])
         ->name('cash-accounts.reconcile');
+    Route::post('cash-accounts/{cashAccount}/transactions', [CashTransactionController::class, 'store'])
+        ->name('cash-accounts.transactions.store');
     Route::delete('cash-transactions/{transaction}', [CashTransactionController::class, 'destroy'])
         ->name('cash-accounts.transactions.destroy');
 

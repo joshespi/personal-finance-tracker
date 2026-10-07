@@ -10,6 +10,11 @@ $testEnv = [
     'DB_USERNAME'   => '',
     'DB_PASSWORD'   => '',
     'DB_URL'        => '',
+    // The container's entrypoint runs `optimize`, caching routes; a stale cache hides any
+    // route added since (tests then fail with "Route [...] not defined"). Point the route
+    // cache at a path that never exists so tests always read routes/web.php fresh —
+    // without deleting the live dev app's cache the way config.php is below.
+    'APP_ROUTES_CACHE' => sys_get_temp_dir().'/phpunit-no-route-cache.php',
 ];
 
 foreach ($testEnv as $key => $value) {

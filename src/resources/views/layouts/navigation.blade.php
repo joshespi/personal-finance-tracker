@@ -339,6 +339,17 @@
                                 <input type="text" name="description" maxlength="500" placeholder="Optional"
                                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
                             </div>
+                            @if ($qaEnvelopes->isNotEmpty())
+                                <div x-show="cashType === 'withdrawal'">
+                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Envelope</label>
+                                    <select name="envelope_id" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="">— Unassigned —</option>
+                                        @foreach ($qaEnvelopes as $e)
+                                            <option value="{{ $e->id }}">{{ $e->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endif
                             @if ($qaIncomeCategories->isNotEmpty())
                                 <div x-show="cashType === 'deposit'" x-cloak>
                                     <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Income category</label>
