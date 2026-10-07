@@ -134,4 +134,12 @@ class CashflowTest extends TestCase
             ->assertOk()
             ->assertSee('No deposits recorded for this month');
     }
+
+    public function test_malformed_month_param_falls_back_to_current_month(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('analysis', ['tab' => 'cashflow', 'month' => 'not-a-month']))
+            ->assertOk()
+            ->assertViewHas('month', fn ($m) => $m->isSameMonth(now()));
+    }
 }

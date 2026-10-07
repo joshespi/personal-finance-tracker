@@ -19,9 +19,9 @@ class CashflowService
      *
      * @return array{month: Carbon, income: float, totalSpent: float, net: float, incomeRows: Collection, envelopeRows: Collection, history: Collection}
      */
-    public function compute(User $user, ?string $month = null): array
+    public function compute(User $user, ?Carbon $month = null): array
     {
-        $month    = Carbon::parse($month ?? now()->format('Y-m'))->startOfMonth();
+        $month    = ($month ?? now())->copy()->startOfMonth();
         $monthEnd = $month->copy()->endOfMonth();
 
         $envelopes = $user

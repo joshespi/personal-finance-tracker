@@ -21,7 +21,7 @@ class AnalysisController extends Controller
 
     private function cashflow(Request $request, CashflowService $cashflow): View
     {
-        $data = $cashflow->compute($request->user(), $request->input('month'));
+        $data = $cashflow->compute($request->user(), $this->monthFromParam($request->input('month')));
 
         ['prevMonth' => $prevMonthParam, 'nextMonth' => $nextMonthParam, 'isCurrentMonth' => $isCurrentMonth] = $this->monthNav($data['month']);
 
