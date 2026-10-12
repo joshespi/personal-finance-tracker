@@ -1,6 +1,6 @@
 {
-    "name": "Portfolio Tracker",
-    "short_name": "Portfolio",
+    "name": "Personal Finance Tracker",
+    "short_name": "Finance",
     "description": "Track investments, budget envelopes, cash, and liabilities in one place.",
     "start_url": "/dashboard",
     "display": "standalone",
