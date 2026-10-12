@@ -1,6 +1,9 @@
 import './bootstrap';
 import './ticker-search';
+import { initFormGuards } from './form-guards';
 import { DEMO_MASK, fmtFull, fmtSigned } from './format-utils';
+
+initFormGuards();
 
 // Whole-dollar display for interactive "type any number and see the split" widgets —
 // deliberately not demo-masked, since the figure being shown is whatever the visitor

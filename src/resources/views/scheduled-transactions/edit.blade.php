@@ -21,12 +21,12 @@
                            class="text-sm text-gray-500 dark:text-gray-400 hover:underline">Cancel</a>
                         <button type="submit"
                                 form="delete-scheduled-transaction"
-                                onclick="return confirm('Delete this scheduled transaction? This cannot be undone.')"
                                 class="ml-auto text-sm text-red-600 dark:text-red-400 hover:underline">Delete</button>
                     </div>
                 </form>
 
                 <form method="POST" id="delete-scheduled-transaction"
+                      onsubmit="return confirm('Delete this scheduled transaction? This cannot be undone.')"
                       action="{{ route('scheduled-transactions.destroy', $scheduledTransaction) }}">
                     @csrf
                     @method('DELETE')

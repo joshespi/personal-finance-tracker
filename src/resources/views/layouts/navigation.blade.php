@@ -188,6 +188,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['plus'] }}" />
             </svg>
             <span class="flex-1 text-start">{{ __('Quick add') }}</span>
+            <kbd class="hidden lg:inline text-xs text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-600 rounded px-1.5" aria-hidden="true">N</kbd>
         </button>
         @endauth
 
@@ -274,7 +275,7 @@
         get fundAction() { return this.envelope ? `/envelopes/${this.envelope}/transactions` : '#'; },
         get buyAction()  { return this.portfolio ? `/portfolios/${this.portfolio}/transactions` : '#'; },
     }"
-    @open-quick-add.window="open = true; tab = 'cash'"
+    @open-quick-add.window="if (! open) { open = true; tab = 'cash' }"
     @keydown.escape.window="open = false">
 
     <div x-show="open" x-cloak @click="open = false"
