@@ -44,12 +44,6 @@
 
             <x-flash />
 
-            @if (session('error'))
-                <div class="bg-amber-100 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 rounded-md px-4 py-3 text-sm">
-                    {{ session('error') }}
-                </div>
-            @endif
-
             @if ($portfolio->isClosed())
                 <div class="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-4 py-3 text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2">
                     <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
