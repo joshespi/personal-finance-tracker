@@ -8,12 +8,18 @@
         <meta name="theme-color" content="#4f46e5">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-title" content="Portfolio Tracker">
+        <meta name="apple-mobile-web-app-title" content="{{ config('app.name') }}">
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/icons/icon-180.png">
 
-        <title>{{ config('app.name', 'Portfolio Tracker') }}</title>
+        {{-- Every page's header slot leads with an <h2> naming it; reuse that text as the tab title. --}}
+        @php
+            $pageTitle = isset($header) && preg_match('~<h2[^>]*>(.*?)</h2>~s', (string) $header, $titleMatch)
+                ? trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($titleMatch[1]))))
+                : '';
+        @endphp
+        <title>{{ $pageTitle !== '' ? $pageTitle.' · ' : '' }}{{ config('app.name') }}</title>
 
         <!-- Dark mode: apply class before paint to avoid flash -->
         <script>
@@ -70,7 +76,7 @@
                         @auth
                         <button @click="$dispatch('open-quick-add')"
                                 class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                                aria-label="Quick add" title="Quick add">
+                                aria-label="Quick add" title="Quick add (N)">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                             </svg>
@@ -130,7 +136,7 @@
 
                 <footer class="mt-12 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400 dark:text-gray-500">
-                        <span>Portfolio Tracker <span class="text-gray-400 dark:text-gray-500">v{{ config('app.version') }}</span> &mdash; <a href="{{ route('about') }}" class="hover:text-gray-600 dark:hover:text-gray-300 transition">About</a> &middot; <a href="{{ route('donate') }}" class="hover:text-gray-600 dark:hover:text-gray-300 transition">Donate</a></span>
+                        <span>{{ config('app.name') }} <span class="text-gray-400 dark:text-gray-500">v{{ config('app.version') }}</span> &mdash; <a href="{{ route('about') }}" class="hover:text-gray-600 dark:hover:text-gray-300 transition">About</a> &middot; <a href="{{ route('donate') }}" class="hover:text-gray-600 dark:hover:text-gray-300 transition">Donate</a></span>
                         <a href="https://github.com/joshespi/portfolio-tracker" target="_blank" rel="noopener"
                            class="inline-flex items-center gap-1.5 hover:text-gray-600 dark:hover:text-gray-300 transition">
                             <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">

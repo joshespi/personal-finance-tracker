@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Offline — Portfolio Tracker</title>
+    <title>Offline · {{ config('app.name') }}</title>
     @vite(['resources/css/app.css'])
 </head>
 <body class="bg-slate-50 dark:bg-gray-900 min-h-screen flex items-center justify-center font-sans antialiased">
