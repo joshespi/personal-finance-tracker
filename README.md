@@ -99,6 +99,21 @@ docker compose exec app php artisan test
 ```
 
 
+## Deploying
+
+Add the **`deploy`** label to a PR; when it's merged into `main`, `.github/workflows/deploy.yml` runs `scripts/deploy.sh` on the self-hosted runner on the production Docker host. The script pulls `main` and only does what the diff needs:
+
+| Changed | Step |
+| ------- | ---- |
+| `docker/`, `docker-compose.yml` | `docker compose up -d --build` (entrypoint then handles composer + migrate) |
+| `src/composer.json` / `.lock` | `composer install` |
+| `src/database/migrations/` | `php artisan migrate --force` |
+| `src/package*.json`, Vite/Tailwind/PostCSS config | `npm ci` |
+| `src/resources/`, the above | `npm run build` |
+| always | `optimize:clear` + `optimize`, then a `/up` health check |
+
+Run a deploy by hand from **Actions → Deploy → Run workflow** (tick *full* to redo every step), or on the server with `scripts/deploy.sh [--full]`. The workflow needs the `DEPLOY_PATH` repository variable set to the server checkout path.
+
 ## Ports
 
 | Service | Host port |
