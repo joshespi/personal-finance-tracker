@@ -1,0 +1,52 @@
+name: Deploy
+
+# Deploys to the home-lab Docker host when a PR carrying the `deploy` label is
+# merged into main. Can also be run by hand from the Actions tab.
+#
+# Runs on a self-hosted runner installed on the Docker host itself (registered
+# with the extra label `deploy`). The runner does not check the repo out — it
+# runs scripts/deploy.sh inside the existing server checkout, whose path is
+# the DEPLOY_PATH repository variable (Settings → Secrets and variables →
+# Actions → Variables).
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Rebuild everything (images, dependencies, assets) regardless of what changed
+        type: boolean
+        default: false
+
+# One deploy at a time; a second merge queues behind the first instead of
+# racing it.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event.pull_request.merged == true &&
+       contains(github.event.pull_request.labels.*.name, 'deploy'))
+    runs-on: [self-hosted, deploy]
+    timeout-minutes: 20
+    steps:
+      - name: Deploy
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          FULL: ${{ inputs.full }}
+        run: |
+          : "${DEPLOY_PATH:?Set the DEPLOY_PATH repository variable to the server checkout path}"
+          cd "$DEPLOY_PATH"
+          if [ "$FULL" = "true" ]; then
+            bash scripts/deploy.sh --full
+          else
+            bash scripts/deploy.sh
+          fi
