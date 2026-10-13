@@ -87,16 +87,18 @@ main() {
   # --- 5. Front-end assets ---------------------------------------------------
   # public/build is gitignored, so the server compiles its own. Tailwind scans
   # resources/views and resources/js, so any change under resources/ can add
-  # or remove CSS classes.
+  # or remove CSS classes. Node runs in the app container (glibc); the `rolldown`
+  # probe also catches a node_modules installed for another platform (e.g. the
+  # old alpine `node` service), whose native binaries the app can't load.
   if changed_matches '^src/(package(-lock)?\.json|vite\.config\.js|tailwind\.config\.js|postcss\.config\.js)$' \
-    || [[ ! -d src/node_modules ]]; then
+    || ! docker compose exec -T app node -e "require('rolldown')" >/dev/null 2>&1; then
     echo "[deploy] JS dependencies changed — npm ci"
-    docker compose run --rm -T node npm ci --no-audit --no-fund
+    docker compose exec -T app npm ci --no-audit --no-fund
   fi
   if changed_matches '^src/(resources/|package(-lock)?\.json$|vite\.config\.js$|tailwind\.config\.js$|postcss\.config\.js$)' \
     || [[ ! -f src/public/build/manifest.json ]]; then
     echo "[deploy] front-end changed — npm run build"
-    docker compose run --rm -T node npm run build
+    docker compose exec -T app npm run build
   fi
 
   # --- 6. Laravel caches -----------------------------------------------------
