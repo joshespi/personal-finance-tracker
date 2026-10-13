@@ -5,7 +5,7 @@ import {
     PieController, ArcElement,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import { DEMO_MASK, fmtFull, fmtK } from './format-utils';
+import { DEMO_MASK, fmtDate, fmtFull, fmtK, fmtSigned, fmtSignedPct, gainLossClass } from './format-utils';
 
 // Register once for every bundle that imports these helpers.
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
@@ -103,15 +103,84 @@ function buildNorm(data, key, range) {
     return f.map(r => ({ x: new Date(r.date).getTime(), y: parseFloat(((r[key] / base - 1) * 100).toFixed(2)) }));
 }
 
+// First-to-last change across a range-filtered window (rows date-ascending, as
+// the chart already assumes). `dollar`/`pct` are the raw value move
+// (contributions included, same as the dashboard Gain/Loss tile); `costDelta` is
+// the window's cost-basis move so the readout can show how much of that was money
+// put in. A single row is a zero change; `pct` is null when the window starts
+// at/below zero.
+export function rangeChange(rows) {
+    if (!rows || !rows.length) return null;
+    const first = rows[0];
+    const last  = rows[rows.length - 1];
+    const dollar = last.value - first.value;
+    return {
+        dollar,
+        pct: first.value > 0 ? dollar / first.value * 100 : null,
+        costDelta: last.cost - first.cost,
+    };
+}
+
+// Keep in step with the :ranges lists passed to <x-chart-range-buttons>; an
+// unlisted code falls back to showing the raw code.
+const RANGE_PHRASES = {
+    '5D': 'past 5 days', '1W': 'past week', '1M': 'past month', '3M': 'past 3 months',
+    '6M': 'past 6 months', '1Y': 'past year', 'YTD': 'year to date',
+    '5Y': 'past 5 years', '10Y': 'past 10 years', 'All': 'all time',
+};
+
+// Text for the "+$1,234.56 (+5.12%)" / "past 3 months · cost basis +$500.00"
+// readout under a value chart's title, or null when there's nothing to show.
+// Dollars are masked in demo mode; % is kept, as on the calendar heatmap tooltip.
+export function rangeChangeText(rows, range, demoMode = false) {
+    const c = rangeChange(rows);
+    if (!c) return null;
+
+    const money = v => (demoMode ? DEMO_MASK : fmtSigned(v));
+
+    const cut = cutoffDate(range);
+    const firstDate = new Date(rows[0].date);
+    // History short of the range by over a week is labelled "since <date>" so the label matches the numbers.
+    let sub = cut && firstDate - cut > WEEK_MS
+        ? 'since ' + fmtDate(firstDate)
+        : (RANGE_PHRASES[range] ?? range);
+    if (Math.round(c.costDelta * 100) !== 0) sub += ' · cost basis ' + money(c.costDelta);
+
+    return {
+        main: money(c.dollar) + (c.pct === null ? '' : ` (${fmtSignedPct(c.pct)})`),
+        mainClass: gainLossClass(c.dollar),
+        sub,
+    };
+}
+
+function renderRangeChange(el, rows, range, demoMode) {
+    el.replaceChildren();
+    const t = rangeChangeText(rows, range, demoMode);
+    if (!t) return;
+
+    const main = document.createElement('span');
+    main.className = 'font-semibold font-mono ' + t.mainClass;
+    main.textContent = t.main;
+
+    const sub = document.createElement('span');
+    sub.className = 'ml-2 text-xs text-gray-400 dark:text-gray-500';
+    sub.textContent = t.sub;
+
+    el.append(main, sub);
+}
+
 // Shared value/cost line chart (portfolio "Market Value" vs "Cost Basis").
 // `data` may be an array or a () => array thunk (the dashboard switches source by
 // a manual-assets toggle). `transform` post-processes the range-filtered rows
 // (the dashboard resamples long spans); `onUpdate(filtered, range)` is a hook for
-// side effects like the dashboard summary tiles. Returns { chart, refresh } so
-// callers can re-render the current range without re-reading the active range.
+// side effects like the dashboard summary tiles. `changeEl`, if given, gets the
+// active range's $/% change (computed off the un-resampled rows so the endpoints
+// are exact). Returns { chart, refresh } so callers can re-render the current
+// range without re-reading the active range.
 export function makeValueCostChart({
     el, gridColor, labelColor, valueLabel, data, btnsSel,
     range = '1Y', transform = rows => rows, onUpdate, autoTimeUnit = false,
+    changeEl = null, demoMode = false,
 }) {
     if (!el) return null;
 
@@ -148,6 +217,7 @@ export function makeValueCostChart({
         chart.data.datasets[1].data = points.map(row => pointFromRow(row, 'cost'));
         chart.update();
         activateBtn(btnsSel, r);
+        if (changeEl) renderRangeChange(changeEl, filtered, r, demoMode);
         if (onUpdate) onUpdate(filtered, r);
     }
 
