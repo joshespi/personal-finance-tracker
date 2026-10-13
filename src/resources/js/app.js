@@ -1,6 +1,9 @@
 import './bootstrap';
 import './ticker-search';
-import { DEMO_MASK, fmtFull, fmtSigned } from './format-utils';
+import { initFormGuards } from './form-guards';
+import { DEMO_MASK, fmtFull, fmtSigned, fmtSignedPct, gainLossClass } from './format-utils';
+
+initFormGuards();
 
 // Whole-dollar display for interactive "type any number and see the split" widgets —
 // deliberately not demo-masked, since the figure being shown is whatever the visitor
@@ -79,9 +82,13 @@ document.addEventListener('alpine:init', () => {
                 if (v === null || v === undefined) return '—';
                 return fmtSigned(v);
             },
+            plPctFmt(v) {
+                if (v === null || v === undefined) return '';
+                return ' (' + fmtSignedPct(v) + ')';
+            },
             plClass(v) {
                 if (v === null || v === undefined) return 'text-gray-400 dark:text-gray-500';
-                return v >= 0 ? 'text-green-600' : 'text-red-600';
+                return gainLossClass(v);
             },
             get sorted() {
                 return [...this.rows].sort((a, b) => {

@@ -14,6 +14,7 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <x-flash class="mb-4 mx-4 sm:mx-0" />
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
                 <div class="mb-6 p-3 bg-gray-50 dark:bg-gray-700 rounded-md flex items-center justify-between gap-4">
                     <div>

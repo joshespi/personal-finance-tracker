@@ -130,6 +130,7 @@
                             <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
                                 <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">All Years</h3>
                             </div>
+                            <div class="overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead>
                                     <tr class="text-xs text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
@@ -161,6 +162,7 @@
                                     @endforeach
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                     @endif
 

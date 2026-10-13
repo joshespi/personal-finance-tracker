@@ -1,8 +1,8 @@
 import {
     resampleByRange, makeValueCostChart, makeBenchmarkChart, makeAllocationPie,
-    dailyChangeMap, buildCalendarMonths, calendarColor, themeColors,
+    dailyChangeMap, buildCalendarMonths, calendarColor, themeColors, rangeChange,
 } from './chart-utils';
-import { DEMO_MASK, fmtFull, fmtSigned } from './format-utils';
+import { DEMO_MASK, fmtDate, fmtFull, fmtSigned, fmtSignedPct, gainLossClass } from './format-utils';
 
 // Months shown per page of the calendar heatmap; prev/next pages through
 // history one month at a time from there.
@@ -33,8 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateTiles(filtered, range) {
         if (!filtered.length) return;
-        const last  = filtered[filtered.length - 1];
-        const first = filtered[0];
+        const last = filtered[filtered.length - 1];
 
         const tileValue = demoMode ? DEMO_MASK : fmtFull(last.value);
         const mvEl = document.getElementById('tile-market-value');
@@ -49,9 +48,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (demoMode) {
                 plEl.textContent = DEMO_MASK;
             } else {
-                const pl = last.value - first.value;
+                // Same rangeChange() the chart's title readout uses, so the two never disagree.
+                const pl = rangeChange(filtered).dollar;
                 plEl.textContent = fmtSigned(pl);
-                plEl.className   = 'mt-1 text-2xl font-semibold font-mono ' + (pl >= 0 ? 'text-green-600' : 'text-red-600');
+                plEl.className   = 'mt-1 text-2xl font-semibold font-mono ' + gainLossClass(pl);
             }
             if (plLabel) plLabel.textContent = range + ' Gain/Loss';
         }
@@ -253,15 +253,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const dateStr = cell.dataset.date;
             const change  = changes.get(dateStr);
-            const dateLabel = new Date(dateStr + 'T00:00:00Z')
-                .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+            const dateLabel = fmtDate(new Date(dateStr + 'T00:00:00Z'));
 
             if (!change) {
                 calendarTooltip.textContent = `${dateLabel}: no data`;
             } else {
                 const dollarStr = demoMode ? DEMO_MASK : fmtSigned(change.dollar);
-                const pctStr = (change.pct >= 0 ? '+' : '') + change.pct.toFixed(2) + '%';
-                calendarTooltip.textContent = `${dateLabel}: ${dollarStr} (${pctStr})`;
+                calendarTooltip.textContent = `${dateLabel}: ${dollarStr} (${fmtSignedPct(change.pct)})`;
             }
 
             calendarTooltip.classList.remove('hidden');
@@ -285,6 +283,8 @@ document.addEventListener('DOMContentLoaded', function () {
         transform: resampleByRange,
         onUpdate: updateTiles,
         autoTimeUnit: true,
+        changeEl: document.getElementById('dash-range-change'),
+        demoMode,
     });
 
     if (manualBtn && dashChart) {

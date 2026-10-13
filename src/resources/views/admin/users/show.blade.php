@@ -74,6 +74,7 @@
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                     <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Recent Logins</h3>
                 </div>
+                <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-700">
                         <tr>
@@ -98,6 +99,7 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
             </div>
 
         </div>

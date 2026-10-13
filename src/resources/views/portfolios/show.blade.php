@@ -44,12 +44,6 @@
 
             <x-flash />
 
-            @if (session('error'))
-                <div class="bg-amber-100 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 rounded-md px-4 py-3 text-sm">
-                    {{ session('error') }}
-                </div>
-            @endif
-
             @if ($portfolio->isClosed())
                 <div class="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-4 py-3 text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2">
                     <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -124,7 +118,10 @@
             @if ($chartData->count() > 1)
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Portfolio Value History</h3>
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Portfolio Value History</h3>
+                            <p id="port-range-change" aria-live="polite" class="mt-1 text-sm"></p>
+                        </div>
                         <x-chart-range-buttons id="port-range-btns" :ranges="['5D','1W','1M','3M','6M','1Y','YTD','5Y','10Y','All']" />
                     </div>
                     <div class="h-72 relative"><canvas id="portChart"></canvas></div>
@@ -354,7 +351,7 @@
                                             <span x-show="h.unrealized_gain !== null">
                                                 <span x-text="plFmt(h.unrealized_gain)"></span>
                                                 <span x-show="h.unrealized_pct !== null" class="text-xs"
-                                                      x-text="' (' + (h.unrealized_pct >= 0 ? '+' : '') + h.unrealized_pct?.toFixed(2) + '%)'"></span>
+                                                      x-text="plPctFmt(h.unrealized_pct)"></span>
                                             </span>
                                             <span x-show="h.unrealized_gain === null" class="text-gray-300 dark:text-gray-600">—</span>
                                         </td>

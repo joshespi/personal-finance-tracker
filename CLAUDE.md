@@ -14,12 +14,12 @@ The Laravel project lives in `src/`. Everything below assumes `src/` is the app 
 
 ## Runtime & how to run commands
 
-The app runs in Docker Compose (PHP 8.5-FPM `app`, MariaDB 11.8 `db`, Nginx, and a separate `node` service — Node is **not** in the PHP container). **The live app runs inside the user's own container; the host checkout has no `vendor/` or `node_modules/`.** Do not assume you can execute artisan/composer/npm directly — surface the command for the user to run, e.g.:
+The app runs in Docker Compose (PHP 8.5-FPM `app`, MariaDB 11.8 `db`, Nginx; Node + npm are installed in the `app` image, so run frontend builds there — there is no separate Node service). **The live app runs inside the user's own container; the host checkout has no `vendor/` or `node_modules/`.** Do not assume you can execute artisan/composer/npm directly — surface the command for the user to run, e.g.:
 
 ```bash
 docker compose exec app php artisan <command>     # artisan/composer in the PHP container
-docker compose run --rm node npm run build         # build assets after any JS/CSS change
-docker compose run --rm node npm install           # after package.json changes
+docker compose exec app npm run build         # build assets after any JS/CSS change
+docker compose exec app npm install           # after package.json changes
 docker compose exec app composer install           # manual dep restore (rarely needed locally now)
 ```
 
@@ -51,7 +51,7 @@ docker compose exec app php vendor/bin/phpunit --filter EnvelopeTest  # single t
 - Cron-style commands registered in `bootstrap/app.php` `withSchedule`: `assets:fetch-prices` + `assets:process-backfill-queue` (hourly), `portfolios:snapshot` (daily 00:05), `transactions:materialize` (daily 00:10), `email:send-summaries` (daily 06:00). These are driven by the in-stack `scheduler` compose service (`schedule:work`) — **not** a host cron; running both double-fires every command (that's how duplicate summary emails happened). Every entry carries `onOneServer()` so a stray second scheduler loses the shared lock instead of re-running the command.
 - Recurring `ScheduledTransaction`s are **materialized lazily** by `ScheduledTransactionService`, triggered app-wide by the `MaterializeDueScheduledTransactions` web-group middleware on every authenticated request — due entries are created and `next_due_at` advanced (capped at 24 catch-up cycles). The daily `transactions:materialize` command is a backstop for accounts that never open the app, and is deliberately the *only* trigger for the `ScheduledTransactionsSummary` email (an active user materializing on every page load would otherwise get emailed about things they're already looking at).
 
-**Frontend:** Blade + Alpine.js + Tailwind, built by Vite (`node` service). Charts via Chart.js (shared helpers have vitest unit tests — `npm run test`), markdown via EasyMDE, QR via `qrcode`. Two Livewire components (`app/Livewire/TransactionList.php`, single-account ledger; `AllTransactions.php`, the cross-account ledger — sharing form/CRUD logic via `Concerns\ManagesCashTransactionForm`); the app is otherwise server-rendered.
+**Frontend:** Blade + Alpine.js + Tailwind, built by Vite (`npm run build` in the `app` container). Charts via Chart.js (shared helpers have vitest unit tests — `npm run test`), markdown via EasyMDE, QR via `qrcode`. Two Livewire components (`app/Livewire/TransactionList.php`, single-account ledger; `AllTransactions.php`, the cross-account ledger — sharing form/CRUD logic via `Concerns\ManagesCashTransactionForm`); the app is otherwise server-rendered.
 
 **Conventions:** `Model::preventLazyLoading()` is on outside production — N+1s throw in dev/test, so eager-load relations. Production forces HTTPS. Login events are recorded to `LoginHistory` via a listener.
 

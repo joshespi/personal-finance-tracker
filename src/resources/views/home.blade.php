@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Portfolio Tracker') }} &mdash; Free, self-hosted personal finance</title>
+        <title>{{ config('app.name') }} &mdash; Free, self-hosted personal finance</title>
         <meta name="description" content="Track investments and budget your cash in one self-hosted app. Free forever, no ads, no third-party data sharing.">
 
         <!-- Dark mode: apply class before paint to avoid flash -->

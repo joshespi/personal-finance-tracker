@@ -71,7 +71,7 @@
             {{ $filter || $accountFilter || $statusFilter ? $emptyFilteredText : $emptyText }}
         </div>
     @else
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto transition-opacity" wire:loading.class="opacity-60" wire:target="filter,accountFilter,statusFilter">
             <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
                 <thead class="bg-gray-50 dark:bg-gray-700">
                     <tr>

@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', function () {
         valueLabel: 'Market Value',
         data: allData,
         btnsSel: '#port-range-btns',
+        changeEl: document.getElementById('port-range-change'),
+        demoMode,
     });
 
     makeBenchmarkChart({
