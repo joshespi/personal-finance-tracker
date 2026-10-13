@@ -1,7 +1,7 @@
 import './bootstrap';
 import './ticker-search';
 import { initFormGuards } from './form-guards';
-import { DEMO_MASK, fmtFull, fmtSigned } from './format-utils';
+import { DEMO_MASK, fmtFull, fmtSigned, fmtSignedPct, gainLossClass } from './format-utils';
 
 initFormGuards();
 
@@ -82,9 +82,13 @@ document.addEventListener('alpine:init', () => {
                 if (v === null || v === undefined) return '—';
                 return fmtSigned(v);
             },
+            plPctFmt(v) {
+                if (v === null || v === undefined) return '';
+                return ' (' + fmtSignedPct(v) + ')';
+            },
             plClass(v) {
                 if (v === null || v === undefined) return 'text-gray-400 dark:text-gray-500';
-                return v >= 0 ? 'text-green-600' : 'text-red-600';
+                return gainLossClass(v);
             },
             get sorted() {
                 return [...this.rows].sort((a, b) => {
