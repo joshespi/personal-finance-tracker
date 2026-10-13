@@ -54,14 +54,14 @@ docker compose logs -f app
 docker compose exec app php artisan <command>
 ```
 
-Assets are built via the `node` service (Node is not in the PHP container):
+Node + npm are installed in the `app` container, so assets build there:
 
 ```bash
 # First time or after package.json changes
-docker compose run --rm node npm install
+docker compose exec app npm install
 
 # After any JS/CSS change
-docker compose run --rm node npm run build
+docker compose exec app npm run build
 ```
 
 ## Scheduled commands
