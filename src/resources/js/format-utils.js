@@ -4,10 +4,10 @@
 
 export const DEMO_MASK = '••••';
 
-export function fmtK(v) {
+export function fmtK(v, kDecimals = 1) {
     const abs = Math.abs(v);
     if (abs >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
-    if (abs >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K';
+    if (abs >= 1e3) return '$' + (v / 1e3).toFixed(kDecimals) + 'K';
     return '$' + v.toFixed(0);
 }
 

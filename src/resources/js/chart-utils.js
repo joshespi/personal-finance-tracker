@@ -37,21 +37,28 @@ function cutoffDate(range) {
     }
 }
 
+// Bare Y-m-d strings parse as UTC midnight (the previous evening in the
+// Americas), so read them as local midnight instead; anything else passes through.
+export function parseDay(d) {
+    const m = typeof d === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(d);
+}
+
 export function filterByRange(data, range) {
     const cut = cutoffDate(range);
-    return cut ? data.filter(r => new Date(r.date) >= cut) : data;
+    return cut ? data.filter(r => parseDay(r.date) >= cut) : data;
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-const weekKey  = d => Math.floor(new Date(d).getTime() / WEEK_MS);
-const monthKey = d => { const t = new Date(d); return t.getFullYear() * 12 + t.getMonth(); };
+const weekKey  = d => Math.floor(parseDay(d).getTime() / WEEK_MS);
+const monthKey = d => { const t = parseDay(d); return t.getFullYear() * 12 + t.getMonth(); };
 
 // Daily snapshots get noisy over long spans. Collapse to period-end points
 // (weekly/monthly) so the long-range trend reads cleanly. Latest point is
 // always preserved, so today's value never drifts.
 export function resampleByRange(data) {
     if (data.length < 2) return data;
-    const spanDays = (new Date(data[data.length - 1].date) - new Date(data[0].date)) / 86400000;
+    const spanDays = (parseDay(data[data.length - 1].date) - parseDay(data[0].date)) / 86400000;
     if (spanDays <= 92) return data;
     const keyFn = spanDays <= 730 ? weekKey : monthKey;
     const buckets = new Map();
@@ -76,7 +83,8 @@ function makeTimeScales(gridColor, labelColor, yFmt) {
     return {
         x: {
             type: 'time',
-            time: { unit: 'day', tooltipFormat: 'MMM d, yyyy' },
+            // Snapshots are daily, so never auto-pick hour ticks (autoTimeUnit charts).
+            time: { unit: 'day', minUnit: 'day', tooltipFormat: 'MMM d, yyyy' },
             grid: { color: gridColor },
             ticks: { color: labelColor },
         },
@@ -87,12 +95,37 @@ function makeTimeScales(gridColor, labelColor, yFmt) {
     };
 }
 
+// Y-axis label for the value/cost chart. fmtK's single decimal collapses to
+// duplicate labels once the axis is tight, so add K-unit decimals as the tick
+// step shrinks (step $100+ -> 1, $10-99 -> 2, smaller -> 3).
+export function valueTickFmt(v, i, ticks) {
+    if (!ticks || ticks.length < 2) return fmtK(v);
+    const step = Math.abs(ticks[1].value - ticks[0].value);
+    return fmtK(v, step >= 100 ? 1 : step >= 10 ? 2 : 3);
+}
+
+// Cost basis far from the value line (further than the value's own swing, min 1%
+// of its level) flattens the value line when both share an axis, so the chart
+// hides it by default. Rows carry `value`/`cost`.
+export function shouldHideCost(points) {
+    if (points.length < 2) return false;
+    let vMin = Infinity, vMax = -Infinity, cMin = Infinity, cMax = -Infinity;
+    for (const { value, cost } of points) {
+        if (value < vMin) vMin = value;
+        if (value > vMax) vMax = value;
+        if (cost < cMin) cMin = cost;
+        if (cost > cMax) cMax = cost;
+    }
+    const span = Math.max(vMax - vMin, Math.abs(vMax) * 0.01);
+    return cMin < vMin - span || cMax > vMax + span;
+}
+
 function makeLegendOpts(labelColor) {
     return { display: true, position: 'bottom', labels: { color: labelColor } };
 }
 
 function pointFromRow(r, key) {
-    return { x: new Date(r.date).getTime(), y: r[key] };
+    return { x: parseDay(r.date).getTime(), y: r[key] };
 }
 
 function buildNorm(data, key, range) {
@@ -100,7 +133,7 @@ function buildNorm(data, key, range) {
     if (!f.length) return [];
     const base = f[0][key];
     if (!base) return [];
-    return f.map(r => ({ x: new Date(r.date).getTime(), y: parseFloat(((r[key] / base - 1) * 100).toFixed(2)) }));
+    return f.map(r => ({ x: parseDay(r.date).getTime(), y: parseFloat(((r[key] / base - 1) * 100).toFixed(2)) }));
 }
 
 // First-to-last change across a range-filtered window (rows date-ascending, as
@@ -139,10 +172,11 @@ export function rangeChangeText(rows, range, demoMode = false) {
     const money = v => (demoMode ? DEMO_MASK : fmtSigned(v));
 
     const cut = cutoffDate(range);
-    const firstDate = new Date(rows[0].date);
+    const firstDate = parseDay(rows[0].date);
     // History short of the range by over a week is labelled "since <date>" so the label matches the numbers.
+    // fmtDate reads UTC, so hand it the UTC-midnight parse of the same day.
     let sub = cut && firstDate - cut > WEEK_MS
-        ? 'since ' + fmtDate(firstDate)
+        ? 'since ' + fmtDate(new Date(rows[0].date))
         : (RANGE_PHRASES[range] ?? range);
     if (Math.round(c.costDelta * 100) !== 0) sub += ' · cost basis ' + money(c.costDelta);
 
@@ -184,6 +218,7 @@ export function makeValueCostChart({
 }) {
     if (!el) return null;
 
+    let costVisibleOverride = null; // null = auto, else the user's legend choice (page session only)
     const chart = new Chart(el, {
         type: 'line',
         data: {
@@ -196,9 +231,16 @@ export function makeValueCostChart({
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
-            scales: makeTimeScales(gridColor, labelColor, fmtK),
+            scales: makeTimeScales(gridColor, labelColor, valueTickFmt),
             plugins: {
-                legend: makeLegendOpts(labelColor),
+                legend: {
+                    ...makeLegendOpts(labelColor),
+                    // Remember a manual cost-basis toggle so range changes don't undo it.
+                    onClick(e, item, legend) {
+                        Chart.defaults.plugins.legend.onClick.call(this, e, item, legend);
+                        if (item.datasetIndex === 1) costVisibleOverride = legend.chart.isDatasetVisible(1);
+                    },
+                },
                 tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtFull(ctx.parsed.y)}` } },
             },
         },
@@ -215,6 +257,8 @@ export function makeValueCostChart({
         const points   = transform(filtered);
         chart.data.datasets[0].data = points.map(row => pointFromRow(row, 'value'));
         chart.data.datasets[1].data = points.map(row => pointFromRow(row, 'cost'));
+        const hideCost = costVisibleOverride === null ? shouldHideCost(points) : !costVisibleOverride;
+        chart.setDatasetVisibility(1, !hideCost);
         chart.update();
         activateBtn(btnsSel, r);
         if (changeEl) renderRangeChange(changeEl, filtered, r, demoMode);
@@ -293,7 +337,7 @@ export function makeAllocationPie({ el, labels, values, colors, demoMode = false
 // Day-over-day $ and % change, keyed by date string. First date in the series
 // has no prior day to diff against, so it's omitted (renders as "no data").
 export function dailyChangeMap(rows) {
-    const sorted = [...rows].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const sorted = [...rows].sort((a, b) => parseDay(a.date) - parseDay(b.date));
     const map = new Map();
     for (let i = 1; i < sorted.length; i++) {
         const prev = sorted[i - 1].value;

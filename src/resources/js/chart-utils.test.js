@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resampleByRange, filterByRange, dailyChangeMap, buildCalendarMonths, calendarColor, rangeChange, rangeChangeText } from './chart-utils';
+import { resampleByRange, filterByRange, dailyChangeMap, buildCalendarMonths, calendarColor, rangeChange, rangeChangeText, shouldHideCost, parseDay, valueTickFmt } from './chart-utils';
 import { DEMO_MASK } from './format-utils';
 
 function dailySeries(startISO, days) {
@@ -255,5 +255,49 @@ describe('rangeChangeText', () => {
 
     it('returns null with no rows', () => {
         expect(rangeChangeText([], '1M')).toBeNull();
+    });
+});
+
+describe('shouldHideCost', () => {
+    const rows = (values, cost) => values.map(value => ({ value, cost }));
+
+    it('hides cost far below the value band', () => {
+        expect(shouldHideCost(rows([108000, 108500, 109000], 73000))).toBe(true);
+    });
+
+    it('keeps cost within or near the band', () => {
+        expect(shouldHideCost(rows([100000, 110000], 105000))).toBe(false);
+        expect(shouldHideCost(rows([100000, 110000], 95000))).toBe(false);
+    });
+
+    it('uses a 1% minimum span for a flat value series', () => {
+        expect(shouldHideCost(rows([100000, 100000], 99500))).toBe(false);
+        expect(shouldHideCost(rows([100000, 100000], 98000))).toBe(true);
+    });
+
+    it('returns false for empty or single-point input', () => {
+        expect(shouldHideCost([])).toBe(false);
+        expect(shouldHideCost([{ value: 100000, cost: 1 }])).toBe(false);
+    });
+});
+
+describe('parseDay', () => {
+    it('reads a bare Y-m-d string as local midnight', () => {
+        const d = parseDay('2026-09-25');
+        expect(d.getTime()).toBe(new Date(2026, 8, 25).getTime());
+    });
+});
+
+describe('valueTickFmt', () => {
+    it('gives unique labels for a $50-step axis around 108K', () => {
+        const ticks = [107900, 107950, 108000, 108050, 108100].map(value => ({ value }));
+        const labels = ticks.map((t, i) => valueTickFmt(t.value, i, ticks));
+        expect(new Set(labels).size).toBe(labels.length);
+        expect(labels[2]).toBe('$108.00K');
+    });
+
+    it('falls back to fmtK without tick context or outside the K range', () => {
+        expect(valueTickFmt(108100)).toBe('$108.1K');
+        expect(valueTickFmt(500, 0, [{ value: 500 }, { value: 600 }])).toBe('$500');
     });
 });
