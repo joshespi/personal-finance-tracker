@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { resampleByRange, filterByRange, dailyChangeMap, buildCalendarMonths, calendarColor } from './chart-utils';
+import { resampleByRange, filterByRange, dailyChangeMap, buildCalendarMonths, calendarColor, rangeChange, rangeChangeText } from './chart-utils';
+import { DEMO_MASK } from './format-utils';
 
 function dailySeries(startISO, days) {
     const start = new Date(startISO).getTime();
@@ -160,5 +161,99 @@ describe('calendarColor', () => {
 
     it('scales intensity with magnitude', () => {
         expect(calendarColor(0.1, false)).not.toBe(calendarColor(3, false));
+    });
+});
+
+describe('rangeChange', () => {
+    it('returns null with no rows', () => {
+        expect(rangeChange([])).toBeNull();
+        expect(rangeChange(null)).toBeNull();
+    });
+
+    it('treats a single row as a zero change', () => {
+        expect(rangeChange([{ date: '2026-01-01', value: 100, cost: 50 }])).toEqual({ dollar: 0, pct: 0, costDelta: 0 });
+    });
+
+    it('diffs first and last value and cost basis', () => {
+        const c = rangeChange([
+            { date: '2026-01-01', value: 1000, cost: 800 },
+            { date: '2026-01-15', value: 900,  cost: 800 },
+            { date: '2026-02-01', value: 1250, cost: 900 },
+        ]);
+        expect(c.dollar).toBe(250);
+        expect(c.pct).toBeCloseTo(25);
+        expect(c.costDelta).toBe(100);
+    });
+
+    it('reports negative moves', () => {
+        const c = rangeChange([
+            { date: '2026-01-01', value: 2000, cost: 1500 },
+            { date: '2026-02-01', value: 1500, cost: 1500 },
+        ]);
+        expect(c.dollar).toBe(-500);
+        expect(c.pct).toBeCloseTo(-25);
+        expect(c.costDelta).toBe(0);
+    });
+
+    it('leaves pct null when the window starts at zero', () => {
+        const c = rangeChange([
+            { date: '2026-01-01', value: 0,   cost: 0 },
+            { date: '2026-02-01', value: 500, cost: 400 },
+        ]);
+        expect(c.dollar).toBe(500);
+        expect(c.pct).toBeNull();
+    });
+});
+
+describe('rangeChangeText', () => {
+    const daysAgo = n => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+
+    it('formats the change, range phrase and cost-basis move', () => {
+        const t = rangeChangeText([
+            { date: daysAgo(89), value: 1000, cost: 800 },
+            { date: daysAgo(0),  value: 1100, cost: 850 },
+        ], '3M');
+        expect(t.main).toBe('+$100.00 (+10.00%)');
+        expect(t.mainClass).toBe('text-green-600');
+        expect(t.sub).toBe('past 3 months · cost basis +$50.00');
+    });
+
+    it('omits the cost-basis part when it did not move', () => {
+        const t = rangeChangeText([
+            { date: daysAgo(5), value: 1000, cost: 800 },
+            { date: daysAgo(0), value: 900,  cost: 800.001 },
+        ], '1W');
+        expect(t.main).toBe('-$100.00 (-10.00%)');
+        expect(t.mainClass).toBe('text-red-600');
+        expect(t.sub).toBe('past week');
+    });
+
+    it('says "since <date>" when history is shorter than the range', () => {
+        const t = rangeChangeText([
+            { date: daysAgo(30), value: 1000, cost: 800 },
+            { date: daysAgo(0),  value: 1100, cost: 800 },
+        ], '1Y');
+        expect(t.sub).toMatch(/^since [A-Z][a-z]{2} \d{1,2}, \d{4}$/);
+    });
+
+    it('keeps "all time" for the All range', () => {
+        const t = rangeChangeText([
+            { date: daysAgo(30), value: 1000, cost: 800 },
+            { date: daysAgo(0),  value: 1100, cost: 800 },
+        ], 'All');
+        expect(t.sub).toBe('all time');
+    });
+
+    it('masks dollars but keeps % in demo mode', () => {
+        const t = rangeChangeText([
+            { date: daysAgo(89), value: 1000, cost: 800 },
+            { date: daysAgo(0),  value: 1100, cost: 850 },
+        ], '3M', true);
+        expect(t.main).toBe(`${DEMO_MASK} (+10.00%)`);
+        expect(t.sub).toBe(`past 3 months · cost basis ${DEMO_MASK}`);
+    });
+
+    it('returns null with no rows', () => {
+        expect(rangeChangeText([], '1M')).toBeNull();
     });
 });

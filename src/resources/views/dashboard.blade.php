@@ -290,13 +290,16 @@
                     {{-- Portfolio value chart with time range toggles --}}
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-6 py-5">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                            <div class="flex items-center gap-3">
-                                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Portfolio Value</h3>
-                                <button id="manual-toggle"
-                                        class="px-2 py-0.5 text-xs rounded font-medium transition border"
-                                        title="Toggle manual assets in chart">
-                                    Manual
-                                </button>
+                            <div>
+                                <div class="flex items-center gap-3">
+                                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Portfolio Value</h3>
+                                    <button id="manual-toggle"
+                                            class="px-2 py-0.5 text-xs rounded font-medium transition border"
+                                            title="Toggle manual assets in chart">
+                                        Manual
+                                    </button>
+                                </div>
+                                <p id="dash-range-change" aria-live="polite" class="mt-1 text-sm"></p>
                             </div>
                             <x-chart-range-buttons id="dash-range-btns" :ranges="['5D','1W','1M','3M','6M','1Y','YTD','5Y','10Y','All']" />
                         </div>
