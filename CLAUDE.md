@@ -14,7 +14,7 @@ The Laravel project lives in `src/`. Everything below assumes `src/` is the app 
 
 ## Runtime & how to run commands
 
-The app runs in Docker Compose (PHP 8.5-FPM `app`, MariaDB 11.8 `db`, Nginx; Node + npm are installed in the `app` image, so run frontend builds there, and `scripts/deploy.sh` builds there too — there is no separate Node service). **The live app runs inside the user's own container; the host checkout has no `vendor/` or `node_modules/`.** Do not assume you can execute artisan/composer/npm directly — surface the command for the user to run, e.g.:
+The app runs in Docker Compose (PHP 8.5-FPM `app`, MariaDB 11.8 `db`, Nginx; Node + npm are installed in the `app` image, so run frontend builds there — there is no separate Node service). **The live app runs inside the user's own container; the host checkout has no `vendor/` or `node_modules/`.** Do not assume you can execute artisan/composer/npm directly — surface the command for the user to run, e.g.:
 
 ```bash
 docker compose exec app php artisan <command>     # artisan/composer in the PHP container
