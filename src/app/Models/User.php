@@ -17,6 +17,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 
+use function Illuminate\Support\enum_value;
+
 // is_admin and email_summary_last_sent_at deliberately excluded: neither is ever user-submitted,
 // even though every current write path already passes a validated array rather than
 // $request->all() — this is defense-in-depth against a future call site introducing that
@@ -49,23 +51,31 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Drops email verification when the address was just changed: the new mailbox hasn't been
+     * proven to belong to the user, so carrying the old verification over would mark an
+     * unverified address as verified. Call after fill(), before save().
+     */
+    public function unverifyIfEmailChanged(): void
+    {
+        if ($this->isDirty('email')) {
+            $this->email_verified_at = null;
+        }
+    }
+
+    /**
      * Whether a given dashboard block should render for this user. Widgets are
      * visible by default — only an explicit false in dashboard_preferences hides
      * one, so newly-added widgets show up for existing users automatically.
      */
     public function showsWidget(DashboardWidget|string $widget): bool
     {
-        $key = $widget instanceof DashboardWidget ? $widget->value : $widget;
-
-        return (bool) ($this->dashboard_preferences[$key] ?? true);
+        return (bool) ($this->dashboard_preferences[enum_value($widget)] ?? true);
     }
 
     /** Whether this user opted into a given email-summary cadence. Off by default (opt-in). */
     public function wantsEmailFrequency(EmailSummaryFrequency|string $frequency): bool
     {
-        $value = $frequency instanceof EmailSummaryFrequency ? $frequency->value : $frequency;
-
-        return in_array($value, $this->email_summary_frequencies ?? [], true);
+        return in_array(enum_value($frequency), $this->email_summary_frequencies ?? [], true);
     }
 
     /** Whether this user has already been sent $frequency's summary for the period $at falls in. */
@@ -92,9 +102,7 @@ class User extends Authenticatable implements MustVerifyEmail
     /** Whether this user opted into a given email-summary content section. Off by default (opt-in). */
     public function wantsEmailSummarySection(EmailSummarySection|string $section): bool
     {
-        $value = $section instanceof EmailSummarySection ? $section->value : $section;
-
-        return in_array($value, $this->email_summary_sections ?? [], true);
+        return in_array(enum_value($section), $this->email_summary_sections ?? [], true);
     }
 
     public function portfolios(): HasMany
@@ -296,20 +304,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
     private function queryLatestPortfolioValue(): float
     {
-        $portfolioIds = $this->portfolios()->pluck('id');
-
-        if ($portfolioIds->isEmpty()) {
-            return 0.0;
-        }
-
-        $latestDates = PortfolioSnapshot::whereIn('portfolio_id', $portfolioIds)
-            ->selectRaw('portfolio_id, MAX(recorded_on) as max_date')
-            ->groupBy('portfolio_id');
-
-        return (float) PortfolioSnapshot::joinSub($latestDates, 'latest', fn ($j) => $j
-            ->on('portfolio_snapshots.portfolio_id', '=', 'latest.portfolio_id')
-            ->on('portfolio_snapshots.recorded_on', '=', 'latest.max_date')
-        )->selectRaw('SUM(portfolio_snapshots.market_value + portfolio_snapshots.manual_value) as total')
-            ->value('total');
+        return PortfolioSnapshot::latestTotalFor($this->portfolios()->pluck('id')) ?? 0.0;
     }
 }

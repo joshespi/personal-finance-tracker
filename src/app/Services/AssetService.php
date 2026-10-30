@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Enums\AssetType;
 use App\Models\Asset;
 
+use function Illuminate\Support\enum_value;
+
 class AssetService
 {
     /** Canonical form for ticker symbols — apply before storing or comparing them. */
@@ -16,11 +18,10 @@ class AssetService
     public static function findOrCreateBySymbol(string $symbol, string|AssetType $assetType): Asset
     {
         $symbol = self::normalizeSymbol($symbol);
-        $type   = $assetType instanceof AssetType ? $assetType->value : $assetType;
 
         return Asset::firstOrCreate(
             ['symbol' => $symbol],
-            ['name' => $symbol, 'asset_type' => $type]
+            ['name' => $symbol, 'asset_type' => enum_value($assetType)]
         );
     }
 
@@ -28,8 +29,7 @@ class AssetService
     public static function createBySymbol(string $symbol, string|AssetType $assetType): Asset
     {
         $symbol = self::normalizeSymbol($symbol);
-        $type   = $assetType instanceof AssetType ? $assetType->value : $assetType;
 
-        return Asset::create(['symbol' => $symbol, 'name' => $symbol, 'asset_type' => $type]);
+        return Asset::create(['symbol' => $symbol, 'name' => $symbol, 'asset_type' => enum_value($assetType)]);
     }
 }

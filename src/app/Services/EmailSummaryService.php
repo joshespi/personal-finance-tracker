@@ -154,20 +154,7 @@ class EmailSummaryService
             return $this->memo[$key];
         }
 
-        $latestDates = PortfolioSnapshot::whereIn('portfolio_id', $portfolioIds)
-            ->where('recorded_on', '<=', $asOf->toDateString())
-            ->selectRaw('portfolio_id, MAX(recorded_on) as max_date')
-            ->groupBy('portfolio_id');
-
-        // A single aggregate: SUM over zero matching rows returns SQL NULL, which is exactly
-        // the "no snapshot that old" signal — no separate exists() probe needed.
-        $total = PortfolioSnapshot::joinSub($latestDates, 'latest', fn ($j) => $j
-            ->on('portfolio_snapshots.portfolio_id', '=', 'latest.portfolio_id')
-            ->on('portfolio_snapshots.recorded_on', '=', 'latest.max_date')
-        )->selectRaw('SUM(portfolio_snapshots.market_value + portfolio_snapshots.manual_value) as total')
-            ->value('total');
-
-        return $this->memo[$key] = $total === null ? null : (float) $total;
+        return $this->memo[$key] = PortfolioSnapshot::latestTotalFor($portfolioIds, $asOf);
     }
 
     /**
@@ -233,11 +220,7 @@ class EmailSummaryService
     {
         // One bounded aggregate for this month's spend per envelope, rather than hydrating
         // every spend row ever recorded just to filter the month in PHP.
-        $envelopes = $user->envelopes()
-            ->withSum(['spendTransactions as month_spend_total' => fn ($q) => $q
-                ->whereBetween('occurred_at', [now()->startOfMonth(), now()->endOfMonth()]),
-            ], 'amount')
-            ->get();
+        $envelopes = $user->envelopes()->withMonthSpendTotal(now())->get();
 
         $overBudget = $envelopes
             ->map(fn ($e) => ['envelope' => $e->name, 'spent' => round((float) ($e->month_spend_total ?? 0), 2), 'target' => round((float) $e->monthly_target, 2)])
