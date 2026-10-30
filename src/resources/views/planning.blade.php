@@ -33,7 +33,7 @@
 
         {{-- ═══════════════════════════════ DEBT PAYOFF TAB ═══════════════════════════════ --}}
         @if ($tab === 'debt-payoff')
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+        <div class="sm:px-6 lg:px-8 space-y-8">
 
             @if (! $data['has_data'])
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-sm text-gray-600 dark:text-gray-400">
@@ -251,7 +251,7 @@
 
         {{-- ═══════════════════════════════ ALLOCATOR TAB ═══════════════════════════════ --}}
         @elseif ($tab === 'allocator')
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="sm:px-6 lg:px-8 space-y-6">
 
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
                 <form method="GET" action="{{ route('planning', ['tab' => 'allocator']) }}" class="flex items-end gap-3">
@@ -335,7 +335,7 @@
 
         {{-- ═══════════════════════════════ EMERGENCY FUND TAB ═══════════════════════════════ --}}
         @elseif ($tab === 'emergency-fund')
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+        <div class="sm:px-6 lg:px-8 space-y-8">
 
             @if ($mandatoryEnvelopes->isEmpty() || $monthlyBaseline == 0)
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-sm text-gray-600 dark:text-gray-400 space-y-2">
@@ -426,7 +426,7 @@
         @endif
 
         @if ($tab === 'retirement')
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="sm:px-6 lg:px-8 space-y-6">
 
             {{-- Two lenses on "will my money be enough": an age-based 4%-rule target,
                  and the FIRE Forecast wealth trajectory (formerly the standalone

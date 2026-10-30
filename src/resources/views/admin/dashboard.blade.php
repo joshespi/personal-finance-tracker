@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="sm:px-6 lg:px-8 space-y-6">
 
             {{-- Stats grid --}}
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">

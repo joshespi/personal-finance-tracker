@@ -259,9 +259,9 @@
 @auth
 @php
     $qaAccounts         = $sidebarAccounts; // already loaded above (id/name is all quick-add needs)
-    $qaEnvelopes        = Auth::user()->envelopes()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+    $qaEnvelopes        = Auth::user()->envelopes()->ordered()->get(['id', 'name']);
     $qaPortfolios       = Auth::user()->portfolios()->orderBy('name')->get(['id', 'name']);
-    $qaIncomeCategories = Auth::user()->incomeCategories()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+    $qaIncomeCategories = Auth::user()->incomeCategories()->ordered()->get(['id', 'name']);
     $qaToday            = now()->format('Y-m-d');
 @endphp
 <div x-data="{

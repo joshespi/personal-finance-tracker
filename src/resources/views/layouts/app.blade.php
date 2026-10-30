@@ -123,7 +123,7 @@
                 <!-- Page Heading -->
                 @isset($header)
                     <header class="bg-white dark:bg-gray-800 shadow dark:shadow-gray-700/50">
-                        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                        <div class="py-6 px-4 sm:px-6 lg:px-8">
                             {{ $header }}
                         </div>
                     </header>
@@ -135,7 +135,7 @@
                 </main>
 
                 <footer class="mt-12 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400 dark:text-gray-500">
+                    <div class="px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400 dark:text-gray-500">
                         <span>{{ config('app.name') }} <span class="text-gray-400 dark:text-gray-500">v{{ config('app.version') }}</span> &mdash; <a href="{{ route('about') }}" class="hover:text-gray-600 dark:hover:text-gray-300 transition">About</a> &middot; <a href="{{ route('donate') }}" class="hover:text-gray-600 dark:hover:text-gray-300 transition">Donate</a></span>
                         <a href="https://github.com/joshespi/portfolio-tracker" target="_blank" rel="noopener"
                            class="inline-flex items-center gap-1.5 hover:text-gray-600 dark:hover:text-gray-300 transition">
