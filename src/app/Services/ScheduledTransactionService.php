@@ -100,9 +100,9 @@ class ScheduledTransactionService
     {
         match ($scheduled->type) {
             ScheduledTransactionType::EnvelopeFund     => $this->envelopeFund($scheduled, $date, $cleared),
-            ScheduledTransactionType::EnvelopeSpend    => $this->envelopeSpend($scheduled, $date, $cleared),
-            ScheduledTransactionType::CashDeposit      => $this->cashDeposit($scheduled, $date, $cleared),
-            ScheduledTransactionType::CashWithdrawal   => $this->cashWithdrawal($scheduled, $date, $cleared),
+            ScheduledTransactionType::EnvelopeSpend    => $this->cashEntry($scheduled, $date, $cleared, 'withdrawal', $this->ownedEnvelopeId($scheduled)),
+            ScheduledTransactionType::CashDeposit      => $this->cashEntry($scheduled, $date, $cleared, 'deposit'),
+            ScheduledTransactionType::CashWithdrawal   => $this->cashEntry($scheduled, $date, $cleared, 'withdrawal'),
             ScheduledTransactionType::LiabilityPayment => $this->liabilityPayment($scheduled, $date, $cleared),
         };
     }
@@ -137,11 +137,6 @@ class ScheduledTransactionService
         }
     }
 
-    private function envelopeSpend(ScheduledTransaction $s, Carbon $date, bool $cleared): void
-    {
-        $this->cashEntry($s, $date, $cleared, 'withdrawal', $this->ownedEnvelopeId($s));
-    }
-
     /**
      * The schedule's envelope, but only when it belongs to the same user as the schedule.
      *
@@ -157,16 +152,6 @@ class ScheduledTransactionService
         }
 
         return $s->envelope?->user_id === $s->user_id ? $s->envelope_id : null;
-    }
-
-    private function cashDeposit(ScheduledTransaction $s, Carbon $date, bool $cleared): void
-    {
-        $this->cashEntry($s, $date, $cleared, 'deposit');
-    }
-
-    private function cashWithdrawal(ScheduledTransaction $s, Carbon $date, bool $cleared): void
-    {
-        $this->cashEntry($s, $date, $cleared, 'withdrawal');
     }
 
     private function liabilityPayment(ScheduledTransaction $s, Carbon $date, bool $cleared): void
