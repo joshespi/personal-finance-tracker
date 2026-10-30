@@ -15,8 +15,7 @@ class IncomeCategoryController extends Controller
         $categories = $request->user()
             ->incomeCategories()
             ->withCount('cashTransactions')
-            ->orderBy('sort_order')
-            ->orderBy('name')
+            ->ordered()
             ->get();
 
         return view('income-categories.index', compact('categories'));

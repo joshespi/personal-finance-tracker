@@ -58,6 +58,12 @@ class Envelope extends Model
         return $this->hasMany(CashTransaction::class)->withdrawals();
     }
 
+    /** The user's chosen display order, name breaking ties — the order every envelope list/picker uses. */
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('sort_order')->orderBy('name');
+    }
+
     public function scopeWithBalanceTotals($query)
     {
         return $query
@@ -79,6 +85,18 @@ class Envelope extends Model
         return $query->withSum([
             "transactions as {$as}" => fn ($q) => $q
                 ->where('type', 'fund')
+                ->whereBetween('occurred_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()]),
+        ], 'amount');
+    }
+
+    /**
+     * Aggregate `month_spend_total` (or $as): withdrawals charged to the envelope within
+     * the given month — the spend-side twin of scopeWithMonthFundTotal().
+     */
+    public function scopeWithMonthSpendTotal($query, CarbonInterface $month, string $as = 'month_spend_total')
+    {
+        return $query->withSum([
+            "spendTransactions as {$as}" => fn ($q) => $q
                 ->whereBetween('occurred_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()]),
         ], 'amount');
     }

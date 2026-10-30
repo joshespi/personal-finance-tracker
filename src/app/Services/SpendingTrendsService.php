@@ -23,7 +23,7 @@ class SpendingTrendsService
 
         $monthStarts = $this->monthSeries(now(), $lookback);
 
-        $envelopes   = $user->envelopes()->orderBy('sort_order')->get();
+        $envelopes   = $user->envelopes()->ordered()->get();
         $envelopeIds = $envelopes->pluck('id');
 
         // ->copy(): $monthStarts is returned to the caller, so endOfMonth() must not

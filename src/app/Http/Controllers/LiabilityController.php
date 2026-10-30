@@ -178,7 +178,7 @@ class LiabilityController extends Controller
             'liability'      => $liability,
             'liabilityTypes' => self::LIABILITY_TYPES,
             'manualAssets'   => $this->userManualAssets($request),
-            'envelopes'      => $request->user()->envelopes()->orderBy('sort_order')->get(['id', 'name']),
+            'envelopes'      => $request->user()->envelopes()->ordered()->get(['id', 'name']),
             'cashAccounts'   => $request->user()->cashAccounts()->orderBy('name')->get(['id', 'name']),
         ];
     }

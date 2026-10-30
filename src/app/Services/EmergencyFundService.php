@@ -73,7 +73,7 @@ class EmergencyFundService
             ->where(fn ($q) => $q->where('is_emergency_fund', true)
                 ->orWhere('is_mandatory', true)
                 ->orWhere('include_in_emergency_fund', true))
-            ->orderBy('sort_order')
+            ->ordered()
             ->get();
     }
 

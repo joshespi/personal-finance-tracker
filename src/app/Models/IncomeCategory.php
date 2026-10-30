@@ -23,6 +23,12 @@ class IncomeCategory extends Model
         return $this->belongsTo(User::class);
     }
 
+    /** The user's chosen display order, name breaking ties. */
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('sort_order')->orderBy('name');
+    }
+
     public function cashTransactions(): HasMany
     {
         return $this->hasMany(CashTransaction::class);

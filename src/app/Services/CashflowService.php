@@ -26,10 +26,8 @@ class CashflowService
 
         $envelopes = $user
             ->envelopes()
-            ->withSum(['spendTransactions as spent_amount' => fn ($q) => $q
-                ->whereBetween('occurred_at', [$month, $monthEnd]),
-            ], 'amount')
-            ->orderBy('sort_order')
+            ->withMonthSpendTotal($month, 'spent_amount')
+            ->ordered()
             ->get();
 
         $envelopeIds = $envelopes->pluck('id');

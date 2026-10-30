@@ -164,8 +164,7 @@ class CashAccountController extends Controller
 
         $envelopes = $cashAccount->envelopes()
             ->withBalanceTotals()
-            ->orderBy('sort_order')
-            ->orderBy('name')
+            ->ordered()
             ->get()
             ->each(fn ($e) => $e->current_balance = $e->balance());
 

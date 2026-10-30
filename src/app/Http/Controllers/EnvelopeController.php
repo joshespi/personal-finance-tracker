@@ -18,19 +18,14 @@ class EnvelopeController extends Controller
 {
     public function index(Request $request): View
     {
-        $month      = $this->monthFromParam($request->input('month'));
-        $endOfMonth = $month->copy()->endOfMonth();
+        $month = $this->monthFromParam($request->input('month'));
 
         $envelopes = $request->user()
             ->envelopes()
             ->withBalanceTotals()
-            ->withSum([
-                'spendTransactions as month_spend_total' => fn ($q) => $q
-                    ->whereBetween('occurred_at', [$month, $endOfMonth]),
-            ], 'amount')
+            ->withMonthSpendTotal($month)
             ->withMonthFundTotal($month)
-            ->orderBy('sort_order')
-            ->orderBy('name')
+            ->ordered()
             ->get()
             ->each(function ($e) {
                 $e->current_balance   = $e->balance();

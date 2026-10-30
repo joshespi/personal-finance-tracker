@@ -86,7 +86,7 @@ class ScheduledTransactionController extends Controller
     private function formData(Request $request): array
     {
         return [
-            'envelopes'    => $request->user()->envelopes()->orderBy('sort_order')->get(),
+            'envelopes'    => $request->user()->envelopes()->ordered()->get(),
             'cashAccounts' => $request->user()->cashAccounts()->orderBy('name')->get(),
         ];
     }
@@ -116,7 +116,7 @@ class ScheduledTransactionController extends Controller
             // a schedule they own at another user's envelope and debit it.
             'envelope_id'     => [$type?->needsEnvelope() ? 'required' : 'nullable', 'integer', Envelope::ownershipRule($userId)],
             'cash_account_id' => [$type?->requiresCashAccount() ? 'required' : 'nullable', CashAccount::ownershipRule($userId)],
-            'is_active' => 'boolean',
+            'is_active'       => 'boolean',
         ]);
     }
 }
