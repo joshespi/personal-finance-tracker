@@ -26,13 +26,7 @@ class JournalEntryController extends Controller
     {
         $this->authorize('update', $portfolio);
 
-        $data = $request->validate([
-            'title'      => ['nullable', 'string', 'max:255'],
-            'body'       => ['required', 'string'],
-            'entry_date' => ['required', 'date'],
-        ]);
-
-        $portfolio->journalEntries()->create($data);
+        $portfolio->journalEntries()->create($this->validated($request));
 
         return redirect()->route('portfolios.journal.index', $portfolio)
             ->with('success', 'Entry added.');
@@ -53,13 +47,7 @@ class JournalEntryController extends Controller
         $this->authorize('update', $portfolio);
         abort_if($entry->portfolio_id !== $portfolio->id, 403);
 
-        $data = $request->validate([
-            'title'      => ['nullable', 'string', 'max:255'],
-            'body'       => ['required', 'string'],
-            'entry_date' => ['required', 'date'],
-        ]);
-
-        $entry->update($data);
+        $entry->update($this->validated($request));
 
         return redirect()->route('portfolios.journal.index', $portfolio)
             ->with('success', 'Entry updated.');
@@ -74,5 +62,14 @@ class JournalEntryController extends Controller
 
         return redirect()->route('portfolios.journal.index', $portfolio)
             ->with('success', 'Entry deleted.');
+    }
+
+    private function validated(Request $request): array
+    {
+        return $request->validate([
+            'title'      => ['nullable', 'string', 'max:255'],
+            'body'       => ['required', 'string'],
+            'entry_date' => ['required', 'date'],
+        ]);
     }
 }
