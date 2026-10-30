@@ -31,10 +31,22 @@ class ExportController extends Controller
         return in_array($value[0], self::FORMULA_PREFIXES, true) ? "'".$value : $value;
     }
 
-    /** fputcsv() with every cell run through csvSafe() first. */
-    private static function putRow($handle, array $row): void
+    /** Streams a dated CSV download: $header, then one fputcsv() row per entry of $rows, every cell run through csvSafe(). */
+    private static function streamCsv(string $filenamePrefix, array $header, iterable $rows): StreamedResponse
     {
-        fputcsv($handle, array_map(self::csvSafe(...), $row));
+        return response()->streamDownload(function () use ($header, $rows) {
+            $out = fopen('php://output', 'w');
+
+            fputcsv($out, array_map(self::csvSafe(...), $header));
+
+            foreach ($rows as $row) {
+                fputcsv($out, array_map(self::csvSafe(...), $row));
+            }
+
+            fclose($out);
+        }, $filenamePrefix.'-'.now()->format('Y-m-d').'.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     public function index(): View
@@ -51,63 +63,47 @@ class ExportController extends Controller
             ->orderBy('transacted_at')
             ->get();
 
-        return response()->streamDownload(function () use ($transactions) {
-            $out = fopen('php://output', 'w');
-
-            self::putRow($out, ['Date', 'Portfolio', 'Symbol', 'Type', 'Quantity', 'Price Per Unit', 'Fees', 'Currency', 'Total']);
-
-            foreach ($transactions as $t) {
-                self::putRow($out, [
-                    $t->transacted_at->format('Y-m-d'),
-                    $t->portfolio->name,
-                    $t->asset->symbol,
-                    $t->type->value,
-                    $t->quantity,
-                    $t->price_per_unit,
-                    $t->fees,
-                    $t->currency,
-                    round($t->totalCost(), 2),
-                ]);
-            }
-
-            fclose($out);
-        }, 'transactions-'.now()->format('Y-m-d').'.csv', [
-            'Content-Type' => 'text/csv',
-        ]);
+        return self::streamCsv(
+            'transactions',
+            ['Date', 'Portfolio', 'Symbol', 'Type', 'Quantity', 'Price Per Unit', 'Fees', 'Currency', 'Total'],
+            $transactions->map(fn ($t) => [
+                $t->transacted_at->format('Y-m-d'),
+                $t->portfolio->name,
+                $t->asset->symbol,
+                $t->type->value,
+                $t->quantity,
+                $t->price_per_unit,
+                $t->fees,
+                $t->currency,
+                round($t->totalCost(), 2),
+            ]),
+        );
     }
 
     public function realizedGains(Request $request, RealizedGainService $realizedGainService): StreamedResponse
     {
         $allLots = $realizedGainService->allLotsForUser($request->user())->sortBy('sell_date');
 
-        return response()->streamDownload(function () use ($allLots) {
-            $out = fopen('php://output', 'w');
-
-            self::putRow($out, [
+        return self::streamCsv(
+            'realized-gains',
+            [
                 'Symbol', 'Portfolio', 'Quantity',
                 'Buy Date', 'Sell Date', 'Days Held', 'Term',
                 'Cost Basis', 'Proceeds', 'Gain / Loss',
-            ]);
-
-            foreach ($allLots as $lot) {
-                self::putRow($out, [
-                    $lot['asset']->symbol,
-                    $lot['portfolio']->name,
-                    $lot['quantity'],
-                    $lot['buy_date']->format('Y-m-d'),
-                    $lot['sell_date']->format('Y-m-d'),
-                    $lot['holding_days'],
-                    $lot['term'] === 'long' ? 'Long-term' : 'Short-term',
-                    $lot['cost_basis'],
-                    $lot['proceeds'],
-                    $lot['gain'],
-                ]);
-            }
-
-            fclose($out);
-        }, 'realized-gains-'.now()->format('Y-m-d').'.csv', [
-            'Content-Type' => 'text/csv',
-        ]);
+            ],
+            $allLots->map(fn ($lot) => [
+                $lot['asset']->symbol,
+                $lot['portfolio']->name,
+                $lot['quantity'],
+                $lot['buy_date']->format('Y-m-d'),
+                $lot['sell_date']->format('Y-m-d'),
+                $lot['holding_days'],
+                $lot['term'] === 'long' ? 'Long-term' : 'Short-term',
+                $lot['cost_basis'],
+                $lot['proceeds'],
+                $lot['gain'],
+            ]),
+        );
     }
 
     public function fullBackup(Request $request): StreamedResponse
@@ -137,7 +133,7 @@ class ExportController extends Controller
             'liabilities'            => $liabilities->map(fn ($l) => $l->toBackupArray())->values(),
             'cash_accounts'          => $cashAccounts->map(fn ($a) => $a->toBackupArray())->values(),
             'pensions'               => $pensions->map(fn ($p) => $p->toBackupArray())->values(),
-            'income_categories'      => $user->incomeCategories()->orderBy('sort_order')->orderBy('name')->get()->map(fn ($c) => $c->toBackupArray())->values(),
+            'income_categories'      => $user->incomeCategories()->ordered()->get()->map(fn ($c) => $c->toBackupArray())->values(),
             'envelopes'              => $envelopes->map(fn ($e) => $e->toBackupArray())->values(),
             'scheduled_transactions' => $user->scheduledTransactions()->get()->map(fn ($s) => $s->toBackupArray())->values(),
         ];
