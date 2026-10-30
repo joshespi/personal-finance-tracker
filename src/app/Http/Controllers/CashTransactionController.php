@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
-use App\Models\IncomeCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -20,25 +19,15 @@ class CashTransactionController extends Controller
     {
         $this->authorize('update', $cashAccount);
 
-        $userId = $request->user()->id;
-        $data   = $request->validate([
-            'type'               => ['required', 'in:deposit,withdrawal'],
-            'amount'             => ['required', 'numeric', 'gt:0'],
-            'description'        => ['nullable', 'string', 'max:500'],
-            'occurred_at'        => ['required', 'date'],
-            'envelope_id'        => ['nullable', 'integer', Envelope::ownershipRule($userId)],
-            'income_category_id' => ['nullable', 'integer', IncomeCategory::ownershipRule($userId)],
-        ]);
-
-        $isDeposit = $data['type'] === 'deposit';
+        $data = $request->validate(CashTransaction::entryRules($request->user()->id));
 
         $cashAccount->transactions()->create([
             'type'               => $data['type'],
             'amount'             => $data['amount'],
             'description'        => $data['description'] ?? null,
             'occurred_at'        => $data['occurred_at'],
-            'envelope_id'        => $isDeposit ? null : ($data['envelope_id'] ?? null),
-            'income_category_id' => $isDeposit ? ($data['income_category_id'] ?? null) : null,
+            'envelope_id'        => CashTransaction::resolveEnvelopeId($data['envelope_id'] ?? null, $data['type']),
+            'income_category_id' => CashTransaction::resolveIncomeCategoryId($data['income_category_id'] ?? null, $data['type']),
         ]);
 
         return redirect()->route('cash-accounts.show', $cashAccount)->with('success', 'Transaction recorded.');

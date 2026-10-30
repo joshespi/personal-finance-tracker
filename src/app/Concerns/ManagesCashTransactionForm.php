@@ -5,7 +5,6 @@ namespace App\Concerns;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
-use App\Models\IncomeCategory;
 use App\Support\Sql;
 use Illuminate\Support\Facades\Gate;
 
@@ -95,13 +94,15 @@ trait ManagesCashTransactionForm
     /** Validation rules shared by add/edit, keyed with the given field prefix ('new'/'edit'). */
     private function transactionRules(string $prefix): array
     {
+        $rules = CashTransaction::entryRules(auth()->id());
+
         return [
-            "{$prefix}Type"             => ['required', 'in:deposit,withdrawal'],
-            "{$prefix}Amount"           => ['required', 'numeric', 'gt:0'],
-            "{$prefix}Description"      => ['nullable', 'string', 'max:500'],
-            "{$prefix}OccurredAt"       => ['required', 'date'],
-            "{$prefix}EnvelopeId"       => ['nullable', 'integer', Envelope::ownershipRule(auth()->id())],
-            "{$prefix}IncomeCategoryId" => ['nullable', 'integer', IncomeCategory::ownershipRule(auth()->id())],
+            "{$prefix}Type"             => $rules['type'],
+            "{$prefix}Amount"           => $rules['amount'],
+            "{$prefix}Description"      => $rules['description'],
+            "{$prefix}OccurredAt"       => $rules['occurred_at'],
+            "{$prefix}EnvelopeId"       => $rules['envelope_id'],
+            "{$prefix}IncomeCategoryId" => $rules['income_category_id'],
             "{$prefix}Cleared"          => ['boolean'],
         ];
     }
@@ -133,24 +134,12 @@ trait ManagesCashTransactionForm
 
     public function getEnvelopesProperty()
     {
-        return auth()->user()->envelopes()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+        return auth()->user()->envelopes()->ordered()->get(['id', 'name']);
     }
 
     public function getIncomeCategoriesProperty()
     {
-        return auth()->user()->incomeCategories()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
-    }
-
-    /** A category only applies to deposits; ownership is enforced by validation. */
-    private function resolveIncomeCategoryId(?int $categoryId, string $type): ?int
-    {
-        return $type === 'deposit' ? $categoryId : null;
-    }
-
-    /** An envelope only applies to withdrawals; ownership is enforced by validation. */
-    private function resolveEnvelopeId(?int $envelopeId, string $type): ?int
-    {
-        return $type === 'withdrawal' ? $envelopeId : null;
+        return auth()->user()->incomeCategories()->ordered()->get(['id', 'name']);
     }
 
     public function addTransaction(): void
@@ -164,8 +153,8 @@ trait ManagesCashTransactionForm
             'amount'             => $data['newAmount'],
             'description'        => $data['newDescription'] ?: null,
             'occurred_at'        => $data['newOccurredAt'],
-            'envelope_id'        => $this->resolveEnvelopeId($data['newEnvelopeId'], $data['newType']),
-            'income_category_id' => $this->resolveIncomeCategoryId($data['newIncomeCategoryId'], $data['newType']),
+            'envelope_id'        => CashTransaction::resolveEnvelopeId($data['newEnvelopeId'], $data['newType']),
+            'income_category_id' => CashTransaction::resolveIncomeCategoryId($data['newIncomeCategoryId'], $data['newType']),
             'cleared'            => $this->newCleared,
         ]);
 
@@ -224,8 +213,8 @@ trait ManagesCashTransactionForm
             'amount'             => $data['editAmount'],
             'description'        => $data['editDescription'] ?: null,
             'occurred_at'        => $data['editOccurredAt'],
-            'envelope_id'        => $this->resolveEnvelopeId($data['editEnvelopeId'], $data['editType']),
-            'income_category_id' => $this->resolveIncomeCategoryId($data['editIncomeCategoryId'], $data['editType']),
+            'envelope_id'        => CashTransaction::resolveEnvelopeId($data['editEnvelopeId'], $data['editType']),
+            'income_category_id' => CashTransaction::resolveIncomeCategoryId($data['editIncomeCategoryId'], $data['editType']),
             'cleared'            => $this->editCleared,
         ]);
 

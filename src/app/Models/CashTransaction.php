@@ -27,6 +27,36 @@ class CashTransaction extends Model
     }
 
     /**
+     * Validation rules for a single ledger entry, keyed by column name. The one definition
+     * shared by the Quick Add controller and the Livewire ledgers (which re-key them with
+     * their 'new'/'edit' prefixes). Envelope and category ownership is enforced here, so
+     * the resolvers below only decide *which* link applies, never whether it's allowed.
+     */
+    public static function entryRules(int $userId): array
+    {
+        return [
+            'type'               => ['required', 'in:deposit,withdrawal'],
+            'amount'             => ['required', 'numeric', 'gt:0'],
+            'description'        => ['nullable', 'string', 'max:500'],
+            'occurred_at'        => ['required', 'date'],
+            'envelope_id'        => ['nullable', 'integer', Envelope::ownershipRule($userId)],
+            'income_category_id' => ['nullable', 'integer', IncomeCategory::ownershipRule($userId)],
+        ];
+    }
+
+    /** An envelope only applies to withdrawals. */
+    public static function resolveEnvelopeId(?int $envelopeId, string $type): ?int
+    {
+        return $type === 'withdrawal' ? $envelopeId : null;
+    }
+
+    /** An income category only applies to deposits. */
+    public static function resolveIncomeCategoryId(?int $categoryId, string $type): ?int
+    {
+        return $type === 'deposit' ? $categoryId : null;
+    }
+
+    /**
      * Working/cleared/pending balances summed over an arbitrary set of cash transactions.
      * Accepts any query or relation builder so a single account and a multi-account ledger
      * share one definition of "working = deposits − withdrawals".

@@ -44,7 +44,7 @@
                 </div>
 
                 <div>
-                    <x-input-label for="newAmount" value="Amount{{ $account ? " ({$account->currency})" : '' }}" />
+                    <x-input-label for="newAmount" :value="'Amount'.($account ? ' ('.$account->currency.')' : '')" />
                     <x-text-input id="newAmount" wire:model="newAmount" type="number"
                                   class="mt-1 block {{ $accounts !== null ? 'w-32' : 'w-40' }}"
                                   required min="0" step="any" placeholder="0.00" />
