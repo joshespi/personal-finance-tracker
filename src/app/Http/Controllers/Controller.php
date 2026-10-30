@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Portfolio;
 use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\RedirectResponse;
 
 abstract class Controller
 {
@@ -28,6 +30,17 @@ abstract class Controller
         } catch (\Exception) {
             return now()->startOfMonth();
         }
+    }
+
+    /** Redirect back to the portfolio with an error when it's closed (read-only); null when it's open. */
+    protected function redirectIfClosed(Portfolio $portfolio, string $addWhat): ?RedirectResponse
+    {
+        if (! $portfolio->isClosed()) {
+            return null;
+        }
+
+        return redirect()->route('portfolios.show', $portfolio)
+            ->with('error', "This portfolio is closed. Reopen it to add {$addWhat}.");
     }
 
     protected function monthNav(Carbon $month): array

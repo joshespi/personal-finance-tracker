@@ -42,9 +42,8 @@ class TransactionController extends Controller
     {
         $this->authorize('update', $portfolio);
 
-        if ($portfolio->isClosed()) {
-            return redirect()->route('portfolios.show', $portfolio)
-                ->with('error', 'This portfolio is closed. Reopen it to add transactions.');
+        if ($closed = $this->redirectIfClosed($portfolio, 'transactions')) {
+            return $closed;
         }
 
         return view('transactions.create', ['portfolio' => $portfolio, 'types' => TransactionType::options()]);
@@ -54,9 +53,8 @@ class TransactionController extends Controller
     {
         $this->authorize('update', $portfolio);
 
-        if ($portfolio->isClosed()) {
-            return redirect()->route('portfolios.show', $portfolio)
-                ->with('error', 'This portfolio is closed. Reopen it to add transactions.');
+        if ($closed = $this->redirectIfClosed($portfolio, 'transactions')) {
+            return $closed;
         }
 
         $validated = $request->validate(Transaction::fieldRules() + [

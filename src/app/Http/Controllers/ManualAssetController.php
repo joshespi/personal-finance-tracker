@@ -26,9 +26,8 @@ class ManualAssetController extends Controller
     {
         $this->authorize('update', $portfolio);
 
-        if ($portfolio->isClosed()) {
-            return redirect()->route('portfolios.show', $portfolio)
-                ->with('error', 'This portfolio is closed. Reopen it to add assets.');
+        if ($closed = $this->redirectIfClosed($portfolio, 'assets')) {
+            return $closed;
         }
 
         return view('manual-assets.create', [
@@ -41,20 +40,11 @@ class ManualAssetController extends Controller
     {
         $this->authorize('update', $portfolio);
 
-        if ($portfolio->isClosed()) {
-            return redirect()->route('portfolios.show', $portfolio)
-                ->with('error', 'This portfolio is closed. Reopen it to add assets.');
+        if ($closed = $this->redirectIfClosed($portfolio, 'assets')) {
+            return $closed;
         }
 
-        $validated = $this->validatePayload($request);
-        $validated['tracking_method'] ??= 'static';
-        $validated['include_in_chart']    = $request->boolean('include_in_chart');
-        $validated['include_in_invested'] = $request->boolean('include_in_invested');
-
-        $asset = $portfolio->manualAssets()->create(array_merge(
-            array_diff_key($validated, ['proxy_symbol' => null]),
-            $this->resolveProxyData($validated)
-        ));
+        $asset = $portfolio->manualAssets()->create($this->payload($request));
 
         return redirect()->route('manual-assets.show', $asset)->with('success', 'Asset created.');
     }
@@ -94,15 +84,7 @@ class ManualAssetController extends Controller
     {
         $this->authorize('update', $manualAsset);
 
-        $validated = $this->validatePayload($request);
-        $validated['tracking_method'] ??= 'static';
-        $validated['include_in_chart']    = $request->boolean('include_in_chart');
-        $validated['include_in_invested'] = $request->boolean('include_in_invested');
-
-        $manualAsset->update(array_merge(
-            array_diff_key($validated, ['proxy_symbol' => null]),
-            $this->resolveProxyData($validated)
-        ));
+        $manualAsset->update($this->payload($request));
 
         return redirect()->route('manual-assets.show', $manualAsset)->with('success', 'Asset updated.');
     }
@@ -117,6 +99,20 @@ class ManualAssetController extends Controller
         return redirect()
             ->route('portfolios.manual-assets.index', $portfolioId)
             ->with('success', 'Asset deleted.');
+    }
+
+    /** Validated, normalized attributes shared by store and update (checkbox booleans, proxy-ticker anchor data). */
+    private function payload(Request $request): array
+    {
+        $validated = $this->validatePayload($request);
+        $validated['tracking_method'] ??= 'static';
+        $validated['include_in_chart']    = $request->boolean('include_in_chart');
+        $validated['include_in_invested'] = $request->boolean('include_in_invested');
+
+        return array_merge(
+            array_diff_key($validated, ['proxy_symbol' => null]),
+            $this->resolveProxyData($validated)
+        );
     }
 
     private function validatePayload(Request $request): array
