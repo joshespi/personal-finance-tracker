@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 enum TransactionType: string
 {
+    use HasValues;
+
     case Buy           = 'buy';
     case Sell          = 'sell';
     case Dividend      = 'dividend';
@@ -70,12 +74,6 @@ enum TransactionType: string
         };
     }
 
-    /** Flat array of string values — for Eloquent whereIn, Rule::in, validation. */
-    public static function values(): array
-    {
-        return array_column(self::cases(), 'value');
-    }
-
     /** Backing values for types that move the unit count (excludes dividends). */
     public static function positionValues(): array
     {
@@ -96,13 +94,5 @@ enum TransactionType: string
 
             return $opts;
         }, []);
-    }
-
-    private static function subsetValues(callable $filter): array
-    {
-        return array_values(array_map(
-            fn (self $t) => $t->value,
-            array_filter(self::cases(), $filter)
-        ));
     }
 }

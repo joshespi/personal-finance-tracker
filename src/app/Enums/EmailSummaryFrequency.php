@@ -2,6 +2,7 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
 use Carbon\CarbonInterface;
 
 /**
@@ -11,6 +12,8 @@ use Carbon\CarbonInterface;
  */
 enum EmailSummaryFrequency: string
 {
+    use HasValues;
+
     case Daily   = 'daily';
     case Weekly  = 'weekly';
     case Monthly = 'monthly';
@@ -70,11 +73,5 @@ enum EmailSummaryFrequency: string
     public function isSubsumedBy(self $other): bool
     {
         return $this === self::Daily && $other === self::Weekly;
-    }
-
-    /** Flat array of string values — for Rule::in / validation. */
-    public static function values(): array
-    {
-        return array_column(self::cases(), 'value');
     }
 }

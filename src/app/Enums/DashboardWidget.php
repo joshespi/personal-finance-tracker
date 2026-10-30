@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 /**
  * Every toggleable block on the dashboard — whole sections and individual stat
  * tiles. Single source of truth for both the settings form (which renders one
@@ -11,6 +13,8 @@ namespace App\Enums;
  */
 enum DashboardWidget: string
 {
+    use HasValues;
+
     // Sections
     case InvestmentStats     = 'investment_stats';
     case FinancialPicture    = 'financial_picture';
@@ -99,12 +103,6 @@ enum DashboardWidget: string
 
             default => self::GROUP_FINANCIAL,
         };
-    }
-
-    /** Flat array of string values — for validation and building the visibility map. */
-    public static function values(): array
-    {
-        return array_column(self::cases(), 'value');
     }
 
     /**

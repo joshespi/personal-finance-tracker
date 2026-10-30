@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 enum AssetType: string
 {
+    use HasValues;
+
     case Stock      = 'stock';
     case Crypto     = 'crypto';
     case RealEstate = 'real_estate';
@@ -17,12 +21,6 @@ enum AssetType: string
             self::RealEstate => 'Real Estate',
             self::Bond       => 'Bond',
         };
-    }
-
-    /** Flat array of string values — for Eloquent whereIn, Rule::in, etc. */
-    public static function values(): array
-    {
-        return array_column(self::cases(), 'value');
     }
 
     /** Allocation bucket this type rolls up into for the net-worth pie/rebalancing. */

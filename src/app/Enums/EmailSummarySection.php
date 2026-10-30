@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 /**
  * Content blocks a user can opt into for the periodic account-summary email.
  * Single source of truth for both the settings form (one checkbox per case)
@@ -11,6 +13,8 @@ namespace App\Enums;
  */
 enum EmailSummarySection: string
 {
+    use HasValues;
+
     case Budgeting         = 'budgeting';
     case Investing         = 'investing';
     case NetWorth          = 'net_worth';
@@ -40,11 +44,5 @@ enum EmailSummarySection: string
             self::CategoryChanges   => 'Percent change in spending per envelope vs. the prior period.',
             self::Warnings          => 'Envelopes over budget, low balances, and upcoming bills.',
         };
-    }
-
-    /** Flat array of string values — for Rule::in / validation. */
-    public static function values(): array
-    {
-        return array_column(self::cases(), 'value');
     }
 }

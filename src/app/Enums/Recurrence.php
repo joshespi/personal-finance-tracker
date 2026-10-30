@@ -2,10 +2,13 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
 use Carbon\Carbon;
 
 enum Recurrence: string
 {
+    use HasValues;
+
     case Monthly   = 'monthly';
     case Weekly    = 'weekly';
     case Biweekly  = 'biweekly';
@@ -58,11 +61,5 @@ enum Recurrence: string
             self::Yearly    => $date->copy()->addYear(),
             self::Monthly   => $date->copy()->addMonth(),
         };
-    }
-
-    /** Flat array of string values — for Rule::in / validation. */
-    public static function values(): array
-    {
-        return array_column(self::cases(), 'value');
     }
 }

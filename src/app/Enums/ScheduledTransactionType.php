@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 enum ScheduledTransactionType: string
 {
+    use HasValues;
+
     case EnvelopeFund   = 'envelope_fund';
     case EnvelopeSpend  = 'envelope_spend';
     case CashDeposit    = 'cash_deposit';
@@ -73,12 +77,6 @@ enum ScheduledTransactionType: string
         return $this === self::CashDeposit ? 1 : -1;
     }
 
-    /** Flat array of string values — for Eloquent whereIn, Rule::in, validation. */
-    public static function values(): array
-    {
-        return array_column(self::cases(), 'value');
-    }
-
     /** Backing values for types considered inflows — for whereIn/orderByRaw IN() clauses. */
     public static function inflowValues(): array
     {
@@ -107,13 +105,5 @@ enum ScheduledTransactionType: string
     public static function cashAccountRequiredValues(): array
     {
         return self::subsetValues(fn (self $t) => $t->requiresCashAccount());
-    }
-
-    private static function subsetValues(callable $filter): array
-    {
-        return array_values(array_map(
-            fn (self $t) => $t->value,
-            array_filter(self::cases(), $filter)
-        ));
     }
 }
