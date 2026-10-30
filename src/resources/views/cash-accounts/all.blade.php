@@ -9,20 +9,18 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Every account's activity, plus what's scheduled next.</p>
             </div>
             <div class="flex items-center gap-2">
-                <a href="{{ route('cash-transfers.create') }}"
-                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                <x-btn variant="secondary" href="{{ route('cash-transfers.create') }}">
                     Transfer
-                </a>
-                <a href="{{ route('cash-accounts.index') }}"
-                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                </x-btn>
+                <x-btn variant="secondary" href="{{ route('cash-accounts.index') }}">
                     Accounts
-                </a>
+                </x-btn>
             </div>
         </div>
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+        <div class="sm:px-6 lg:px-8 space-y-8">
 
             <x-flash />
 

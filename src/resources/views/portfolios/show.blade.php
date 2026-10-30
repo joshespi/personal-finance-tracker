@@ -13,34 +13,30 @@
                        class="inline-flex items-center px-3 py-1.5 bg-gray-800 dark:bg-gray-700 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition">
                         + Transaction
                     </a>
-                    <a href="{{ route('portfolios.manual-assets.create', $portfolio) }}"
-                       class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                    <x-btn variant="secondary" href="{{ route('portfolios.manual-assets.create', $portfolio) }}">
                         + Manual Asset
-                    </a>
+                    </x-btn>
                 @else
                     <form method="POST" action="{{ route('portfolios.reopen', $portfolio) }}">
                         @csrf
                         @method('PATCH')
-                        <button type="submit"
-                                class="inline-flex items-center px-3 py-1.5 bg-indigo-600 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-indigo-500 transition">
+                        <x-btn variant="primary" type="submit">
                             Reopen
-                        </button>
+                        </x-btn>
                     </form>
                 @endunless
-                <a href="{{ route('portfolios.journal.index', $portfolio) }}"
-                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                <x-btn variant="secondary" href="{{ route('portfolios.journal.index', $portfolio) }}">
                     Journal
-                </a>
-                <a href="{{ route('portfolios.edit', $portfolio) }}"
-                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                </x-btn>
+                <x-btn variant="secondary" href="{{ route('portfolios.edit', $portfolio) }}">
                     Edit
-                </a>
+                </x-btn>
             </div>
         </div>
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div class="px-4 sm:px-6 lg:px-8 space-y-8">
 
             <x-flash />
 

@@ -10,7 +10,7 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+        <div class="sm:px-6 lg:px-8 space-y-4">
 
             <x-flash />
 
@@ -33,23 +33,13 @@
                             </p>
                         </div>
                         <div class="flex items-center gap-2 shrink-0 ms-4">
-                            <a href="{{ route('portfolios.show', $portfolio) }}"
-                               class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                            <x-btn variant="secondary" href="{{ route('portfolios.show', $portfolio) }}">
                                 View
-                            </a>
-                            <a href="{{ route('portfolios.edit', $portfolio) }}"
-                               class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                            </x-btn>
+                            <x-btn variant="secondary" href="{{ route('portfolios.edit', $portfolio) }}">
                                 Edit
-                            </a>
-                            <form method="POST" action="{{ route('portfolios.destroy', $portfolio) }}"
-                                  onsubmit="return confirm('Delete portfolio and all its data?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                        class="inline-flex items-center px-3 py-1.5 bg-red-600 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-red-500 transition">
-                                    Delete
-                                </button>
-                            </form>
+                            </x-btn>
+                            <x-delete-form :action="route('portfolios.destroy', $portfolio)" confirm="Delete portfolio and all its data?" variant="button" />
                         </div>
                     </div>
                 </div>
@@ -90,10 +80,9 @@
                                         </p>
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0 ms-4">
-                                        <a href="{{ route('portfolios.show', $portfolio) }}"
-                                           class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                                        <x-btn variant="secondary" href="{{ route('portfolios.show', $portfolio) }}">
                                             View
-                                        </a>
+                                        </x-btn>
                                         <form method="POST" action="{{ route('portfolios.reopen', $portfolio) }}">
                                             @csrf
                                             @method('PATCH')

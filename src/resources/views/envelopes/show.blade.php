@@ -16,25 +16,16 @@
                 @endif
             </div>
             <div class="flex items-center gap-2">
-                <a href="{{ route('envelopes.edit', $envelope) }}"
-                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                <x-btn variant="secondary" href="{{ route('envelopes.edit', $envelope) }}">
                     Edit
-                </a>
-                <form method="POST" action="{{ route('envelopes.destroy', $envelope) }}"
-                      onsubmit="return confirm('Delete this envelope and all its transactions?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit"
-                            class="inline-flex items-center px-3 py-1.5 bg-red-600 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-red-500 transition">
-                        Delete
-                    </button>
-                </form>
+                </x-btn>
+                <x-delete-form :action="route('envelopes.destroy', $envelope)" confirm="Delete this envelope and all its transactions?" variant="button" />
             </div>
         </div>
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+        <div class="sm:px-6 lg:px-8 space-y-8">
 
             <x-flash />
 
@@ -216,12 +207,7 @@
                                         <td class="px-6 py-3 text-gray-400 dark:text-gray-500 text-xs">{{ $row['source'] ?? '—' }}</td>
                                         <x-flow-cells :inflow="$row['type'] === 'fund'" :amount="$demo->amt((float) $row['amount'])" />
                                         <td class="px-6 py-3 text-right">
-                                            <form method="POST" action="{{ $row['delete_url'] }}" class="inline"
-                                                  onsubmit="return confirm('Delete this transaction?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-600 dark:text-red-400 hover:underline text-xs">Delete</button>
-                                            </form>
+                                            <x-delete-form :action="$row['delete_url']" confirm="Delete this transaction?" class="inline" />
                                         </td>
                                     </tr>
                                 @endforeach

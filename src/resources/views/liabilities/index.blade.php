@@ -13,7 +13,7 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="sm:px-6 lg:px-8 space-y-6">
 
             <x-flash />
 
@@ -57,23 +57,13 @@
                                         @endif
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <a href="{{ route('liabilities.show', $l) }}"
-                                           class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                                        <x-btn variant="secondary" href="{{ route('liabilities.show', $l) }}">
                                             View
-                                        </a>
-                                        <a href="{{ route('liabilities.edit', $l) }}"
-                                           class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                                        </x-btn>
+                                        <x-btn variant="secondary" href="{{ route('liabilities.edit', $l) }}">
                                             Edit
-                                        </a>
-                                        <form method="POST" action="{{ route('liabilities.destroy', $l) }}" class="inline"
-                                              onsubmit="return confirm('Delete this liability and all its balance history?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
-                                                    class="inline-flex items-center px-3 py-1.5 bg-red-600 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-red-500 transition">
-                                                Delete
-                                            </button>
-                                        </form>
+                                        </x-btn>
+                                        <x-delete-form :action="route('liabilities.destroy', $l)" confirm="Delete this liability and all its balance history?" variant="button" class="inline" />
                                     </div>
                                 </div>
                             </div>

@@ -8,7 +8,7 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="sm:px-6 lg:px-8 space-y-6">
 
             {{-- User info card --}}
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
@@ -28,10 +28,9 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <a href="{{ route('admin.users.edit', $user) }}"
-                           class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                        <x-btn variant="secondary" href="{{ route('admin.users.edit', $user) }}">
                             Edit
-                        </a>
+                        </x-btn>
                         @unless ($user->email_verified_at)
                             <form method="POST" action="{{ route('admin.users.verify', $user) }}">
                                 @csrf
@@ -44,10 +43,9 @@
                         @if ($user->id !== Auth::id())
                             <form method="POST" action="{{ route('admin.impersonate', $user) }}">
                                 @csrf
-                                <button type="submit"
-                                        class="inline-flex items-center px-3 py-1.5 bg-indigo-600 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-indigo-500 transition">
+                                <x-btn variant="primary" type="submit">
                                     Impersonate
-                                </button>
+                                </x-btn>
                             </form>
                         @endif
                     </div>

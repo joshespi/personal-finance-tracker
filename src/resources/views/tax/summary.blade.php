@@ -5,15 +5,14 @@
                 <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Tax Summary</h2>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Tax-advantaged accounts (401k, IRA, HSA) are excluded.</p>
             </div>
-            <a href="{{ route('export.realized-gains') }}"
-               class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+            <x-btn variant="secondary" href="{{ route('export.realized-gains') }}">
                 ↓ Export CSV
-            </a>
+            </x-btn>
         </div>
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div class="px-4 sm:px-6 lg:px-8 space-y-6">
 
             @if ($byYear->isEmpty())
                 <div class="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">

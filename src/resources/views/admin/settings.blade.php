@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="sm:px-6 lg:px-8">
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 space-y-6">
 
                 <x-flash />
@@ -16,10 +16,9 @@
                     </p>
                     <form method="POST" action="{{ route('admin.settings.test-email') }}">
                         @csrf
-                        <button type="submit"
-                                class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                        <x-btn variant="secondary" type="submit">
                             Send test email
-                        </button>
+                        </x-btn>
                     </form>
                 </div>
 

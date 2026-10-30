@@ -15,7 +15,7 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="sm:px-6 lg:px-8">
 
             <x-flash class="mb-4" />
 
@@ -43,23 +43,13 @@
                                         @endif
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <a href="{{ route('manual-assets.show', $ma) }}"
-                                           class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                                        <x-btn variant="secondary" href="{{ route('manual-assets.show', $ma) }}">
                                             View
-                                        </a>
-                                        <a href="{{ route('manual-assets.edit', $ma) }}"
-                                           class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                                        </x-btn>
+                                        <x-btn variant="secondary" href="{{ route('manual-assets.edit', $ma) }}">
                                             Edit
-                                        </a>
-                                        <form method="POST" action="{{ route('manual-assets.destroy', $ma) }}" class="inline"
-                                              onsubmit="return confirm('Delete this asset?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
-                                                    class="inline-flex items-center px-3 py-1.5 bg-red-600 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-red-500 transition">
-                                                Delete
-                                            </button>
-                                        </form>
+                                        </x-btn>
+                                        <x-delete-form :action="route('manual-assets.destroy', $ma)" confirm="Delete this asset?" variant="button" class="inline" />
                                     </div>
                                 </div>
                             </div>

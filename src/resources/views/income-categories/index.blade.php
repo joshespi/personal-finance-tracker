@@ -2,10 +2,9 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Income Categories</h2>
-            <a href="{{ route('income-categories.create') }}"
-               class="inline-flex items-center px-3 py-1.5 bg-indigo-600 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-indigo-500 transition">
+            <x-btn variant="primary" href="{{ route('income-categories.create') }}">
                 + New Category
-            </a>
+            </x-btn>
         </div>
     </x-slot>
 
@@ -39,12 +38,7 @@
                                 </div>
                                 <a href="{{ route('income-categories.edit', $category) }}"
                                    class="text-xs text-gray-500 dark:text-gray-400 hover:underline">Edit</a>
-                                <form method="POST" action="{{ route('income-categories.destroy', $category) }}"
-                                      onsubmit="return confirm('Delete this category? Deposits tagged with it will become uncategorized.')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-xs text-red-600 dark:text-red-400 hover:underline">Delete</button>
-                                </form>
+                                <x-delete-form :action="route('income-categories.destroy', $category)" confirm="Delete this category? Deposits tagged with it will become uncategorized." />
                             </div>
                         @endforeach
                     </div>

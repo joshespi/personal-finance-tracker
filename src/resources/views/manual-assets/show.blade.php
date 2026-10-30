@@ -15,25 +15,16 @@
                 </p>
             </div>
             <div class="flex items-center gap-2">
-                <a href="{{ route('manual-assets.edit', $manualAsset) }}"
-                   class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                <x-btn variant="secondary" href="{{ route('manual-assets.edit', $manualAsset) }}">
                     Edit Asset
-                </a>
-                <form method="POST" action="{{ route('manual-assets.destroy', $manualAsset) }}"
-                      onsubmit="return confirm('Delete this asset and all its valuations?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit"
-                            class="inline-flex items-center px-3 py-1.5 bg-red-600 border border-transparent rounded-md text-xs font-semibold text-white hover:bg-red-500 transition">
-                        Delete Asset
-                    </button>
-                </form>
+                </x-btn>
+                <x-delete-form :action="route('manual-assets.destroy', $manualAsset)" confirm="Delete this asset and all its valuations?" variant="button" label="Delete Asset" />
             </div>
         </div>
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+        <div class="sm:px-6 lg:px-8 space-y-8">
 
             <x-flash />
 
@@ -124,84 +115,16 @@
                 </div>
             @endif
 
-            {{-- Add Valuation --}}
-            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
-                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Record New Valuation</h3>
-                </div>
-                <div class="p-6">
-                    <form method="POST" action="{{ route('manual-assets.valuations.store', $manualAsset) }}"
-                          class="flex flex-wrap items-end gap-4">
-                        @csrf
-
-                        <div>
-                            <x-input-label for="value" value="Value ({{ $manualAsset->currency }})" />
-                            <x-text-input id="value" name="value" type="number" class="mt-1 block w-40"
-                                          :value="old('value')" required min="0" step="any" placeholder="250000.00" />
-                            <x-input-error :messages="$errors->get('value')" class="mt-2" />
-                        </div>
-
-                        <div>
-                            <x-input-label for="valued_at" value="Date" />
-                            <x-text-input id="valued_at" name="valued_at" type="date" class="mt-1 block w-40"
-                                          :value="old('valued_at', now()->format('Y-m-d'))" required />
-                            <x-input-error :messages="$errors->get('valued_at')" class="mt-2" />
-                        </div>
-
-                        <div class="flex-1 min-w-48">
-                            <x-input-label for="notes" value="Notes (optional)" />
-                            <x-text-input id="notes" name="notes" type="text" class="mt-1 block w-full"
-                                          :value="old('notes')" maxlength="1000" placeholder="Annual appraisal" />
-                            <x-input-error :messages="$errors->get('notes')" class="mt-2" />
-                        </div>
-
-                        <div class="pb-0.5">
-                            <x-primary-button>Record</x-primary-button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            {{-- Valuation History --}}
-            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
-                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Valuation History</h3>
-                </div>
-
-                @if ($manualAsset->valuations->isEmpty())
-                    <div class="p-6 text-sm text-gray-500 dark:text-gray-400">No valuations recorded yet.</div>
-                @else
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
-                            <thead class="bg-gray-50 dark:bg-gray-700">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Value ({{ $manualAsset->currency }})</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Notes</th>
-                                    <th class="px-6 py-3"></th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-                                @foreach ($manualAsset->valuations as $v)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td class="px-6 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ $v->valued_at->format('M j, Y') }}</td>
-                                        <td class="px-6 py-3 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">{{ $demo->amt((float) $v->value) }}</td>
-                                        <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $v->notes ?? '—' }}</td>
-                                        <td class="px-6 py-3 text-right">
-                                            <form method="POST" action="{{ route('valuations.destroy', $v) }}" class="inline"
-                                                  onsubmit="return confirm('Delete this valuation?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-600 dark:text-red-400 hover:underline text-xs">Delete</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @endif
-            </div>
+            <x-dated-entry-log
+                :action="route('manual-assets.valuations.store', $manualAsset)"
+                :entries="$manualAsset->valuations"
+                :destroy="fn ($v) => route('valuations.destroy', $v)"
+                field="value" date-field="valued_at"
+                form-title="Record New Valuation" history-title="Valuation History"
+                :value-label="'Value ('.$manualAsset->currency.')'"
+                :column-label="'Value ('.$manualAsset->currency.')'"
+                placeholder="250000.00" notes-placeholder="Annual appraisal"
+                empty="No valuations recorded yet." confirm="Delete this valuation?" />
 
         </div>
     </div>
