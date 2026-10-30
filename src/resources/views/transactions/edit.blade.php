@@ -13,7 +13,7 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="sm:px-6 lg:px-8">
             <x-flash class="mb-4 mx-4 sm:mx-0" />
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
                 <div class="mb-6 p-3 bg-gray-50 dark:bg-gray-700 rounded-md flex items-center justify-between gap-4">
@@ -46,12 +46,11 @@
 
                     <div>
                         <x-input-label for="portfolio_id" value="Account" />
-                        <select id="portfolio_id" name="portfolio_id"
-                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                        <x-select-input id="portfolio_id" name="portfolio_id">
                             @foreach ($portfolios as $p)
                                 <option value="{{ $p->id }}" @selected((int) old('portfolio_id', $transaction->portfolio_id) === $p->id)>{{ $p->name }}</option>
                             @endforeach
-                        </select>
+                        </x-select-input>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-show="isTransfer" x-cloak>
                             Transfer transactions can't be moved to a different account.
                         </p>
@@ -60,12 +59,11 @@
 
                     <div>
                         <x-input-label for="type" value="Transaction Type" />
-                        <select id="type" name="type" x-model="txType"
-                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                        <x-select-input id="type" name="type" x-model="txType">
                             @foreach ($types as $value => $label)
                                 <option value="{{ $value }}" @selected(old('type', $transaction->type->value) === $value)>{{ $label }}</option>
                             @endforeach
-                        </select>
+                        </x-select-input>
                         <x-input-error :messages="$errors->get('type')" class="mt-2" />
                     </div>
 
@@ -120,9 +118,7 @@
 
                     <div>
                         <x-input-label for="notes" value="Notes (optional)" />
-                        <textarea id="notes" name="notes"
-                                  class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-                                  rows="2" maxlength="1000">{{ old('notes', $transaction->notes) }}</textarea>
+                        <x-textarea-input id="notes" name="notes" rows="2" maxlength="1000">{{ old('notes', $transaction->notes) }}</x-textarea-input>
                         <x-input-error :messages="$errors->get('notes')" class="mt-2" />
                     </div>
 

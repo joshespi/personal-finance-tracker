@@ -9,7 +9,7 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="sm:px-6 lg:px-8">
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
                 <form method="POST" action="{{ route('portfolios.transactions.store', $portfolio) }}" class="space-y-6"
                       x-data="transactionForm()">
@@ -18,14 +18,13 @@
                     <div class="space-y-4">
                         <div>
                             <x-input-label for="asset_type" value="Asset Type" />
-                            <select id="asset_type" name="asset_type"
+                            <x-select-input id="asset_type" name="asset_type"
                                     x-model="assetType"
-                                    @change="results = []; query && search()"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    @change="results = []; query && search()">
                                 @foreach (App\Enums\AssetType::cases() as $type)
                                     <option value="{{ $type->value }}" @selected(old('asset_type', 'stock') === $type->value)>{{ $type->label() }}</option>
                                 @endforeach
-                            </select>
+                            </x-select-input>
                             <x-input-error :messages="$errors->get('asset_type')" class="mt-2" />
                         </div>
                         <div class="relative">
@@ -63,12 +62,11 @@
 
                     <div>
                         <x-input-label for="type" value="Transaction Type" />
-                        <select id="type" name="type" x-model="txType"
-                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                        <x-select-input id="type" name="type" x-model="txType">
                             @foreach ($types as $value => $label)
                                 <option value="{{ $value }}" @selected(old('type', 'buy') === $value)>{{ $label }}</option>
                             @endforeach
-                        </select>
+                        </x-select-input>
                         <x-input-error :messages="$errors->get('type')" class="mt-2" />
 
                         <div x-show="txType === 'transfer_in' || txType === 'transfer_out'" x-cloak
@@ -125,9 +123,7 @@
 
                     <div>
                         <x-input-label for="notes" value="Notes (optional)" />
-                        <textarea id="notes" name="notes"
-                                  class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-                                  rows="2" maxlength="1000">{{ old('notes') }}</textarea>
+                        <x-textarea-input id="notes" name="notes" rows="2" maxlength="1000">{{ old('notes') }}</x-textarea-input>
                         <x-input-error :messages="$errors->get('notes')" class="mt-2" />
                     </div>
 

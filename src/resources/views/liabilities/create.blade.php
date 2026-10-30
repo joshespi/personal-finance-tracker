@@ -1,26 +1,13 @@
 <x-app-layout>
     <x-slot name="header">
-        <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-                <a href="{{ route('liabilities.index') }}" class="hover:underline">Liabilities</a>
-            </p>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Add Liability</h2>
-        </div>
+        <x-page-header title="Add Liability" :crumbs="[['Liabilities', route('liabilities.index')]]" />
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                <form method="POST" action="{{ route('liabilities.store') }}" class="space-y-6">
-                    @csrf
-                    @include('liabilities._form')
-                    <div class="flex items-center gap-4">
-                        <x-primary-button>Add Liability</x-primary-button>
-                        <a href="{{ route('liabilities.index') }}"
-                           class="text-sm text-gray-600 dark:text-gray-400 hover:underline">Cancel</a>
-                    </div>
-                </form>
-            </div>
+        <div class="sm:px-6 lg:px-8">
+            <x-form-card :action="route('liabilities.store')" submit="Add Liability" :cancel="route('liabilities.index')">
+                @include('liabilities._form')
+            </x-form-card>
         </div>
     </div>
 </x-app-layout>

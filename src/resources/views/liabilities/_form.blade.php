@@ -12,24 +12,22 @@
 
 <div>
     <x-input-label for="liability_type" value="Type" />
-    <select id="liability_type" name="liability_type" x-model="liabilityType"
-            class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+    <x-select-input id="liability_type" name="liability_type" x-model="liabilityType">
         @foreach ($liabilityTypes as $value => $label)
             <option value="{{ $value }}" @selected(old('liability_type', $l?->liability_type) === $value)>{{ $label }}</option>
         @endforeach
-    </select>
+    </x-select-input>
     <x-input-error :messages="$errors->get('liability_type')" class="mt-2" />
 </div>
 
 <div>
     <x-input-label for="manual_asset_id" value="Secured by Asset (optional)" />
-    <select id="manual_asset_id" name="manual_asset_id"
-            class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+    <x-select-input id="manual_asset_id" name="manual_asset_id">
         <option value="">— None —</option>
         @foreach ($manualAssets as $ma)
             <option value="{{ $ma->id }}" @selected((string)old('manual_asset_id', $l?->manual_asset_id) === (string)$ma->id)>{{ $ma->name }}</option>
         @endforeach
-    </select>
+    </x-select-input>
     <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Link a mortgage to a property, or an auto loan to a vehicle.</p>
     <x-input-error :messages="$errors->get('manual_asset_id')" class="mt-2" />
 </div>
@@ -62,9 +60,7 @@
 
 <div>
     <x-input-label for="notes" value="Notes (optional)" />
-    <textarea id="notes" name="notes"
-              class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-              rows="3" maxlength="1000">{{ old('notes', $l?->notes) }}</textarea>
+    <x-textarea-input id="notes" name="notes" rows="3" maxlength="1000">{{ old('notes', $l?->notes) }}</x-textarea-input>
     <x-input-error :messages="$errors->get('notes')" class="mt-2" />
 </div>
 
@@ -93,25 +89,23 @@
 
     <div>
         <x-input-label for="payment_envelope_id" value="Charge Envelope (optional)" />
-        <select id="payment_envelope_id" name="payment_envelope_id"
-                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+        <x-select-input id="payment_envelope_id" name="payment_envelope_id">
             <option value="">— None —</option>
             @foreach ($envelopes as $env)
                 <option value="{{ $env->id }}" @selected((string)old('payment_envelope_id', $l?->payment_envelope_id) === (string)$env->id)>{{ $env->name }}</option>
             @endforeach
-        </select>
+        </x-select-input>
         <x-input-error :messages="$errors->get('payment_envelope_id')" class="mt-2" />
     </div>
 
     <div>
         <x-input-label for="payment_cash_account_id" value="Pay From Account (optional)" />
-        <select id="payment_cash_account_id" name="payment_cash_account_id"
-                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+        <x-select-input id="payment_cash_account_id" name="payment_cash_account_id">
             <option value="">— None —</option>
             @foreach ($cashAccounts as $acct)
                 <option value="{{ $acct->id }}" @selected((string)old('payment_cash_account_id', $l?->payment_cash_account_id) === (string)$acct->id)>{{ $acct->name }}</option>
             @endforeach
-        </select>
+        </x-select-input>
         <x-input-error :messages="$errors->get('payment_cash_account_id')" class="mt-2" />
     </div>
 </div>

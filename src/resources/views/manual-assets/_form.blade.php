@@ -10,12 +10,11 @@
 
 <div>
     <x-input-label for="asset_class" value="Asset Class" />
-    <select id="asset_class" name="asset_class"
-            class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+    <x-select-input id="asset_class" name="asset_class">
         @foreach ($assetClasses as $value => $label)
             <option value="{{ $value }}" @selected(old('asset_class', $m?->asset_class) === $value)>{{ $label }}</option>
         @endforeach
-    </select>
+    </x-select-input>
     <x-input-error :messages="$errors->get('asset_class')" class="mt-2" />
 </div>
 
@@ -29,9 +28,7 @@
 
 <div>
     <x-input-label for="description" value="Description (optional)" />
-    <textarea id="description" name="description"
-              class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-              rows="3" maxlength="1000">{{ old('description', $m?->description) }}</textarea>
+    <x-textarea-input id="description" name="description" rows="3" maxlength="1000">{{ old('description', $m?->description) }}</x-textarea-input>
     <x-input-error :messages="$errors->get('description')" class="mt-2" />
 </div>
 

@@ -74,13 +74,12 @@
 
                                 <div class="flex-1">
                                     <x-input-label for="{{ $side }}_account_id" :value="$label" />
-                                    <select id="{{ $side }}_account_id" name="{{ $side }}_account_id" required x-model="{{ $side }}"
-                                            class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <x-select-input id="{{ $side }}_account_id" name="{{ $side }}_account_id" required x-model="{{ $side }}">
                                         <option value="">Select…</option>
                                         @foreach ($accounts as $a)
                                             <option value="{{ $a->id }}" @selected($sel == $a->id)>{{ $demo->n($a->name) }}</option>
                                         @endforeach
-                                    </select>
+                                    </x-select-input>
                                     <x-input-error :messages="$errors->get($side.'_account_id')" class="mt-2" />
                                 </div>
                             @endforeach

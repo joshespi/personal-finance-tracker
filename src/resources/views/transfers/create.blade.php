@@ -9,7 +9,7 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="sm:px-6 lg:px-8">
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
                     Records a linked Transfer Out and Transfer In across two portfolios (e.g. exchange → cold wallet).
@@ -30,24 +30,22 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <x-input-label for="from_portfolio_id" value="From Portfolio" />
-                            <select id="from_portfolio_id" name="from_portfolio_id" required
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                            <x-select-input id="from_portfolio_id" name="from_portfolio_id" required>
                                 <option value="">Select…</option>
                                 @foreach ($portfolios as $p)
                                     <option value="{{ $p->id }}" @selected(old('from_portfolio_id', request('from_portfolio_id')) == $p->id)>{{ $p->name }}</option>
                                 @endforeach
-                            </select>
+                            </x-select-input>
                             <x-input-error :messages="$errors->get('from_portfolio_id')" class="mt-2" />
                         </div>
                         <div>
                             <x-input-label for="to_portfolio_id" value="To Portfolio" />
-                            <select id="to_portfolio_id" name="to_portfolio_id" required
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                            <x-select-input id="to_portfolio_id" name="to_portfolio_id" required>
                                 <option value="">Select…</option>
                                 @foreach ($portfolios as $p)
                                     <option value="{{ $p->id }}" @selected(old('to_portfolio_id', request('to_portfolio_id')) == $p->id)>{{ $p->name }}</option>
                                 @endforeach
-                            </select>
+                            </x-select-input>
                             <x-input-error :messages="$errors->get('to_portfolio_id')" class="mt-2" />
                         </div>
                     </div>
@@ -62,12 +60,11 @@
                         </div>
                         <div>
                             <x-input-label for="asset_type" value="Asset Type" />
-                            <select id="asset_type" name="asset_type"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                            <x-select-input id="asset_type" name="asset_type">
                                 @foreach (App\Enums\AssetType::cases() as $type)
                                     <option value="{{ $type->value }}" @selected(old('asset_type', request('asset_type', 'stock')) === $type->value)>{{ $type->label() }}</option>
                                 @endforeach
-                            </select>
+                            </x-select-input>
                             <x-input-error :messages="$errors->get('asset_type')" class="mt-2" />
                         </div>
                     </div>
@@ -132,9 +129,7 @@
 
                     <div>
                         <x-input-label for="notes" value="Notes (optional)" />
-                        <textarea id="notes" name="notes"
-                                  class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-                                  rows="2" maxlength="1000">{{ old('notes') }}</textarea>
+                        <x-textarea-input id="notes" name="notes" rows="2" maxlength="1000">{{ old('notes') }}</x-textarea-input>
                         <x-input-error :messages="$errors->get('notes')" class="mt-2" />
                     </div>
 

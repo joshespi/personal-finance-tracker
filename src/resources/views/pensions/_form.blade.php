@@ -155,8 +155,7 @@
 
         <div>
             <x-input-label for="notes" value="Notes (optional)" />
-            <textarea id="notes" name="notes" rows="2" maxlength="1000"
-                      class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">{{ old('notes', $p?->notes) }}</textarea>
+            <x-textarea-input id="notes" name="notes" rows="2" maxlength="1000">{{ old('notes', $p?->notes) }}</x-textarea-input>
             <x-input-error :messages="$errors->get('notes')" class="mt-2" />
         </div>
 

@@ -32,25 +32,23 @@
         {{-- Type --}}
         <div>
             <x-input-label for="type" value="Type" />
-            <select id="type" name="type" x-model="type"
-                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+            <x-select-input id="type" name="type" x-model="type">
                 @foreach (\App\Enums\ScheduledTransactionType::cases() as $type)
                     @continue(! $type->userSelectable() && $type->value !== $currentType)
                     <option value="{{ $type->value }}">{{ $type->label() }}</option>
                 @endforeach
-            </select>
+            </x-select-input>
             <x-input-error :messages="$errors->get('type')" class="mt-2" />
         </div>
 
         {{-- Recurrence --}}
         <div>
             <x-input-label for="recurrence" value="Recurrence" />
-            <select id="recurrence" name="recurrence"
-                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+            <x-select-input id="recurrence" name="recurrence">
                 @foreach (\App\Enums\Recurrence::cases() as $r)
                     <option value="{{ $r->value }}" @selected(old('recurrence', $s?->recurrence?->value) === $r->value)>{{ $r->formLabel() }}</option>
                 @endforeach
-            </select>
+            </x-select-input>
             <x-input-error :messages="$errors->get('recurrence')" class="mt-2" />
         </div>
 
@@ -66,15 +64,14 @@
     {{-- Envelope --}}
     <div x-show="needsEnvelope()" x-cloak>
         <x-input-label for="envelope_id" value="Envelope" />
-        <select id="envelope_id" name="envelope_id"
-                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+        <x-select-input id="envelope_id" name="envelope_id">
             <option value="">— Select envelope —</option>
             @foreach ($envelopes as $env)
                 <option value="{{ $env->id }}" @selected((string)old('envelope_id', $s?->envelope_id) === (string)$env->id)>
                     {{ $env->name }}
                 </option>
             @endforeach
-        </select>
+        </x-select-input>
         <x-input-error :messages="$errors->get('envelope_id')" class="mt-2" />
     </div>
 
@@ -83,15 +80,14 @@
         <x-input-label for="cash_account_id">
             Cash account <span x-show="!cashRequired()" class="text-gray-400 dark:text-gray-500 font-normal">(optional)</span>
         </x-input-label>
-        <select id="cash_account_id" name="cash_account_id"
-                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+        <x-select-input id="cash_account_id" name="cash_account_id">
             <option value="">— None —</option>
             @foreach ($cashAccounts as $ca)
                 <option value="{{ $ca->id }}" @selected((string)old('cash_account_id', $s?->cash_account_id) === (string)$ca->id)>
                     {{ $ca->name }}
                 </option>
             @endforeach
-        </select>
+        </x-select-input>
         <x-input-error :messages="$errors->get('cash_account_id')" class="mt-2" />
         <p x-show="type === 'envelope_fund'" class="mt-1 text-xs text-gray-400 dark:text-gray-500">
             Pairing a spending account will create a matching withdrawal there each time this runs.

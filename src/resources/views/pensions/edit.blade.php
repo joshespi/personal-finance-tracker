@@ -18,18 +18,9 @@
 
     <div class="py-12">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                <form method="POST" action="{{ route('pensions.update', $pension) }}" class="space-y-6">
-                    @csrf
-                    @method('PUT')
-                    @include('pensions._form')
-                    <div class="flex items-center gap-4">
-                        <x-primary-button>Save</x-primary-button>
-                        <a href="{{ route('pensions.index') }}"
-                           class="text-sm text-gray-600 dark:text-gray-400 hover:underline">Cancel</a>
-                    </div>
-                </form>
-            </div>
+            <x-form-card :action="route('pensions.update', $pension)" method="PUT" submit="Save" :cancel="route('pensions.index')">
+                @include('pensions._form')
+            </x-form-card>
         </div>
     </div>
 </x-app-layout>

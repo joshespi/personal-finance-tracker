@@ -4,17 +4,10 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                <form method="POST" action="{{ route('portfolios.store') }}" class="space-y-6">
-                    @csrf
-                    @include('portfolios._form')
-                    <div class="flex items-center gap-4">
-                        <x-primary-button>Create Portfolio</x-primary-button>
-                        <a href="{{ route('portfolios.index') }}" class="text-sm text-gray-600 dark:text-gray-400 hover:underline">Cancel</a>
-                    </div>
-                </form>
-            </div>
+        <div class="sm:px-6 lg:px-8">
+            <x-form-card :action="route('portfolios.store')" submit="Create Portfolio" :cancel="route('portfolios.index')">
+                @include('portfolios._form')
+            </x-form-card>
         </div>
     </div>
 </x-app-layout>

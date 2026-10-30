@@ -9,9 +9,7 @@
 
 <div>
     <x-input-label for="description" value="Description (optional)" />
-    <textarea id="description" name="description"
-              class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-              rows="3" maxlength="1000">{{ old('description', $p?->description) }}</textarea>
+    <x-textarea-input id="description" name="description" rows="3" maxlength="1000">{{ old('description', $p?->description) }}</x-textarea-input>
     <x-input-error :messages="$errors->get('description')" class="mt-2" />
 </div>
 
