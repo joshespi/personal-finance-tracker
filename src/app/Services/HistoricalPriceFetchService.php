@@ -87,26 +87,13 @@ class HistoricalPriceFetchService
             return ['outcome' => PriceFetchOutcome::RateLimited, 'count' => 0, 'message' => 'rate-limited (HTTP 429)'];
         }
 
-        if (! $response->successful() || ($response->json('s') ?? 'no_data') === 'no_data') {
+        if (! FinnhubClient::hasCandles($response)) {
             Log::warning("Backfill: no Finnhub candles for {$asset->symbol}");
 
             return ['outcome' => PriceFetchOutcome::NoData, 'count' => 0, 'message' => "no data (HTTP {$response->status()})"];
         }
 
-        $timestamps = $response->json('t') ?? [];
-        $closes     = $response->json('c') ?? [];
-
-        $rows = [];
-        foreach ($timestamps as $i => $ts) {
-            $date        = Carbon::createFromTimestamp($ts)->toDateString();
-            $rows[$date] = ['asset_id' => $asset->id, 'recorded_at' => $date.' 12:00:00', 'price' => $closes[$i], 'currency' => 'USD'];
-        }
-
-        if ($rows !== []) {
-            AssetPrice::upsert(array_values($rows), ['asset_id', 'recorded_at'], ['price', 'currency']);
-        }
-
-        return ['outcome' => PriceFetchOutcome::Fetched, 'count' => count($rows), 'message' => null];
+        return $this->storePrices($asset, FinnhubClient::closesByDate($response));
     }
 
     private function fetchCoinGecko(Asset $asset, Carbon $from, Carbon $to): array
@@ -125,21 +112,23 @@ class HistoricalPriceFetchService
             return ['outcome' => PriceFetchOutcome::NoData, 'count' => 0, 'message' => "no data (HTTP {$response->status()})"];
         }
 
-        $prices   = $response->json('prices') ?? [];
-        $fromDate = $from->toDateString();
-        $toDate   = $to->toDateString();
+        return $this->storePrices($asset, CoinGeckoClient::pricesByDate($response, $from->toDateString(), $to->toDateString()));
+    }
 
+    /**
+     * Upserts one noon-stamped daily price per date and builds the Fetched result.
+     *
+     * @param  array<string, float>  $pricesByDate  Y-m-d => price
+     */
+    private function storePrices(Asset $asset, array $pricesByDate): array
+    {
         $rows = [];
-        foreach ($prices as [$ts, $price]) {
-            $date = Carbon::createFromTimestampMs($ts)->toDateString();
-            if ($date < $fromDate || $date > $toDate) {
-                continue;
-            }
-            $rows[$date] = ['asset_id' => $asset->id, 'recorded_at' => $date.' 12:00:00', 'price' => $price, 'currency' => 'USD'];
+        foreach ($pricesByDate as $date => $price) {
+            $rows[] = ['asset_id' => $asset->id, 'recorded_at' => $date.' 12:00:00', 'price' => $price, 'currency' => 'USD'];
         }
 
         if ($rows !== []) {
-            AssetPrice::upsert(array_values($rows), ['asset_id', 'recorded_at'], ['price', 'currency']);
+            AssetPrice::upsert($rows, ['asset_id', 'recorded_at'], ['price', 'currency']);
         }
 
         return ['outcome' => PriceFetchOutcome::Fetched, 'count' => count($rows), 'message' => null];

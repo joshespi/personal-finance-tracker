@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Concerns\RetriesHttpRequests;
+use Carbon\Carbon;
 use Illuminate\Http\Client\Response;
 
 class CoinGeckoClient
@@ -38,6 +39,28 @@ class CoinGeckoClient
             'from'        => $from,
             'to'          => $to,
         ]);
+    }
+
+    /**
+     * Flattens a market_chart response's [ms-timestamp, price] pairs to one price per day,
+     * keeping only days within [$from, $to] (Y-m-d) — CoinGecko pads ranges with the
+     * adjacent day's point.
+     *
+     * @return array<string, float> Y-m-d => price, later points winning a same-day collision
+     */
+    public static function pricesByDate(Response $response, string $from, string $to): array
+    {
+        $byDate = [];
+
+        foreach ($response->json('prices') ?? [] as [$ts, $price]) {
+            $date = Carbon::createFromTimestampMs($ts)->toDateString();
+
+            if ($date >= $from && $date <= $to) {
+                $byDate[$date] = $price;
+            }
+        }
+
+        return $byDate;
     }
 
     public function search(string $query): Response

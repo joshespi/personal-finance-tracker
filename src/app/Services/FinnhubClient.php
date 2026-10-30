@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Concerns\RetriesHttpRequests;
+use Carbon\Carbon;
 use Illuminate\Http\Client\Response;
 
 class FinnhubClient
@@ -50,6 +51,25 @@ class FinnhubClient
             'to'         => $to,
             'token'      => $this->apiKey,
         ]);
+    }
+
+    /** Whether a dailyCandles() response carries candles (Finnhub answers 200 with s=no_data for an empty range). */
+    public static function hasCandles(Response $response): bool
+    {
+        return $response->successful() && ($response->json('s') ?? 'no_data') !== 'no_data';
+    }
+
+    /** @return array<string, float> Y-m-d => close price, later candles winning a same-day collision */
+    public static function closesByDate(Response $response): array
+    {
+        $closes = $response->json('c') ?? [];
+        $byDate = [];
+
+        foreach ($response->json('t') ?? [] as $i => $ts) {
+            $byDate[Carbon::createFromTimestamp($ts)->toDateString()] = $closes[$i];
+        }
+
+        return $byDate;
     }
 
     public function search(string $query): Response

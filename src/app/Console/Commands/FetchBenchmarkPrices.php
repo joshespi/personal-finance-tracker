@@ -78,26 +78,14 @@ class FetchBenchmarkPrices extends Command
             return;
         }
 
-        if (! $response->successful() || ($response->json('s') ?? 'no_data') === 'no_data') {
+        if (! FinnhubClient::hasCandles($response)) {
             $this->error("Failed to fetch {$ticker}: ".$response->status());
             Log::error("Benchmark fetch failed for {$ticker}", ['status' => $response->status()]);
 
             return;
         }
 
-        $data       = $response->json();
-        $timestamps = $data['t'] ?? [];
-        $closes     = $data['c'] ?? [];
-        $rows       = [];
-
-        foreach ($timestamps as $i => $ts) {
-            $date        = Carbon::createFromTimestamp($ts)->toDateString();
-            $rows[$date] = ['ticker' => $ticker, 'recorded_on' => $date, 'close_price' => $closes[$i]];
-        }
-
-        $this->storeRows($rows);
-
-        $this->line("  {$ticker}: stored ".count($rows).' days');
+        $this->storeCloses($ticker, FinnhubClient::closesByDate($response));
     }
 
     private function fetchCryptoCandles(string $ticker, Carbon $from, Carbon $to): void
@@ -129,15 +117,15 @@ class FetchBenchmarkPrices extends Command
             return;
         }
 
-        $prices = $response->json('prices') ?? [];
-        $rows   = [];
+        $this->storeCloses($ticker, CoinGeckoClient::pricesByDate($response, $from->toDateString(), $to->toDateString()));
+    }
 
-        foreach ($prices as [$ts, $price]) {
-            $date = Carbon::createFromTimestampMs($ts)->toDateString();
-            if ($date < $from->toDateString() || $date > $to->toDateString()) {
-                continue;
-            }
-            $rows[$date] = ['ticker' => $ticker, 'recorded_on' => $date, 'close_price' => $price];
+    /** @param  array<string, float>  $closesByDate  Y-m-d => close price */
+    private function storeCloses(string $ticker, array $closesByDate): void
+    {
+        $rows = [];
+        foreach ($closesByDate as $date => $close) {
+            $rows[] = ['ticker' => $ticker, 'recorded_on' => $date, 'close_price' => $close];
         }
 
         $this->storeRows($rows);
