@@ -124,7 +124,7 @@ class RealizedGainTest extends TestCase
     }
 
     /**
-     * Regression: both fee-per-unit divisions (the buy-side fold in buildOpenLots() and
+     * Regression: both fee-per-unit divisions (the buy-side fold in FifoLots::build() and
      * the sell-side reduction in compute()) used to divide by max(1, quantity) — a unit
      * floor, not a zero guard — silently shrinking the fee on any sub-1-unit trade,
      * routine for crypto. Now centralised on Transaction::usdFeePerUnit().

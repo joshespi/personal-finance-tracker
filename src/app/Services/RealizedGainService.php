@@ -6,7 +6,7 @@ use App\Enums\TransactionType;
 use App\Models\Portfolio;
 use App\Models\Transaction;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Support\FifoLots;
 use Illuminate\Support\Collection;
 
 /**
@@ -47,14 +47,14 @@ class RealizedGainService
 
         $lots = collect();
 
-        $this->buildOpenLots($txns, function (array $lot, float $matched, Transaction $t) use ($lots) {
+        FifoLots::build($txns, function (array $lot, float $matched, Transaction $t) use ($lots) {
             if ($t->type !== TransactionType::Sell) {
                 return; // transfers move cost basis to the destination portfolio — not a taxable event
             }
 
             $sellPrice = (float) $t->price_per_unit;
             // A cash sell fee reduces what was actually received — mirrors the buy-side
-            // fee-into-cost-per-unit fold in buildOpenLots() so proceeds/gain reconcile
+            // fee-into-cost-per-unit fold in FifoLots::build() so proceeds/gain reconcile
             // with the account's actual cash movement.
             $netSellPrice = $sellPrice - $t->usdFeePerUnit();
             $sellDate     = $t->transacted_at;
@@ -115,78 +115,9 @@ class RealizedGainService
             ->orderBy('transacted_at')
             ->get();
 
-        $openLots = $this->buildOpenLots($txns)[$assetId] ?? [];
+        $openLots = FifoLots::build($txns)[$assetId] ?? [];
 
-        return array_values(array_filter($openLots, fn ($l) => $l['qty'] > 0.000001));
-    }
-
-    /**
-     * Builds FIFO open lots per asset from a transaction set: inflows push a new lot
-     * (qty, cost-per-unit, date, asset), outflows consume existing lots FIFO. Shared by
-     * compute() (portfolio-wide, needs the date/asset tags to build realized-gain rows)
-     * and openLotsForAsset() (single-asset, for transfer cost-basis carryover) — these
-     * used to be two separately maintained copies of the same walk.
-     *
-     * $onSale, if given, is invoked (lot, matchedQty, transaction) for every FIFO match
-     * on an outflow — the hook compute() uses to record a realized-gain row per match,
-     * without duplicating the walk itself.
-     *
-     * @return array<int, array<int, array{qty: float, cost_per_unit: float, date: Carbon, asset: mixed}>> keyed by asset_id
-     */
-    private function buildOpenLots(Collection $txns, ?callable $onSale = null): array
-    {
-        $openLots = [];
-
-        foreach ($txns as $t) {
-            $assetId = $t->asset_id;
-            $openLots[$assetId] ??= [];
-
-            if ($t->type->isInflow()) {
-                $costPerUnit          = (float) $t->price_per_unit + $t->usdFeePerUnit();
-                $openLots[$assetId][] = [
-                    'qty'           => (float) $t->quantity,
-                    'cost_per_unit' => $costPerUnit,
-                    'date'          => $t->transacted_at,
-                    'asset'         => $t->asset,
-                ];
-            } elseif ($t->type->isOutflow()) {
-                // fee_in_asset on a transfer_out means fee units also left the wallet
-                $remainingToSell = $t->quantityWithAssetFee();
-
-                $this->consumeFifo($openLots[$assetId], $remainingToSell, function (array $lot, float $matched) use ($onSale, $t) {
-                    if ($onSale !== null) {
-                        $onSale($lot, $matched, $t);
-                    }
-                });
-            }
-        }
-
-        return $openLots;
-    }
-
-    /**
-     * Consume $remaining units FIFO from &$lots (each ['qty' => float, ...]),
-     * decrementing qty and shifting fully-consumed lots off the front.
-     * $onMatch, if given, is invoked with (lot, matchedQty) — before qty is
-     * decremented — for every partial/full match, so callers can record
-     * per-match detail (e.g. a realized-gain row) without duplicating the walk.
-     */
-    private function consumeFifo(array &$lots, float $remaining, ?callable $onMatch = null): void
-    {
-        while ($remaining > 0.000001 && ! empty($lots)) {
-            $matched = min($lots[0]['qty'], $remaining);
-
-            if ($onMatch !== null) {
-                $onMatch($lots[0], $matched);
-            }
-
-            $lots[0]['qty'] -= $matched;
-            $remaining -= $matched;
-
-            if ($lots[0]['qty'] < 0.000001) {
-                array_shift($lots);
-            }
-        }
+        return array_values(array_filter($openLots, fn ($l) => $l['qty'] > FifoLots::EPSILON));
     }
 
     /**
@@ -200,19 +131,15 @@ class RealizedGainService
             return null;
         }
 
-        $remaining = $qtySent;
-        $totalCost = 0.0;
+        $totalCost  = 0.0;
+        $matchedQty = 0.0;
 
-        foreach ($openLots as $lot) {
-            if ($remaining <= 0.000001) {
-                break;
-            }
-            $matched = min($lot['qty'], $remaining);
+        FifoLots::consume($openLots, $qtySent, function (array $lot, float $matched) use (&$totalCost, &$matchedQty) {
             $totalCost += $matched * $lot['cost_per_unit'];
-            $remaining -= $matched;
-        }
+            $matchedQty += $matched;
+        });
 
-        if ($remaining > 0.000001) {
+        if ($qtySent - $matchedQty > FifoLots::EPSILON) {
             return null;
         }
 

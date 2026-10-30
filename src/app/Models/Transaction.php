@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AssetType;
 use App\Enums\TransactionType;
+use App\Support\FifoLots;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -161,26 +162,7 @@ class Transaction extends Model
      */
     public static function accumulateFifoCostBasis(Collection $transactions): array
     {
-        $lots = [];
-
-        foreach ($transactions->sortBy('transacted_at') as $t) {
-            if ($t->type->isInflow()) {
-                $costPerUnit = (float) $t->price_per_unit + $t->usdFeePerUnit();
-                $lots[]      = ['qty' => (float) $t->quantity, 'cost_per_unit' => $costPerUnit];
-            } elseif ($t->type->isOutflow()) {
-                $remaining = $t->quantityWithAssetFee();
-
-                while ($remaining > 0.000001 && ! empty($lots)) {
-                    $matched = min($lots[0]['qty'], $remaining);
-                    $lots[0]['qty'] -= $matched;
-                    $remaining -= $matched;
-
-                    if ($lots[0]['qty'] < 0.000001) {
-                        array_shift($lots);
-                    }
-                }
-            }
-        }
+        $lots = array_merge([], ...array_values(FifoLots::build($transactions->sortBy('transacted_at'))));
 
         $totalQty  = array_sum(array_column($lots, 'qty'));
         $totalCost = array_sum(array_map(fn ($l) => $l['qty'] * $l['cost_per_unit'], $lots));
