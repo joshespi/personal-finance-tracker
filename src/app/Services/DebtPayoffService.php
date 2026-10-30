@@ -80,10 +80,7 @@ class DebtPayoffService
             2
         );
 
-        [$snowballOrder, $avalancheOrder] = $this->payoffOrders($debtData);
-
-        $snowball  = empty($debtData) ? $this->emptySimulation() : $this->simulate($debtData, $snowballOrder, 0.0);
-        $avalanche = empty($debtData) ? $this->emptySimulation() : $this->simulate($debtData, $avalancheOrder, 0.0);
+        ['snowball' => $snowball, 'avalanche' => $avalanche] = $this->simulateBoth($debtData, 0.0);
 
         return [
             'has_data'                    => true,
@@ -108,8 +105,15 @@ class DebtPayoffService
      */
     public function resimulate(User $user, float $extraPayment): array
     {
-        $debtData = $this->revolvingDebtData($this->liabilitiesWithBalance($user), $user);
+        return $this->simulateBoth(
+            $this->revolvingDebtData($this->liabilitiesWithBalance($user), $user),
+            $extraPayment
+        );
+    }
 
+    /** @return array{snowball: array, avalanche: array} both payoff simulations, empty ones when there's no revolving debt */
+    private function simulateBoth(array $debtData, float $extraPayment): array
+    {
         if (empty($debtData)) {
             return ['snowball' => $this->emptySimulation(), 'avalanche' => $this->emptySimulation()];
         }
