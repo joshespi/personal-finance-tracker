@@ -1,18 +1,9 @@
 import './bootstrap';
 import './ticker-search';
 import { initFormGuards } from './form-guards';
-import { DEMO_MASK, fmtFull, fmtSigned, fmtSignedPct, gainLossClass } from './format-utils';
+import { DEMO_MASK, fmtFull, fmtSigned, fmtSignedPct, fmtWhole, gainLossClass } from './format-utils';
 
 initFormGuards();
-
-// Whole-dollar display for interactive "type any number and see the split" widgets —
-// deliberately not demo-masked, since the figure being shown is whatever the visitor
-// just typed (not real account data), so masking it would defeat the widget's purpose.
-function fmtWhole(v) {
-    // A cleared or unparseable number input yields '' / NaN — show $0 rather than '$NaN'.
-    const n = Number(v);
-    return '$' + (Number.isFinite(n) ? Math.round(n) : 0).toLocaleString();
-}
 
 // Livewire bundles and starts its own Alpine instance (@livewireScripts in
 // layouts/app.blade.php loads it on every page, not just Livewire ones) — importing
@@ -31,6 +22,8 @@ document.addEventListener('alpine:init', () => {
         mandatoryPct,
         discretionaryPct,
         savingsPct,
+        // Deliberately not demo-masked: the figure is whatever the visitor just typed (not
+        // real account data), so masking it would defeat the widget's purpose.
         fmt: fmtWhole,
         get needs() { return this.income * this.mandatoryPct / 100; },
         get wants() { return this.income * this.discretionaryPct / 100; },
@@ -39,6 +32,8 @@ document.addEventListener('alpine:init', () => {
 
     window.Alpine.data('holdingsSort', (rows) => {
         const demo = window.__demoMode ?? false;
+        // Demo mode masks the figure; a missing value shows an em dash instead of throwing.
+        const masked = (fmt) => (v) => demo ? DEMO_MASK : (v === null || v === undefined ? '—' : fmt(v));
         return {
             rows,
             sortCol: 'sort_value',
@@ -55,33 +50,17 @@ document.addEventListener('alpine:init', () => {
             arrow(col) {
                 return this.sortCol === col ? (this.sortDir === 'asc' ? ' ↑' : ' ↓') : '';
             },
-            fmtMoney(v) {
-                if (demo) return DEMO_MASK;
-                if (v === null || v === undefined) return '—';
-                return fmtFull(v);
-            },
-            fmtPrice(v) {
-                if (demo) return DEMO_MASK;
-                if (v === null || v === undefined) return '—';
-                return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-            },
-            // Both guard null/undefined like the formatters above: a missing quantity or
-            // percentage used to throw inside the `sorted` getter, which takes the whole
-            // Alpine component down rather than blanking one cell.
-            fmtQty(v) {
-                if (demo) return DEMO_MASK;
-                if (v === null || v === undefined) return '—';
-                return parseFloat(Number(v).toFixed(8)).toString();
-            },
+            // Every cell formatter guards null/undefined: a missing quantity or percentage
+            // used to throw inside the `sorted` getter, which takes the whole Alpine
+            // component down rather than blanking one cell.
+            fmtMoney: masked(fmtFull),
+            fmtPrice: masked(v => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })),
+            fmtQty: masked(v => parseFloat(Number(v).toFixed(8)).toString()),
             fmtPct(v) {
                 if (v === null || v === undefined) return '—';
                 return Number(v).toFixed(1) + '%';
             },
-            plFmt(v) {
-                if (demo) return DEMO_MASK;
-                if (v === null || v === undefined) return '—';
-                return fmtSigned(v);
-            },
+            plFmt: masked(fmtSigned),
             plPctFmt(v) {
                 if (v === null || v === undefined) return '';
                 return ' (' + fmtSignedPct(v) + ')';

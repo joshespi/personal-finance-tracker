@@ -1,4 +1,5 @@
 import { themeColors } from './chart-utils';
+import { fmtWhole } from './format-utils';
 
 // Debt-payoff Alpine component: renders the snowball/avalanche projection chart and
 // drives the "extra payment" what-if slider. Registered on 'alpine:init' like the
@@ -94,11 +95,11 @@ document.addEventListener('alpine:init', () => {
                         responsive: true, maintainAspectRatio: false, animation: false,
                         plugins: {
                             legend: { position: 'top', labels: { color: tc, usePointStyle: true, pointStyleWidth: 10 } },
-                            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': $' + Math.round(ctx.raw).toLocaleString() } },
+                            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmtWhole(ctx.raw) } },
                         },
                         scales: {
                             x: { ticks: { maxTicksLimit: 12, color: tc }, grid: { color: gc } },
-                            y: { ticks: { callback: v => '$' + Math.round(v).toLocaleString(), color: tc }, grid: { color: gc } },
+                            y: { ticks: { callback: fmtWhole, color: tc }, grid: { color: gc } },
                         },
                     },
                 });

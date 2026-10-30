@@ -16,6 +16,13 @@ export function fmtFull(v) {
     return (v < 0 ? '-$' : '$') + str;
 }
 
+// Whole-dollar display ("$1,235") for interactive widgets and chart axes. A cleared or
+// unparseable number input yields '' / NaN — show $0 rather than '$NaN'. Not demo-masked.
+export function fmtWhole(v) {
+    const n = Number(v);
+    return '$' + (Number.isFinite(n) ? Math.round(n) : 0).toLocaleString();
+}
+
 // Round to the 2dp the signed formatters display before taking the sign, so a
 // float-noise -0.001 reads "+0.00" (Math.round yields -0, and -0 >= 0) rather
 // than "-0.00" in red.

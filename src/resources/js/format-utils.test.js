@@ -1,5 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { fmtDate, fmtSigned, fmtSignedPct, gainLossClass } from './format-utils';
+import { fmtDate, fmtSigned, fmtSignedPct, fmtWhole, gainLossClass } from './format-utils';
+
+describe('fmtWhole', () => {
+    it('rounds to whole dollars with thousands separators', () => {
+        expect(fmtWhole(1234.56)).toBe('$1,235');
+        expect(fmtWhole('2500')).toBe('$2,500');
+    });
+
+    it('shows $0 for a cleared or unparseable input', () => {
+        expect(fmtWhole('')).toBe('$0');
+        expect(fmtWhole(NaN)).toBe('$0');
+        expect(fmtWhole(undefined)).toBe('$0');
+    });
+});
 
 describe('signed formatters', () => {
     it('sign positive, zero and negative values', () => {
