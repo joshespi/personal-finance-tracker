@@ -10,7 +10,6 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="{{ config('app.name') }}">
         <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/icons/icon-180.png">
 
         {{-- Every page's header slot leads with an <h2> naming it; reuse that text as the tab title. --}}
