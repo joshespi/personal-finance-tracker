@@ -6,12 +6,15 @@ use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
+use App\Models\Liability;
+use App\Models\ScheduledTransaction;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class EnvelopeController extends Controller
@@ -121,7 +124,10 @@ class EnvelopeController extends Controller
 
         $cashAccounts = $request->user()->cashAccounts()->orderBy('name')->get(['id', 'name']);
 
-        return view('envelopes.show', compact('envelope', 'cashAccounts'));
+        // Roll-into targets for the delete dialog.
+        $otherEnvelopes = $request->user()->envelopes()->whereKeyNot($envelope->id)->ordered()->get(['id', 'name']);
+
+        return view('envelopes.show', compact('envelope', 'cashAccounts', 'otherEnvelopes'));
     }
 
     public function edit(Request $request, Envelope $envelope): View
@@ -153,9 +159,38 @@ class EnvelopeController extends Controller
     {
         $this->authorize('delete', $envelope);
 
-        $envelope->delete();
+        $validated = $request->validate([
+            'reassign_to' => ['nullable', 'integer', Rule::notIn([$envelope->id]), Envelope::ownershipRule($request->user()->id)],
+        ]);
 
-        return redirect()->route('envelopes.index')->with('success', 'Envelope deleted.');
+        $target = isset($validated['reassign_to'])
+            ? $request->user()->envelopes()->find($validated['reassign_to'])
+            : null;
+
+        DB::transaction(function () use ($envelope, $target) {
+            if ($target !== null) {
+                $this->rollInto($envelope, $target);
+            }
+
+            $envelope->delete();
+        });
+
+        return redirect()->route('envelopes.index')->with('success', $target === null
+            ? 'Envelope deleted.'
+            : "Envelope deleted; its transactions were moved to {$target->name}.");
+    }
+
+    /**
+     * Repoint everything hanging off $from at $into, ahead of deleting $from. Without this the
+     * delete's foreign keys drop the assigned ('fund') rows and null the envelope on spending,
+     * schedules and liability auto-pay — moving them instead carries the balance and history over.
+     */
+    private function rollInto(Envelope $from, Envelope $into): void
+    {
+        EnvelopeTransaction::where('envelope_id', $from->id)->update(['envelope_id' => $into->id]);
+        CashTransaction::where('envelope_id', $from->id)->update(['envelope_id' => $into->id]);
+        ScheduledTransaction::where('envelope_id', $from->id)->update(['envelope_id' => $into->id]);
+        Liability::where('payment_envelope_id', $from->id)->update(['payment_envelope_id' => $into->id]);
     }
 
     public function assignOne(Request $request): JsonResponse

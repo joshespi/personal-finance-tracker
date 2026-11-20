@@ -6,6 +6,8 @@ use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
 use App\Models\EnvelopeTransaction;
+use App\Models\Liability;
+use App\Models\ScheduledTransaction;
 use App\Models\User;
 use Tests\TestCase;
 
@@ -91,6 +93,78 @@ class EnvelopeTest extends TestCase
             ->assertRedirect(route('envelopes.index'));
 
         $this->assertDatabaseMissing('envelopes', ['id' => $envelope->id]);
+    }
+
+    public function test_delete_envelope_without_reassign_drops_funds_and_uncategorizes_spending(): void
+    {
+        $envelope = Envelope::factory()->create();
+        $account  = CashAccount::factory()->for($envelope->user)->create();
+        $fund     = EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 500]);
+        $spend    = CashTransaction::factory()->for($account)->spend($envelope)->create(['amount' => 75]);
+
+        $this->actingAs($envelope->user)
+            ->delete(route('envelopes.destroy', $envelope))
+            ->assertRedirect(route('envelopes.index'));
+
+        $this->assertDatabaseMissing('envelope_transactions', ['id' => $fund->id]);
+        $this->assertDatabaseHas('cash_transactions', ['id' => $spend->id, 'envelope_id' => null]);
+    }
+
+    public function test_delete_envelope_rolls_transactions_into_another_envelope(): void
+    {
+        $user     = User::factory()->create();
+        $envelope = Envelope::factory()->for($user)->create();
+        $target   = Envelope::factory()->for($user)->create();
+        $account  = CashAccount::factory()->for($user)->create();
+
+        EnvelopeTransaction::factory()->for($target)->fund()->create(['amount' => 100]);
+        $fund     = EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 500]);
+        $spend    = CashTransaction::factory()->for($account)->spend($envelope)->create(['amount' => 75]);
+        // future(): a schedule due today would be materialized by the request itself and skew the balance.
+        $schedule = ScheduledTransaction::factory()->for($user)->envelopeSpend()->future()->create([
+            'cash_account_id' => $account->id,
+            'envelope_id'     => $envelope->id,
+        ]);
+        $liability = Liability::factory()->for($user)->create(['payment_envelope_id' => $envelope->id]);
+
+        $this->actingAs($user)
+            ->delete(route('envelopes.destroy', $envelope), ['reassign_to' => $target->id])
+            ->assertRedirect(route('envelopes.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('envelopes', ['id' => $envelope->id]);
+        $this->assertDatabaseHas('envelope_transactions', ['id' => $fund->id, 'envelope_id' => $target->id]);
+        $this->assertDatabaseHas('cash_transactions', ['id' => $spend->id, 'envelope_id' => $target->id]);
+        $this->assertDatabaseHas('scheduled_transactions', ['id' => $schedule->id, 'envelope_id' => $target->id]);
+        $this->assertDatabaseHas('liabilities', ['id' => $liability->id, 'payment_envelope_id' => $target->id]);
+
+        // The deleted envelope's balance (500 − 75) lands on top of the target's own 100.
+        $this->assertEquals(525.0, $target->fresh()->balance());
+    }
+
+    public function test_delete_envelope_cannot_roll_into_another_users_envelope(): void
+    {
+        $envelope = Envelope::factory()->create();
+        $foreign  = Envelope::factory()->create();
+        $fund     = EnvelopeTransaction::factory()->for($envelope)->fund()->create(['amount' => 500]);
+
+        $this->actingAs($envelope->user)
+            ->delete(route('envelopes.destroy', $envelope), ['reassign_to' => $foreign->id])
+            ->assertSessionHasErrors('reassign_to');
+
+        $this->assertDatabaseHas('envelopes', ['id' => $envelope->id]);
+        $this->assertDatabaseHas('envelope_transactions', ['id' => $fund->id, 'envelope_id' => $envelope->id]);
+    }
+
+    public function test_delete_envelope_cannot_roll_into_itself(): void
+    {
+        $envelope = Envelope::factory()->create();
+
+        $this->actingAs($envelope->user)
+            ->delete(route('envelopes.destroy', $envelope), ['reassign_to' => $envelope->id])
+            ->assertSessionHasErrors('reassign_to');
+
+        $this->assertDatabaseHas('envelopes', ['id' => $envelope->id]);
     }
 
     public function test_balance_reflects_funds_minus_spends(): void

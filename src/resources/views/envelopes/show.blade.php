@@ -19,10 +19,14 @@
                 <x-btn variant="secondary" href="{{ route('envelopes.edit', $envelope) }}">
                     Edit
                 </x-btn>
-                <x-delete-form :action="route('envelopes.destroy', $envelope)" confirm="Delete this envelope and all its transactions?" variant="button" />
+                <x-btn variant="danger" type="button"
+                       data-id="{{ $envelope->id }}" data-name="{{ $envelope->name }}" data-action="{{ route('envelopes.destroy', $envelope) }}"
+                       x-data x-on:click="$dispatch('delete-envelope', { ...$el.dataset })">Delete</x-btn>
             </div>
         </div>
     </x-slot>
+
+    <x-envelope-delete-dialog :envelopes="$otherEnvelopes" />
 
     <div class="py-12">
         <div class="sm:px-6 lg:px-8 space-y-8">
