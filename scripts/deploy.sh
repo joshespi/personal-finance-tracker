@@ -27,6 +27,14 @@ app_env=$(grep -m1 '^APP_ENV=' .env | cut -d= -f2- | tr -d '"' || true)
 # Paths whose change means the images or service definitions need rebuilding.
 BUILD_PATHS="docker docker-compose.yml"
 
+# Last commit that touched BUILD_PATHS, and the one the running image was last built from.
+# Diffing across this run's pull isn't enough: if the code was pulled by hand first, before and
+# after are equal and a stale image (e.g. an entrypoint without the .ready marker) goes unnoticed.
+# Kept inside .git so it is never tracked.
+BUILD_REV_FILE=".git/deploy-build-rev"
+# shellcheck disable=SC2086
+build_rev() { git log -1 --format=%H -- $BUILD_PATHS; }
+
 before=$(git rev-parse HEAD)
 if [ "$pull" = 1 ]; then
     echo "==> git pull"
@@ -40,6 +48,11 @@ if [ "$before" != "$after" ] && ! git diff --quiet "$before" "$after" -- $BUILD_
     echo "==> Docker files changed since $(git rev-parse --short "$before")"
     rebuild=1
 fi
+current_build_rev=$(build_rev)
+if [ "$rebuild" = 0 ] && [ "$(cat "$BUILD_REV_FILE" 2>/dev/null || true)" != "$current_build_rev" ]; then
+    echo "==> image not built from the current Docker files (or never recorded); rebuilding"
+    rebuild=1
+fi
 
 # Safety net before any migration runs. Skipped on a first deploy when the db isn't up yet.
 running_services=$(docker compose ps --status running --services)
@@ -51,6 +64,8 @@ fi
 if [ "$rebuild" = 1 ]; then
     echo "==> docker compose up -d --build"
     docker compose up -d --build
+    printf '%s
+' "$current_build_rev" > "$BUILD_REV_FILE"
 else
     echo "==> docker compose up -d"
     docker compose up -d
@@ -63,6 +78,8 @@ until docker compose exec -T app test -f storage/framework/cache/.ready; do
     tries=$((tries + 1))
     if [ "$tries" -gt 100 ]; then
         echo "app did not become ready; check: docker compose logs app" >&2
+        echo "If the container predates the current entrypoint it never writes the .ready marker;" >&2
+        echo "re-run with: scripts/deploy.sh --no-pull --rebuild" >&2
         exit 1
     fi
     sleep 3
