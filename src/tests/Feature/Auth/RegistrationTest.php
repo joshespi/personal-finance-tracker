@@ -25,11 +25,40 @@ class RegistrationTest extends TestCase
             'email'                 => 'test@example.com',
             'password'              => 'password',
             'password_confirmation' => 'password',
+            'features'              => ['investing', 'cash', 'retirement'],
         ]);
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
         Notification::assertSentTo(User::where('email', 'test@example.com')->sole(), VerifyEmail::class);
+    }
+
+    public function test_registration_stores_the_chosen_features(): void
+    {
+        $this->post('/register', [
+            'name'                  => 'Test User',
+            'email'                 => 'pick@example.com',
+            'password'              => 'password',
+            'password_confirmation' => 'password',
+            'features'              => ['cash'],
+        ])->assertRedirect(route('dashboard', absolute: false));
+
+        $user = User::where('email', 'pick@example.com')->sole();
+        $this->assertTrue($user->hasFeature('cash'));
+        $this->assertFalse($user->hasFeature('investing'));
+        $this->assertFalse($user->hasFeature('retirement'));
+    }
+
+    public function test_registration_requires_at_least_one_feature(): void
+    {
+        $this->post('/register', [
+            'name'                  => 'Test User',
+            'email'                 => 'none@example.com',
+            'password'              => 'password',
+            'password_confirmation' => 'password',
+        ])->assertSessionHasErrors('features');
+
+        $this->assertGuest();
     }
 
     public function test_unverified_user_is_redirected_from_dashboard(): void

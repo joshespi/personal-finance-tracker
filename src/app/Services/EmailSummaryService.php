@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\EmailSummarySection;
+use App\Enums\Feature;
 use App\Models\CashTransaction;
 use App\Models\Liability;
 use App\Models\PortfolioSnapshot;
@@ -133,7 +134,10 @@ class EmailSummaryService
     /** Memoized per compute() — several sections scope to the same user's portfolios. */
     private function portfolioIds(User $user): Collection
     {
-        return $this->memo['portfolioIds'] ??= $user->portfolios()->pluck('id');
+        // Empty when Investing is off so no investing/net-worth-change figure is reported from hidden portfolios.
+        return $this->memo['portfolioIds'] ??= $user->hasFeature(Feature::Investing)
+            ? $user->portfolios()->pluck('id')
+            : collect();
     }
 
     /**

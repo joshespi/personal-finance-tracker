@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\Feature;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\User;
@@ -31,12 +32,14 @@ class RegisteredUserController extends Controller
             'name'     => ['required', 'string', 'max:255'],
             'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ]);
+            ...Feature::selectionRules(),
+        ], ['features.required' => 'Pick at least one thing to track.', 'features.min' => 'Pick at least one thing to track.']);
 
         $user = User::create([
             'name'     => $request->name,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
+            'features' => Feature::mapFromSelection($request->input('features', [])),
         ]);
 
         event(new Registered($user));

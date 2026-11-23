@@ -20,12 +20,17 @@
                 </h2>
             </div>
 
-            <x-tab-nav :tabs="[
-                ['href' => route('planning', ['tab' => 'debt-payoff']), 'label' => 'Debt Payoff', 'active' => $tab === 'debt-payoff'],
-                ['href' => route('planning', ['tab' => 'allocator']), 'label' => 'Allocator', 'active' => $tab === 'allocator'],
-                ['href' => route('planning', ['tab' => 'emergency-fund']), 'label' => 'Emergency Fund', 'active' => $tab === 'emergency-fund'],
-                ['href' => route('planning', ['tab' => 'retirement']), 'label' => 'Retirement', 'active' => $tab === 'retirement'],
-            ]" />
+            @php
+                $planningTabs = collect([
+                    'debt-payoff'    => 'Debt Payoff',
+                    'allocator'      => 'Allocator',
+                    'emergency-fund' => 'Emergency Fund',
+                    'retirement'     => 'Retirement',
+                ])->only(\App\Http\Controllers\PlanningController::availableTabs(auth()->user()))
+                  ->map(fn ($label, $key) => ['href' => route('planning', ['tab' => $key]), 'label' => $label, 'active' => $tab === $key])
+                  ->values()->all();
+            @endphp
+            <x-tab-nav :tabs="$planningTabs" />
         </div>
     </x-slot>
 

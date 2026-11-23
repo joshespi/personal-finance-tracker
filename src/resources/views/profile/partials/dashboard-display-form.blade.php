@@ -11,7 +11,12 @@
         @csrf
         @method('PATCH')
 
-        @foreach (\App\Enums\DashboardWidget::grouped() as $group => $widgets)
+        @foreach (\App\Enums\DashboardWidget::grouped() as $group => $allWidgets)
+            {{-- Widgets of a switched-off module aren't offered (their saved preference is kept). --}}
+            @php
+                $widgets = array_filter($allWidgets, fn ($w) => $w->feature() === null || $user->hasFeature($w->feature()));
+            @endphp
+            @continue($widgets === [])
             <div x-data="{ setAll(v) { $el.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = v) } }">
                 <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-1 mb-3">
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ $group }}</h3>

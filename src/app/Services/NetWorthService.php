@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Enums\AssetType;
 use App\Enums\DashboardWidget;
+use App\Enums\Feature;
 use App\Models\PortfolioSnapshot;
 use App\Models\User;
 use App\Support\Rebalancing;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 
 class NetWorthService
@@ -29,21 +31,30 @@ class NetWorthService
      */
     public function compute(User $user): array
     {
-        $portfolios = $user->portfolios()
-            ->active()
-            ->with(['transactions.asset.latestPrice', 'manualAssets.latestValuation', 'manualAssets.proxyAsset.latestPrice'])
-            ->get();
+        $hasInvesting = $user->hasFeature(Feature::Investing);
+        $hasCash      = $user->hasFeature(Feature::Cash);
 
-        $rawSnapshots = PortfolioSnapshot::whereIn('portfolio_id', $portfolios->pluck('id'))
-            ->selectRaw('recorded_on, SUM(market_value) as mv, SUM(manual_value) as manv, SUM(cost_basis) as cb')
-            ->groupBy('recorded_on')
-            ->orderBy('recorded_on')
-            ->get()
-            ->mapWithKeys(fn ($s) => [$s->recorded_on->toDateString() => [
-                'value'        => round((float) $s->mv + (float) $s->manv, 2),
-                'market_value' => round((float) $s->mv, 2),
-                'cost'         => round((float) $s->cb, 2),
-            ]]);
+        // A module that's switched off contributes nothing (its data is kept, just not counted),
+        // so net worth reflects only what the user has chosen to track.
+        $portfolios = $hasInvesting
+            ? $user->portfolios()
+                ->active()
+                ->with(['transactions.asset.latestPrice', 'manualAssets.latestValuation', 'manualAssets.proxyAsset.latestPrice'])
+                ->get()
+            : new EloquentCollection();
+
+        $rawSnapshots = $portfolios->isEmpty()
+            ? collect()
+            : PortfolioSnapshot::whereIn('portfolio_id', $portfolios->pluck('id'))
+                ->selectRaw('recorded_on, SUM(market_value) as mv, SUM(manual_value) as manv, SUM(cost_basis) as cb')
+                ->groupBy('recorded_on')
+                ->orderBy('recorded_on')
+                ->get()
+                ->mapWithKeys(fn ($s) => [$s->recorded_on->toDateString() => [
+                    'value'        => round((float) $s->mv + (float) $s->manv, 2),
+                    'market_value' => round((float) $s->mv, 2),
+                    'cost'         => round((float) $s->cb, 2),
+                ]]);
 
         $chartData = $rawSnapshots->map(fn ($v, $date) => ['date' => $date, 'value' => $v['value'], 'cost' => $v['cost']])
             ->values();
@@ -54,10 +65,9 @@ class NetWorthService
         // Per-widget visibility map (value => bool) so the view can gate each
         // section/tile without re-hitting the model, and so hidden widgets' data
         // is never computed. Missing = visible by default.
-        $prefs = $user->dashboard_preferences ?? [];
-        $show  = [];
+        $show = [];
         foreach (DashboardWidget::cases() as $widget) {
-            $show[$widget->value] = $prefs[$widget->value] ?? true;
+            $show[$widget->value] = $user->showsWidget($widget);
         }
 
         $benchmarkData = $show[DashboardWidget::Benchmark->value] ? $this->benchmarkService->all() : [];
@@ -72,7 +82,7 @@ class NetWorthService
             ->sortByDesc('total_value')->values();
 
         $portfolioValue = round($summaries->sum('total_value'), 2);
-        $totalCash      = round($user->totalCash(), 2);
+        $totalCash      = $hasCash ? round($user->totalCash(), 2) : 0.0;
         $totalAssets    = round($portfolioValue + $totalCash, 2);
 
         // Invested = portfolio value minus manual assets flagged out (e.g. primary residence).
@@ -82,10 +92,10 @@ class NetWorthService
             ->where('include_in_invested', false)
             ->sum(fn ($ma) => $ma->currentValue());
         $investedValue   = round($portfolioValue - $excludedFromInvested, 2);
-        $userLiabilities = $user->liabilities()->with('latestBalance')->get();
+        $userLiabilities = $hasCash ? $user->liabilities()->with('latestBalance')->get() : new EloquentCollection();
         $totalDebt       = round($userLiabilities->sum(fn ($l) => $l->currentBalance()), 2);
 
-        $readyToAssign = $user->readyToAssign();
+        $readyToAssign = $hasCash ? $user->readyToAssign() : 0.0;
 
         $revolving            = $userLiabilities->filter(fn ($l) => $l->isRevolving() && $l->currentBalance() > 0);
         $revolvingBalance     = round($revolving->sum(fn ($l) => $l->currentBalance()), 2);
@@ -100,7 +110,7 @@ class NetWorthService
         $pensionValue         = 0.0;
         $pensionMonthlyIncome = 0.0;
         $pensionDrawAge       = null;
-        foreach ($user->pensions()->get() as $pension) {
+        foreach ($user->hasFeature(Feature::Retirement) ? $user->pensions()->get() : [] as $pension) {
             $computed = $this->pensionService->compute($pension);
             if ($pension->include_in_net_worth) {
                 $pensionValue += $computed['pvAccrued'];

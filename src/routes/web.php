@@ -16,6 +16,7 @@ use App\Http\Controllers\CsvImportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DividendController;
 use App\Http\Controllers\EnvelopeController;
+use App\Http\Controllers\EnvelopeInvestmentController;
 use App\Http\Controllers\EnvelopeTransactionController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\IncomeCategoryController;
@@ -56,83 +57,116 @@ Route::middleware('auth')->group(function () {
         return redirect()->back();
     })->name('demo-mode.toggle');
 
-    Route::get('/transactions', AllTransactionsController::class)->name('transactions.all');
-    Route::get('/dividends', DividendController::class)->name('dividends');
-    Route::get('/tax', TaxSummaryController::class)->name('tax.summary');
     Route::get('/export', [ExportController::class, 'index'])->name('export.index');
-    Route::get('/import/csv', [CsvImportController::class, 'index'])->name('import.csv');
-    Route::post('/import/csv/upload', [CsvImportController::class, 'upload'])->name('import.csv.upload');
-    Route::get('/import/csv/preview', [CsvImportController::class, 'preview'])->name('import.csv.preview');
-    Route::post('/import/csv/commit', [CsvImportController::class, 'commit'])->name('import.csv.commit');
-    Route::post('/import/csv/cancel', [CsvImportController::class, 'cancel'])->name('import.csv.cancel');
-    Route::get('/export/transactions', [ExportController::class, 'transactions'])->name('export.transactions');
-    Route::get('/export/realized-gains', [ExportController::class, 'realizedGains'])->name('export.realized-gains');
     Route::get('/export/backup', [ExportController::class, 'fullBackup'])->name('export.backup');
-    Route::patch('assets/{asset}/reclassify', [AssetController::class, 'reclassify'])->name('assets.reclassify');
 
-    Route::resource('portfolios', PortfolioController::class);
+    Route::middleware('feature:investing')->group(function () {
+        Route::get('/transactions', AllTransactionsController::class)->name('transactions.all');
+        Route::get('/dividends', DividendController::class)->name('dividends');
+        Route::get('/tax', TaxSummaryController::class)->name('tax.summary');
+        Route::get('/export/transactions', [ExportController::class, 'transactions'])->name('export.transactions');
+        Route::get('/export/realized-gains', [ExportController::class, 'realizedGains'])->name('export.realized-gains');
+        Route::patch('assets/{asset}/reclassify', [AssetController::class, 'reclassify'])->name('assets.reclassify');
 
-    Route::prefix('portfolios/{portfolio}/journal')->name('portfolios.journal.')->group(function () {
-        Route::get('/', [JournalEntryController::class, 'index'])->name('index');
-        Route::post('/', [JournalEntryController::class, 'store'])->name('store');
-        Route::get('/{entry}/edit', [JournalEntryController::class, 'edit'])->name('edit');
-        Route::put('/{entry}', [JournalEntryController::class, 'update'])->name('update');
-        Route::delete('/{entry}', [JournalEntryController::class, 'destroy'])->name('destroy');
+        Route::resource('portfolios', PortfolioController::class);
+
+        Route::prefix('portfolios/{portfolio}/journal')->name('portfolios.journal.')->group(function () {
+            Route::get('/', [JournalEntryController::class, 'index'])->name('index');
+            Route::post('/', [JournalEntryController::class, 'store'])->name('store');
+            Route::get('/{entry}/edit', [JournalEntryController::class, 'edit'])->name('edit');
+            Route::put('/{entry}', [JournalEntryController::class, 'update'])->name('update');
+            Route::delete('/{entry}', [JournalEntryController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::resource('portfolios.transactions', TransactionController::class)->except(['show'])->shallow();
+
+        Route::get('portfolios/{portfolio}/transactions/import/template', [TransactionImportController::class, 'template'])
+            ->name('portfolios.transactions.import.template');
+
+        Route::post('portfolios/{portfolio}/transactions/import', [TransactionImportController::class, 'store'])
+            ->name('portfolios.transactions.import');
+
+        Route::get('/transfers/create', [PortfolioTransferController::class, 'create'])->name('transfers.create');
+        Route::post('/transfers', [PortfolioTransferController::class, 'store'])->name('transfers.store');
+
+        Route::resource('portfolios.manual-assets', ManualAssetController::class)->shallow();
+
+        Route::patch('portfolios/{portfolio}/chart-visibility', [PortfolioController::class, 'updateChartVisibility'])
+            ->name('portfolios.chart-visibility');
+
+        Route::patch('portfolios/{portfolio}/close', [PortfolioController::class, 'close'])->name('portfolios.close');
+        Route::patch('portfolios/{portfolio}/reopen', [PortfolioController::class, 'reopen'])->name('portfolios.reopen');
+
+        Route::post('portfolios/{portfolio}/slices', [PortfolioSliceController::class, 'store'])->name('portfolios.slices.store');
+        Route::delete('portfolios/{portfolio}/slices/{slice}', [PortfolioSliceController::class, 'destroy'])->name('portfolios.slices.destroy');
+
+        Route::resource('manual-assets.valuations', ManualValuationController::class)
+            ->shallow()
+            ->only(['store', 'destroy']);
+
+        // Ticker autocomplete
+        Route::get('/tickers/search', TickerSearchController::class)->name('tickers.search')->middleware('throttle:30,1');
     });
 
-    Route::resource('portfolios.transactions', TransactionController::class)->except(['show'])->shallow();
+    Route::middleware('feature:cash')->group(function () {
+        Route::get('/import/csv', [CsvImportController::class, 'index'])->name('import.csv');
+        Route::post('/import/csv/upload', [CsvImportController::class, 'upload'])->name('import.csv.upload');
+        Route::get('/import/csv/preview', [CsvImportController::class, 'preview'])->name('import.csv.preview');
+        Route::post('/import/csv/commit', [CsvImportController::class, 'commit'])->name('import.csv.commit');
+        Route::post('/import/csv/cancel', [CsvImportController::class, 'cancel'])->name('import.csv.cancel');
 
-    Route::get('portfolios/{portfolio}/transactions/import/template', [TransactionImportController::class, 'template'])
-        ->name('portfolios.transactions.import.template');
+        Route::resource('liabilities', LiabilityController::class);
 
-    Route::post('portfolios/{portfolio}/transactions/import', [TransactionImportController::class, 'store'])
-        ->name('portfolios.transactions.import');
+        Route::post('liabilities/{liability}/balances', [LiabilityBalanceController::class, 'store'])
+            ->name('liabilities.balances.store');
+        Route::delete('liability-balances/{balance}', [LiabilityBalanceController::class, 'destroy'])
+            ->name('liabilities.balances.destroy');
 
-    Route::get('/transfers/create', [PortfolioTransferController::class, 'create'])->name('transfers.create');
-    Route::post('/transfers', [PortfolioTransferController::class, 'store'])->name('transfers.store');
+        // Literal route registered before the resource so "all" isn't matched as {cashAccount}.
+        Route::get('cash-accounts/all', [CashAccountController::class, 'all'])->name('cash-accounts.all');
 
-    Route::resource('portfolios.manual-assets', ManualAssetController::class)->shallow();
+        Route::resource('cash-accounts', CashAccountController::class);
 
-    Route::patch('portfolios/{portfolio}/chart-visibility', [PortfolioController::class, 'updateChartVisibility'])
-        ->name('portfolios.chart-visibility');
+        Route::post('cash-accounts/{cashAccount}/reconcile', [CashAccountController::class, 'reconcile'])
+            ->name('cash-accounts.reconcile');
+        Route::post('cash-accounts/{cashAccount}/transactions', [CashTransactionController::class, 'store'])
+            ->name('cash-accounts.transactions.store');
+        Route::delete('cash-transactions/{transaction}', [CashTransactionController::class, 'destroy'])
+            ->name('cash-accounts.transactions.destroy');
 
-    Route::patch('portfolios/{portfolio}/close', [PortfolioController::class, 'close'])->name('portfolios.close');
-    Route::patch('portfolios/{portfolio}/reopen', [PortfolioController::class, 'reopen'])->name('portfolios.reopen');
+        Route::get('/cash-transfers/create', [CashTransferController::class, 'create'])->name('cash-transfers.create');
+        Route::post('/cash-transfers', [CashTransferController::class, 'store'])->name('cash-transfers.store');
 
-    Route::post('portfolios/{portfolio}/slices', [PortfolioSliceController::class, 'store'])->name('portfolios.slices.store');
-    Route::delete('portfolios/{portfolio}/slices/{slice}', [PortfolioSliceController::class, 'destroy'])->name('portfolios.slices.destroy');
+        Route::get('/analysis', AnalysisController::class)->name('analysis');
 
-    Route::resource('manual-assets.valuations', ManualValuationController::class)
-        ->shallow()
-        ->only(['store', 'destroy']);
+        Route::resource('income-categories', IncomeCategoryController::class)->except(['show']);
 
-    Route::resource('liabilities', LiabilityController::class);
+        Route::resource('scheduled-transactions', ScheduledTransactionController::class)->except(['index', 'show']);
+        Route::patch('scheduled-transactions/{scheduledTransaction}/toggle', [ScheduledTransactionController::class, 'toggle'])
+            ->name('scheduled-transactions.toggle');
+        Route::post('scheduled-transactions/{scheduledTransaction}/enter-now', [ScheduledTransactionController::class, 'enterNow'])
+            ->name('scheduled-transactions.enter-now');
+        Route::post('scheduled-transactions/{scheduledTransaction}/skip', [ScheduledTransactionController::class, 'skip'])
+            ->name('scheduled-transactions.skip');
 
-    Route::resource('pensions', PensionController::class)->except(['show']);
+        Route::post('envelopes/assign-one', [EnvelopeController::class, 'assignOne'])->name('envelopes.assign-one');
+        Route::post('envelopes/copy-previous-month', [EnvelopeController::class, 'copyPreviousMonth'])->name('envelopes.copy-previous-month');
+        Route::resource('envelopes', EnvelopeController::class);
 
-    Route::post('liabilities/{liability}/balances', [LiabilityBalanceController::class, 'store'])
-        ->name('liabilities.balances.store');
-    Route::delete('liability-balances/{balance}', [LiabilityBalanceController::class, 'destroy'])
-        ->name('liabilities.balances.destroy');
+        Route::post('envelopes/{envelope}/transactions', [EnvelopeTransactionController::class, 'store'])
+            ->name('envelopes.transactions.store');
+        Route::post('envelopes/{envelope}/invest', [EnvelopeInvestmentController::class, 'store'])
+            ->middleware('feature:investing')
+            ->name('envelopes.invest');
+        Route::delete('envelope-transactions/{transaction}', [EnvelopeTransactionController::class, 'destroy'])
+            ->name('envelopes.transactions.destroy');
+    });
 
-    // Literal route registered before the resource so "all" isn't matched as {cashAccount}.
-    Route::get('cash-accounts/all', [CashAccountController::class, 'all'])->name('cash-accounts.all');
+    Route::resource('pensions', PensionController::class)->except(['show'])->middleware('feature:retirement');
 
-    Route::resource('cash-accounts', CashAccountController::class);
-
-    Route::post('cash-accounts/{cashAccount}/reconcile', [CashAccountController::class, 'reconcile'])
-        ->name('cash-accounts.reconcile');
-    Route::post('cash-accounts/{cashAccount}/transactions', [CashTransactionController::class, 'store'])
-        ->name('cash-accounts.transactions.store');
-    Route::delete('cash-transactions/{transaction}', [CashTransactionController::class, 'destroy'])
-        ->name('cash-accounts.transactions.destroy');
-
-    Route::get('/cash-transfers/create', [CashTransferController::class, 'create'])->name('cash-transfers.create');
-    Route::post('/cash-transfers', [CashTransferController::class, 'store'])->name('cash-transfers.store');
-
-    Route::get('/analysis', AnalysisController::class)->name('analysis');
     Route::get('/planning', PlanningController::class)->name('planning');
     Route::post('/planning/debt-payoff/simulate', [PlanningController::class, 'resimulateDebtPayoff'])
+        ->middleware('feature:cash')
         ->name('planning.debt-payoff.simulate');
     // These used to be standalone pages; each is now a tab (or tab+mode) of /analysis
     // or /planning. Kept as redirects (not simply removed) so old bookmarks still land
@@ -147,32 +181,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/forecast', fn () => redirect()->route('planning', [...request()->query(), 'tab' => 'retirement', 'mode' => 'trajectory']))->name('forecast');
     Route::get('/ready-to-assign', fn () => redirect()->route('envelopes.index'))->name('ready-to-assign');
 
-    Route::resource('income-categories', IncomeCategoryController::class)->except(['show']);
-
-    Route::resource('scheduled-transactions', ScheduledTransactionController::class)->except(['index', 'show']);
-    Route::patch('scheduled-transactions/{scheduledTransaction}/toggle', [ScheduledTransactionController::class, 'toggle'])
-        ->name('scheduled-transactions.toggle');
-    Route::post('scheduled-transactions/{scheduledTransaction}/enter-now', [ScheduledTransactionController::class, 'enterNow'])
-        ->name('scheduled-transactions.enter-now');
-    Route::post('scheduled-transactions/{scheduledTransaction}/skip', [ScheduledTransactionController::class, 'skip'])
-        ->name('scheduled-transactions.skip');
-
-    Route::post('envelopes/assign-one', [EnvelopeController::class, 'assignOne'])->name('envelopes.assign-one');
-    Route::post('envelopes/copy-previous-month', [EnvelopeController::class, 'copyPreviousMonth'])->name('envelopes.copy-previous-month');
-    Route::resource('envelopes', EnvelopeController::class);
-
-    Route::post('envelopes/{envelope}/transactions', [EnvelopeTransactionController::class, 'store'])
-        ->name('envelopes.transactions.store');
-    Route::delete('envelope-transactions/{transaction}', [EnvelopeTransactionController::class, 'destroy'])
-        ->name('envelopes.transactions.destroy');
-
-    // Ticker autocomplete
-    Route::get('/tickers/search', TickerSearchController::class)->name('tickers.search')->middleware('throttle:30,1');
-
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/targets', [ProfileController::class, 'updateTargets'])->name('profile.targets');
     Route::patch('/profile/notifications', [ProfileController::class, 'updateNotifications'])->name('profile.notifications');
+    Route::patch('/profile/features', [ProfileController::class, 'updateFeatures'])->name('profile.features');
     Route::patch('/profile/display', [ProfileController::class, 'updateDisplay'])->name('profile.display');
     Route::patch('/profile/email-summary', [ProfileController::class, 'updateEmailSummary'])->name('profile.email-summary');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

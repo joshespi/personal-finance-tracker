@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\Feature;
 use App\Mail\ScheduledTransactionsSummary;
 use App\Models\ScheduledTransaction;
 use App\Models\User;
@@ -49,8 +50,9 @@ class MaterializeScheduledTransactions extends Command
             $totalUsers++;
             $totalTransactions += $fired->count();
 
-            if (! $user->notify_scheduled_transactions) {
-                $this->line("  {$user->email}: {$fired->count()} transaction(s) materialized (email muted)");
+            if (! $user->notify_scheduled_transactions || ! $user->hasFeature(Feature::Cash)) {
+                $reason = $user->hasFeature(Feature::Cash) ? 'email muted' : 'Cash module off, email skipped';
+                $this->line("  {$user->email}: {$fired->count()} transaction(s) materialized ({$reason})");
 
                 return;
             }

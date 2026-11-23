@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Feature;
 use App\Models\Pension;
 use App\Services\PensionService;
 use Illuminate\Http\RedirectResponse;
@@ -28,7 +29,11 @@ class PensionController extends Controller
         if ($computed->isNotEmpty()) {
             $pensionAnnual     = (float) $computed->sum('projectedAnnual');
             $yearsToRetirement = (int) $computed->first()['yearsToDraw'];
-            $portfolioBase     = round($user->latestPortfolioValue() + $user->totalCash(), 2);
+            $portfolioBase     = round(
+                ($user->hasFeature(Feature::Investing) ? $user->latestPortfolioValue() : 0.0)
+                + ($user->hasFeature(Feature::Cash) ? $user->totalCash() : 0.0),
+                2
+            );
 
             $incomeFloor = $this->pensions->incomeFloor($portfolioBase, $pensionAnnual, $yearsToRetirement, $overrides);
         }

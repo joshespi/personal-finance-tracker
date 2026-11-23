@@ -106,6 +106,29 @@ enum DashboardWidget: string
     }
 
     /**
+     * The module this block belongs to, or null when it spans modules (net worth and
+     * total assets stay visible whichever modules are on). A block whose module is
+     * switched off is hidden regardless of the user's per-widget preference.
+     */
+    public function feature(): ?Feature
+    {
+        return match ($this) {
+            self::InvestmentStats, self::NetWorthChart, self::CalendarHeatmap, self::Benchmark,
+            self::Allocation, self::Rebalancing, self::Holdings, self::Portfolios,
+            self::TilePortfolioValue, self::TileInvestedValue, self::TileCostBasis,
+            self::TileMarketValue, self::TileUnrealized, self::TilePl => Feature::Investing,
+
+            self::InterestBleedBanner, self::BudgetDriftBanner, self::TileCash, self::TileTotalDebt,
+            self::TileDebtToAsset, self::TileEmergencyFund, self::TileReadyToAssign,
+            self::TileMonthlySpend, self::TileAgeOfMoney => Feature::Cash,
+
+            self::TileRetirementIncome, self::TilePensionValue => Feature::Retirement,
+
+            default => null,
+        };
+    }
+
+    /**
      * Cases bucketed by group() in declaration order, for rendering the settings
      * form as labelled groups.
      *

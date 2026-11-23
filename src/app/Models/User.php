@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\DashboardWidget;
 use App\Enums\EmailSummaryFrequency;
 use App\Enums\EmailSummarySection;
+use App\Enums\Feature;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -24,7 +25,7 @@ use function Illuminate\Support\enum_value;
 // $request->all() — this is defense-in-depth against a future call site introducing that
 // mistake. Their legitimate writers (Admin\UserController::update, recordEmailSummarySent)
 // set them explicitly instead.
-#[Fillable(['name', 'email', 'password', 'emergency_fund_target_months', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'notify_scheduled_transactions', 'dashboard_preferences', 'email_summary_frequencies', 'email_summary_sections'])]
+#[Fillable(['name', 'email', 'password', 'emergency_fund_target_months', 'target_stock_pct', 'target_crypto_pct', 'target_real_estate_pct', 'target_bond_pct', 'notify_scheduled_transactions', 'dashboard_preferences', 'features', 'email_summary_frequencies', 'email_summary_sections'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -44,6 +45,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'target_bond_pct'               => 'decimal:2',
             'notify_scheduled_transactions' => 'boolean',
             'dashboard_preferences'         => 'array',
+            'features'                      => 'array',
             'email_summary_frequencies'     => 'array',
             'email_summary_sections'        => 'array',
             'email_summary_last_sent_at'    => 'array',
@@ -69,7 +71,32 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function showsWidget(DashboardWidget|string $widget): bool
     {
+        $case = is_string($widget) ? DashboardWidget::tryFrom($widget) : $widget;
+        $feature = $case?->feature();
+
+        if ($feature !== null && ! $this->hasFeature($feature)) {
+            return false;
+        }
+
         return (bool) ($this->dashboard_preferences[enum_value($widget)] ?? true);
+    }
+
+    /** Whether a top-level module is on for this user. Enabled unless explicitly set false. */
+    public function hasFeature(Feature|string $feature): bool
+    {
+        return (bool) ($this->features[enum_value($feature)] ?? true);
+    }
+
+    /** Quick-add covers cash entries and portfolio buys, so it needs at least one of those modules. */
+    public function canQuickAdd(): bool
+    {
+        return $this->hasFeature(Feature::Cash) || $this->hasFeature(Feature::Investing);
+    }
+
+    /** @return list<Feature> */
+    public function enabledFeatures(): array
+    {
+        return array_values(array_filter(Feature::cases(), fn (Feature $f) => $this->hasFeature($f)));
     }
 
     /** Whether this user opted into a given email-summary cadence. Off by default (opt-in). */
@@ -102,6 +129,11 @@ class User extends Authenticatable implements MustVerifyEmail
     /** Whether this user opted into a given email-summary content section. Off by default (opt-in). */
     public function wantsEmailSummarySection(EmailSummarySection|string $section): bool
     {
+        $feature = (is_string($section) ? EmailSummarySection::tryFrom($section) : $section)?->feature();
+        if ($feature !== null && ! $this->hasFeature($feature)) {
+            return false;
+        }
+
         return in_array(enum_value($section), $this->email_summary_sections ?? [], true);
     }
 

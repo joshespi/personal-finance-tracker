@@ -21,15 +21,25 @@
 
             <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
                 <div class="max-w-xl">
-                    @include('profile.partials.investment-targets-form')
+                    @include('profile.partials.features-form')
                 </div>
             </div>
 
+            @if ($user->hasFeature(\App\Enums\Feature::Investing))
+            <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+                <div class="max-w-xl">
+                    @include('profile.partials.investment-targets-form')
+                </div>
+            </div>
+            @endif
+
+            @if ($user->hasFeature(\App\Enums\Feature::Cash))
             <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
                 <div class="max-w-xl">
                     @include('profile.partials.notification-preferences-form')
                 </div>
             </div>
+            @endif
 
             <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
                 <div class="max-w-3xl">

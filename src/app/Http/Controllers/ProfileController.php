@@ -6,6 +6,7 @@ use App\Enums\AssetType;
 use App\Enums\DashboardWidget;
 use App\Enums\EmailSummaryFrequency;
 use App\Enums\EmailSummarySection;
+use App\Enums\Feature;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -66,6 +67,15 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit')->with('status', 'notifications-updated');
     }
 
+    public function updateFeatures(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(Feature::selectionRules(), ['features.required' => 'Keep at least one feature turned on.', 'features.min' => 'Keep at least one feature turned on.']);
+
+        $request->user()->update(['features' => Feature::mapFromSelection($validated['features'])]);
+
+        return Redirect::route('profile.edit')->with('status', 'features-updated');
+    }
+
     public function updateDisplay(Request $request): RedirectResponse
     {
         // Checkboxes only submit the visible (checked) widgets; everything else is
@@ -79,8 +89,18 @@ class ProfileController extends Controller
 
         $submitted = array_flip($validated['widgets'] ?? []);
 
-        $prefs = collect(DashboardWidget::values())
-            ->mapWithKeys(fn (string $key) => [$key => isset($submitted[$key])])
+        $user  = $request->user();
+        $prefs = collect(DashboardWidget::cases())
+            ->mapWithKeys(function (DashboardWidget $widget) use ($submitted, $user) {
+                // A widget of a switched-off module isn't on the form, so it can't have been
+                // submitted: keep its saved preference so re-enabling the module restores it.
+                $feature = $widget->feature();
+                if ($feature !== null && ! $user->hasFeature($feature)) {
+                    return [$widget->value => $user->dashboard_preferences[$widget->value] ?? true];
+                }
+
+                return [$widget->value => isset($submitted[$widget->value])];
+            })
             ->all();
 
         $request->user()->update(['dashboard_preferences' => $prefs]);
@@ -99,9 +119,17 @@ class ProfileController extends Controller
             'sections.*'    => ['string', Rule::in(EmailSummarySection::values())],
         ]);
 
-        $request->user()->update([
+        // Sections of a switched-off module aren't on the form; carry over what was saved so
+        // turning the module back on restores them.
+        $user = $request->user();
+        $kept = array_filter(
+            $user->email_summary_sections ?? [],
+            fn (string $value) => ($feature = EmailSummarySection::tryFrom($value)?->feature()) !== null && ! $user->hasFeature($feature)
+        );
+
+        $user->update([
             'email_summary_frequencies' => array_values($validated['frequencies'] ?? []),
-            'email_summary_sections'    => array_values($validated['sections'] ?? []),
+            'email_summary_sections'    => array_values(array_unique([...($validated['sections'] ?? []), ...$kept])),
         ]);
 
         return Redirect::route('profile.edit')->with('status', 'email-summary-updated');

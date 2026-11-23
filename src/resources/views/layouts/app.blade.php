@@ -72,7 +72,7 @@
                         <span class="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">{{ config('app.name') }}</span>
                     </a>
                     <div class="ms-auto flex items-center gap-1">
-                        @auth
+                        @if (auth()->user()?->canQuickAdd())
                         <button @click="$dispatch('open-quick-add')"
                                 class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                                 aria-label="Quick add" title="Quick add (N)">
@@ -80,7 +80,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                             </svg>
                         </button>
-                        @endauth
+                        @endif
                         <button @click="dark = !dark"
                                 class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                                 aria-label="Toggle dark mode" title="Toggle dark mode">

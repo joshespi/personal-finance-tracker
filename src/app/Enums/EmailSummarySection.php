@@ -22,6 +22,16 @@ enum EmailSummarySection: string
     case CategoryChanges   = 'category_changes';
     case Warnings          = 'warnings';
 
+    /** The module this section reports on, or null when it spans modules. */
+    public function feature(): ?Feature
+    {
+        return match ($this) {
+            self::Budgeting, self::UpcomingScheduled, self::CategoryChanges, self::Warnings => Feature::Cash,
+            self::Investing => Feature::Investing,
+            self::NetWorth  => null,
+        };
+    }
+
     public function label(): string
     {
         return match ($this) {

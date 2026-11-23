@@ -14,11 +14,18 @@
 
     // ── Cash accounts for the Accounts section (single aggregate query) ────────
     $currentAccountId = optional($req->route('cash_account'))->id;
-    $sidebarAccounts = Auth::user()->cashAccounts()
-        ->withCurrentBalance()
-        ->orderBy('name')
-        ->get()
-        ->each(fn ($a) => $a->current_balance = $a->currentBalanceFromSums());
+    $navUser = Auth::user();
+    $hasInvesting = $navUser->hasFeature(\App\Enums\Feature::Investing);
+    $hasCash = $navUser->hasFeature(\App\Enums\Feature::Cash);
+    $hasRetirement = $navUser->hasFeature(\App\Enums\Feature::Retirement);
+
+    $sidebarAccounts = $hasCash
+        ? $navUser->cashAccounts()
+            ->withCurrentBalance()
+            ->orderBy('name')
+            ->get()
+            ->each(fn ($a) => $a->current_balance = $a->currentBalanceFromSums())
+        : collect();
 
     $accountItems = [];
     foreach ($sidebarAccounts as $a) {
@@ -49,6 +56,7 @@
     // Reusable section blocks: key => [label, icon, active, items[]].
     $sections = [
         'budget' => [
+            'show'   => $hasCash,
             'label'  => 'Budget',
             'icon'   => $icons['budget'],
             'active' => $budgetActive,
@@ -59,6 +67,7 @@
             ],
         ],
         'accounts' => [
+            'show'   => $hasCash,
             'label'  => 'Accounts',
             'icon'   => $icons['accounts'],
             'active' => $accountsActive,
@@ -69,11 +78,11 @@
             'icon'   => $icons['invest'],
             'active' => $investActive,
             'items'  => [
-                ['label' => 'Portfolios',   'href' => route('portfolios.index'),  'active' => $req->routeIs('portfolios.*', 'manual-assets.*')],
-                ['label' => 'Transactions', 'href' => route('transactions.all'),  'active' => $req->routeIs('transactions.*')],
-                ['label' => 'Dividends',    'href' => route('dividends'),         'active' => $req->routeIs('dividends')],
-                ['label' => 'Tax',          'href' => route('tax.summary'),       'active' => $req->routeIs('tax.*')],
-                ['label' => 'Pension',      'href' => route('pensions.index'),    'active' => $req->routeIs('pensions.*')],
+                ['label' => 'Portfolios',   'href' => route('portfolios.index'),  'active' => $req->routeIs('portfolios.*', 'manual-assets.*'), 'show' => $hasInvesting],
+                ['label' => 'Transactions', 'href' => route('transactions.all'),  'active' => $req->routeIs('transactions.*'), 'show' => $hasInvesting],
+                ['label' => 'Dividends',    'href' => route('dividends'),         'active' => $req->routeIs('dividends'), 'show' => $hasInvesting],
+                ['label' => 'Tax',          'href' => route('tax.summary'),       'active' => $req->routeIs('tax.*'), 'show' => $hasInvesting],
+                ['label' => 'Pension',      'href' => route('pensions.index'),    'active' => $req->routeIs('pensions.*'), 'show' => $hasRetirement],
             ],
         ],
         'plan' => [
@@ -81,16 +90,27 @@
             'icon'   => $icons['plan'],
             'active' => $planActive,
             'items'  => [
-                ['label' => 'Cashflow',        'href' => route('analysis', ['tab' => 'cashflow']),         'active' => $isAnalysisTab('cashflow') || $req->routeIs('cashflow')],
-                ['label' => 'Spending Trends', 'href' => route('analysis', ['tab' => 'trends']),           'active' => $isAnalysisTab('trends') || $req->routeIs('spending-trends')],
-                ['label' => '50/30/20 Rule',   'href' => route('analysis', ['tab' => 'budget-rule']),      'active' => $isAnalysisTab('budget-rule') || $req->routeIs('budget-rule')],
-                ['label' => 'Emergency Fund',  'href' => route('planning', ['tab' => 'emergency-fund']),   'active' => $isPlanningTab('emergency-fund') || $req->routeIs('emergency-fund')],
-                ['label' => 'Debt Payoff',     'href' => route('planning', ['tab' => 'debt-payoff']),      'active' => $isPlanningTab('debt-payoff') || $req->routeIs('debt-payoff')],
-                ['label' => 'Allocator',       'href' => route('planning', ['tab' => 'allocator']),        'active' => $isPlanningTab('allocator') || $req->routeIs('allocator')],
-                ['label' => 'Retirement & FIRE', 'href' => route('planning', ['tab' => 'retirement']),     'active' => $isPlanningTab('retirement')],
+                ['label' => 'Cashflow',        'href' => route('analysis', ['tab' => 'cashflow']),         'active' => $isAnalysisTab('cashflow') || $req->routeIs('cashflow'), 'show' => $hasCash],
+                ['label' => 'Spending Trends', 'href' => route('analysis', ['tab' => 'trends']),           'active' => $isAnalysisTab('trends') || $req->routeIs('spending-trends'), 'show' => $hasCash],
+                ['label' => '50/30/20 Rule',   'href' => route('analysis', ['tab' => 'budget-rule']),      'active' => $isAnalysisTab('budget-rule') || $req->routeIs('budget-rule'), 'show' => $hasCash],
+                ['label' => 'Emergency Fund',  'href' => route('planning', ['tab' => 'emergency-fund']),   'active' => $isPlanningTab('emergency-fund') || $req->routeIs('emergency-fund'), 'show' => $hasCash],
+                ['label' => 'Debt Payoff',     'href' => route('planning', ['tab' => 'debt-payoff']),      'active' => $isPlanningTab('debt-payoff') || $req->routeIs('debt-payoff'), 'show' => $hasCash],
+                ['label' => 'Allocator',       'href' => route('planning', ['tab' => 'allocator']),        'active' => $isPlanningTab('allocator') || $req->routeIs('allocator'), 'show' => $hasInvesting],
+                ['label' => 'Retirement & FIRE', 'href' => route('planning', ['tab' => 'retirement']),     'active' => $isPlanningTab('retirement'), 'show' => $hasRetirement],
             ],
         ],
     ];
+
+    // Drop items/sections belonging to modules this user has switched off (an item or
+    // section with no 'show' key is always visible; a section left empty is dropped).
+    $sections = collect($sections)
+        ->map(function ($section) {
+            $section['items'] = array_values(array_filter($section['items'], fn ($item) => $item['show'] ?? true));
+
+            return $section;
+        })
+        ->filter(fn ($section) => ($section['show'] ?? true) && $section['items'] !== [])
+        ->all();
 @endphp
 
 {{-- Mobile backdrop --}}
@@ -182,6 +202,7 @@
     {{-- Pinned footer: quick add, theme, user menu --}}
     <div class="shrink-0 border-t border-gray-100 dark:border-gray-700 p-3 space-y-1">
         @auth
+        @if ($navUser->canQuickAdd())
         <button @click="$dispatch('open-quick-add')"
                 class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition">
             <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
@@ -190,6 +211,7 @@
             <span class="flex-1 text-start">{{ __('Quick add') }}</span>
             <kbd class="hidden lg:inline text-xs text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-600 rounded px-1.5" aria-hidden="true">N</kbd>
         </button>
+        @endif
         @endauth
 
         <button @click="dark = !dark"
@@ -259,14 +281,16 @@
 @auth
 @php
     $qaAccounts         = $sidebarAccounts; // already loaded above (id/name is all quick-add needs)
-    $qaEnvelopes        = Auth::user()->envelopes()->ordered()->get(['id', 'name']);
-    $qaPortfolios       = Auth::user()->portfolios()->orderBy('name')->get(['id', 'name']);
-    $qaIncomeCategories = Auth::user()->incomeCategories()->ordered()->get(['id', 'name']);
+    $qaEnvelopes        = $hasCash ? Auth::user()->envelopes()->ordered()->get(['id', 'name']) : collect();
+    $qaPortfolios       = $hasInvesting ? Auth::user()->portfolios()->orderBy('name')->get(['id', 'name']) : collect();
+    $qaIncomeCategories = $hasCash ? Auth::user()->incomeCategories()->ordered()->get(['id', 'name']) : collect();
+    $qaFirstTab         = $hasCash ? 'cash' : ($hasInvesting ? 'buy' : null);
     $qaToday            = now()->format('Y-m-d');
 @endphp
+@if ($qaFirstTab)
 <div x-data="{
         open: false,
-        tab: 'cash',
+        tab: '{{ $qaFirstTab }}',
         cashAccount: {{ $qaAccounts->first()?->id ?? 'null' }},
         cashType: 'withdrawal',
         envelope: {{ $qaEnvelopes->first()?->id ?? 'null' }},
@@ -275,7 +299,7 @@
         get fundAction() { return this.envelope ? `/envelopes/${this.envelope}/transactions` : '#'; },
         get buyAction()  { return this.portfolio ? `/portfolios/${this.portfolio}/transactions` : '#'; },
     }"
-    @open-quick-add.window="if (! open) { open = true; tab = 'cash' }"
+    @open-quick-add.window="if (! open) { open = true; tab = '{{ $qaFirstTab }}' }"
     @keydown.escape.window="open = false">
 
     <div x-show="open" x-cloak @click="open = false"
@@ -295,19 +319,24 @@
             </div>
 
             <div class="flex border-b border-gray-100 dark:border-gray-700 px-5">
+                @if ($hasCash)
                 <button @click="tab = 'cash'"
                         :class="tab === 'cash' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
                         class="py-3 px-1 mr-6 text-sm font-medium border-b-2 -mb-px transition">Cash</button>
                 <button @click="tab = 'fund'"
                         :class="tab === 'fund' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
                         class="py-3 px-1 mr-6 text-sm font-medium border-b-2 -mb-px transition">Fund Envelope</button>
+                @endif
+                @if ($hasInvesting)
                 <button @click="tab = 'buy'"
                         :class="tab === 'buy' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
                         class="py-3 px-1 text-sm font-medium border-b-2 -mb-px transition">Log Buy</button>
+                @endif
             </div>
 
             <div class="p-5">
 
+                @if ($hasCash)
                 {{-- Cash Tab --}}
                 <div x-show="tab === 'cash'" style="display:none;">
                     @if ($qaAccounts->isNotEmpty())
@@ -411,6 +440,9 @@
                     @endif
                 </div>
 
+                @endif
+
+                @if ($hasInvesting)
                 {{-- Log Buy Tab --}}
                 <div x-show="tab === 'buy'" style="display:none;">
                     @if ($qaPortfolios->isNotEmpty())
@@ -467,9 +499,11 @@
                         </p>
                     @endif
                 </div>
+                @endif
 
             </div>
         </div>
     </div>
 </div>
+@endif
 @endauth

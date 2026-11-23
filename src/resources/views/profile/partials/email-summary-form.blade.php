@@ -33,6 +33,7 @@
             </h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                 @foreach (\App\Enums\EmailSummarySection::cases() as $section)
+                    @continue($section->feature() !== null && ! $user->hasFeature($section->feature()))
                     <label class="flex items-start gap-2.5 cursor-pointer">
                         <input type="checkbox" name="sections[]" value="{{ $section->value }}"
                                class="mt-0.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"

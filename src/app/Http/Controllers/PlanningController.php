@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Feature;
+use App\Models\User;
 use App\Services\AllocatorService;
 use App\Services\DebtPayoffService;
 use App\Services\EmergencyFundService;
@@ -13,6 +15,20 @@ use Illuminate\View\View;
 
 class PlanningController extends Controller
 {
+    /** Which module owns each tab, in display order — first enabled one is the landing tab. */
+    public const TAB_FEATURES = [
+        'debt-payoff'    => Feature::Cash,
+        'allocator'      => Feature::Investing,
+        'emergency-fund' => Feature::Cash,
+        'retirement'     => Feature::Retirement,
+    ];
+
+    /** @return list<string> Planning tabs the user's enabled features allow. */
+    public static function availableTabs(User $user): array
+    {
+        return array_keys(array_filter(self::TAB_FEATURES, fn (Feature $f) => $user->hasFeature($f)));
+    }
+
     public function __invoke(
         Request $request,
         DebtPayoffService $debtPayoff,
@@ -21,7 +37,13 @@ class PlanningController extends Controller
         RetirementProjectionService $retirement,
         ForecastService $forecast,
     ): View {
-        return match ($request->input('tab', 'debt-payoff')) {
+        $available = self::availableTabs($request->user());
+        $requested = $request->input('tab');
+        // A known tab whose module is off looks absent; a missing/unknown tab lands on the first allowed one.
+        abort_if($available === [] || (isset(self::TAB_FEATURES[$requested]) && ! in_array($requested, $available, true)), 404);
+        $tab = in_array($requested, $available, true) ? $requested : $available[0];
+
+        return match ($tab) {
             'allocator'      => $this->allocator($request, $allocator),
             'emergency-fund' => $this->emergencyFund($request, $emergencyFund),
             'retirement'     => $this->retirement($request, $retirement, $forecast),
@@ -95,7 +117,7 @@ class PlanningController extends Controller
 
         $user = $request->user();
 
-        $defaultValue = round($user->latestPortfolioValue(), 2);
+        $defaultValue = $user->hasFeature(Feature::Investing) ? round($user->latestPortfolioValue(), 2) : 0.0;
 
         $birthYear      = $request->filled('birth_year') ? (int) $request->input('birth_year') : null;
         $retirementAge  = (int) $request->input('retirement_age', 65);

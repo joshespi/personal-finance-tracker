@@ -39,6 +39,13 @@
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
 
+        <!-- Features -->
+        <div class="mt-6">
+            <x-input-label :value="__('What do you want to track?')" />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-3">You can change this any time in your profile.</p>
+            <x-feature-picker :selected="old('features')" :error="$errors->first('features')" />
+        </div>
+
         <div class="flex items-center justify-end mt-4">
             <a class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 focus:ring-indigo-500" href="{{ route('login') }}">
                 {{ __('Already registered?') }}

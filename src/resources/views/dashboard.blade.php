@@ -52,10 +52,13 @@
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Welcome to your financial tracker</h3>
                     <p class="text-gray-500 dark:text-gray-400 mb-6">Get started by adding any of the following:</p>
                     <div class="flex flex-wrap justify-center gap-3">
+                        @if (auth()->user()->hasFeature(\App\Enums\Feature::Investing))
                         <a href="{{ route('portfolios.create') }}"
                            class="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-700 rounded-md text-sm font-semibold text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition">
                             Create a portfolio
                         </a>
+                        @endif
+                        @if (auth()->user()->hasFeature(\App\Enums\Feature::Cash))
                         <a href="{{ route('cash-accounts.create') }}"
                            class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                             Add a spending account
@@ -68,6 +71,13 @@
                            class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                             Set up budget envelopes
                         </a>
+                        @endif
+                        @if (auth()->user()->hasFeature(\App\Enums\Feature::Retirement))
+                        <a href="{{ route('pensions.create') }}"
+                           class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                            Add a pension
+                        </a>
+                        @endif
                     </div>
                 </div>
             @else

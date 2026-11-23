@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\Feature;
 use App\Models\User;
 use App\Support\Finance;
 
@@ -10,10 +11,15 @@ class ForecastService
     /** Trailing 3-month average net worth / monthly-savings-rate defaults, used to prefill the form. */
     public function computeDefaults(User $user): array
     {
-        $defaultStartNw = round($user->latestPortfolioValue() + $user->totalCash() - $user->totalDebt(), 2);
+        // Only count modules the user has switched on — a hidden module's data is kept but not summed.
+        $hasCash   = $user->hasFeature(Feature::Cash);
+        $portfolio = $user->hasFeature(Feature::Investing) ? $user->latestPortfolioValue() : 0.0;
+        $cash      = $hasCash ? $user->totalCash() - $user->totalDebt() : 0.0;
 
-        $income3m = $user->incomeForTrailingMonths(3);
-        $spend3m  = $user->spendForTrailingMonths(3);
+        $defaultStartNw = round($portfolio + $cash, 2);
+
+        $income3m = $hasCash ? $user->incomeForTrailingMonths(3) : 0.0;
+        $spend3m  = $hasCash ? $user->spendForTrailingMonths(3) : 0.0;
 
         $defaultMonthlySavings = round(max(0, ($income3m - $spend3m) / 3), 2);
 

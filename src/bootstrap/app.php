@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\HandleImpersonation;
 use App\Http\Middleware\MaterializeDueScheduledTransactions;
@@ -53,7 +54,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // only the scheme — so without this nothing constrains the host at all. Automatically
         // a no-op in local/testing (see TrustHosts::shouldSpecifyTrustedHosts()).
         $middleware->trustHosts();
-        $middleware->alias(['admin' => EnsureUserIsAdmin::class]);
+        $middleware->alias([
+            'admin'   => EnsureUserIsAdmin::class,
+            'feature' => EnsureFeatureEnabled::class,
+        ]);
         $middleware->appendToGroup('web', HandleImpersonation::class);
         $middleware->appendToGroup('web', ShareDemoMode::class);
         $middleware->appendToGroup('web', MaterializeDueScheduledTransactions::class);

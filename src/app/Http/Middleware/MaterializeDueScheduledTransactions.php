@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Feature;
 use App\Services\ScheduledTransactionService;
 use Closure;
 use Illuminate\Http\Request;
@@ -25,7 +26,8 @@ class MaterializeDueScheduledTransactions
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check()) {
+        // Scheduled transactions are a Cash feature; skip the work (and queries) when it's off.
+        if (Auth::check() && Auth::user()->hasFeature(Feature::Cash)) {
             $this->service->materializeForUser(Auth::user());
         }
 

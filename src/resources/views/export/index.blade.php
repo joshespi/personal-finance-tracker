@@ -24,6 +24,7 @@
                 </a>
             </div>
 
+            @if (auth()->user()->hasFeature(\App\Enums\Feature::Investing))
             {{-- Transactions CSV --}}
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 flex items-start justify-between gap-6">
                 <div>
@@ -54,6 +55,9 @@
                 </a>
             </div>
 
+            @endif
+
+            @if (auth()->user()->hasFeature(\App\Enums\Feature::Cash))
             {{-- CSV import --}}
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 flex items-start justify-between gap-6 border-t-2 border-indigo-100 dark:border-indigo-900/40 mt-4">
                 <div>
@@ -72,6 +76,7 @@
                     Import
                 </a>
             </div>
+            @endif
 
             <p class="text-xs text-gray-400 dark:text-gray-500 px-1">
                 All exports contain only your own data. No telemetry. Store the full backup somewhere off-server (local disk, cloud storage) so you have a copy independent of the database.
