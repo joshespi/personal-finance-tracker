@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Feature;
 use App\Models\CashAccount;
 use App\Models\CashTransaction;
 use App\Models\Envelope;
@@ -114,20 +115,32 @@ class EnvelopeController extends Controller
     {
         $this->authorize('view', $envelope);
 
+        $hasInvesting = $request->user()->hasFeature(Feature::Investing);
+
         $envelope->load([
             'transactions'      => fn ($q) => $q->where('type', 'fund')->orderByDesc('occurred_at')->orderByDesc('id'),
             'spendTransactions' => fn ($q) => $q->with('cashAccount:id,name')->orderByDesc('occurred_at')->orderByDesc('id'),
             'cashAccount:id,name',
         ]);
+        // Invested positions and the Invest form are Investing-module data; skip the queries when it's off.
+        // (Relation must still be marked loaded: lazy loading throws outside production.)
+        if ($hasInvesting) {
+            $envelope->load('investments.asset.latestPrice');
+        } else {
+            $envelope->setRelation('investments', new Collection());
+        }
         $envelope->current_balance  = $envelope->balance();
         $envelope->spent_this_month = $envelope->spentInMonth();
 
         $cashAccounts = $request->user()->cashAccounts()->orderBy('name')->get(['id', 'name']);
+        $portfolios   = $hasInvesting
+            ? $request->user()->portfolios()->active()->orderBy('name')->get(['id', 'name'])
+            : collect();
 
         // Roll-into targets for the delete dialog.
         $otherEnvelopes = $request->user()->envelopes()->whereKeyNot($envelope->id)->ordered()->get(['id', 'name']);
 
-        return view('envelopes.show', compact('envelope', 'cashAccounts', 'otherEnvelopes'));
+        return view('envelopes.show', compact('envelope', 'cashAccounts', 'portfolios', 'otherEnvelopes'));
     }
 
     public function edit(Request $request, Envelope $envelope): View

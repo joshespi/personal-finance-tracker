@@ -53,6 +53,26 @@ class Envelope extends Model
         return $this->hasMany(EnvelopeTransaction::class);
     }
 
+    /** Portfolio buys funded from this envelope. */
+    public function investments(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    /** Cash put into investments from this envelope (needs `investments.asset.latestPrice` for value). */
+    public function investedCost(): float
+    {
+        return (float) $this->investments->sum(fn ($t) => $t->totalCost());
+    }
+
+    /** Current market value of the units bought from this envelope. */
+    public function investedValue(): float
+    {
+        return (float) $this->investments->sum(
+            fn ($t) => (float) $t->quantity * (float) ($t->asset?->latestPrice?->price ?? $t->price_per_unit)
+        );
+    }
+
     public function spendTransactions(): HasMany
     {
         return $this->hasMany(CashTransaction::class)->withdrawals();

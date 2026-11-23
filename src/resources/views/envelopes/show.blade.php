@@ -45,6 +45,21 @@
                     </p>
                 </x-stat-tile>
 
+                @if ($envelope->investments->isNotEmpty())
+                    @php
+                        $invCost  = $envelope->investedCost();
+                        $invValue = $envelope->investedValue();
+                        $invGain  = $invValue - $invCost;
+                    @endphp
+                    <x-stat-tile>
+                        <x-slot:label>Invested</x-slot:label>
+                        <p class="mt-1 text-2xl font-semibold font-mono text-gray-900 dark:text-gray-100">${{ $demo->amt($invValue) }}</p>
+                        <p class="mt-1 text-xs {{ $invGain >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                            {{ $invGain < 0 ? '−' : '+' }}${{ $demo->amt(abs($invGain)) }} vs ${{ $demo->amt($invCost) }} cost
+                        </p>
+                    </x-stat-tile>
+                @endif
+
                 @if ($hasMonthlyTarget)
                     @php
                         $target = (float) $envelope->monthly_target;
@@ -156,6 +171,77 @@
                     @endif
                 </div>
             </div>
+
+            {{-- Invest from this envelope --}}
+            @if ($cashAccounts->isNotEmpty() && $portfolios->isNotEmpty())
+                @php
+                    $sel = 'mt-1 block w-48 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm';
+                @endphp
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Invest From This Envelope</h3>
+                    </div>
+                    <div class="p-6">
+                        <form method="POST" action="{{ route('envelopes.invest', $envelope) }}" class="flex flex-wrap items-end gap-4">
+                            @csrf
+                            <div>
+                                <x-input-label for="inv_symbol" value="Symbol" />
+                                <x-text-input id="inv_symbol" name="symbol" type="text" class="mt-1 block w-28" :value="old('symbol')" required maxlength="20" placeholder="VOO" />
+                                <x-input-error :messages="$errors->get('symbol')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="inv_asset_type" value="Type" />
+                                <select id="inv_asset_type" name="asset_type" class="{{ $sel }} !w-32">
+                                    @foreach (\App\Enums\AssetType::cases() as $at)
+                                        <option value="{{ $at->value }}" @selected(old('asset_type', 'stock') === $at->value)>{{ $at->label() }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('asset_type')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="inv_quantity" value="Quantity" />
+                                <x-text-input id="inv_quantity" name="quantity" type="number" class="mt-1 block w-32" :value="old('quantity')" required min="0" step="any" />
+                                <x-input-error :messages="$errors->get('quantity')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="inv_price" value="Price / unit" />
+                                <x-text-input id="inv_price" name="price_per_unit" type="number" class="mt-1 block w-32" :value="old('price_per_unit')" required min="0" step="any" />
+                                <x-input-error :messages="$errors->get('price_per_unit')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="inv_fees" value="Fees" />
+                                <x-text-input id="inv_fees" name="fees" type="number" class="mt-1 block w-24" :value="old('fees')" min="0" step="any" />
+                                <x-input-error :messages="$errors->get('fees')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="inv_date" value="Date" />
+                                <x-text-input id="inv_date" name="transacted_at" type="date" class="mt-1 block w-40" :value="old('transacted_at', now()->format('Y-m-d'))" required />
+                                <x-input-error :messages="$errors->get('transacted_at')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="inv_portfolio" value="Portfolio" />
+                                <select id="inv_portfolio" name="portfolio_id" class="{{ $sel }}" required>
+                                    @foreach ($portfolios as $pf)
+                                        <option value="{{ $pf->id }}" @selected(old('portfolio_id') == $pf->id)>{{ $pf->name }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('portfolio_id')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="inv_account" value="Paid from account" />
+                                <select id="inv_account" name="cash_account_id" class="{{ $sel }}" required>
+                                    @foreach ($cashAccounts as $ca)
+                                        <option value="{{ $ca->id }}" @selected(old('cash_account_id') == $ca->id)>{{ $ca->name }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('cash_account_id')" class="mt-2" />
+                            </div>
+                            <div class="pb-0.5"><x-primary-button>Invest</x-primary-button></div>
+                        </form>
+                        <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Records the buy in the portfolio and a matching withdrawal charged to this envelope. The invested value stays shown here.</p>
+                    </div>
+                </div>
+            @endif
 
             {{-- Transaction History --}}
             @php

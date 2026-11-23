@@ -19,7 +19,7 @@ class Transaction extends Model
     protected $fillable = [
         'portfolio_id', 'asset_id', 'type', 'quantity',
         'price_per_unit', 'fees', 'fee_in_asset', 'currency', 'notes', 'transacted_at',
-        'linked_transfer_id',
+        'linked_transfer_id', 'envelope_id',
     ];
 
     protected $casts = [
@@ -51,6 +51,12 @@ class Transaction extends Model
     public function portfolio(): BelongsTo
     {
         return $this->belongsTo(Portfolio::class);
+    }
+
+    /** The envelope whose money funded this buy (set by the envelope "Invest" action). */
+    public function envelope(): BelongsTo
+    {
+        return $this->belongsTo(Envelope::class);
     }
 
     public function asset(): BelongsTo
