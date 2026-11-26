@@ -10,13 +10,40 @@ import { DEMO_MASK, fmtDate, fmtFull, fmtK, fmtSigned, fmtSignedPct, gainLossCla
 // Register once for every bundle that imports these helpers.
 Chart.register(LineController, LineElement, PointElement, Filler, LinearScale, TimeScale, Tooltip, Legend, PieController, ArcElement);
 
+Chart.defaults.font.family = 'Figtree, system-ui, sans-serif';
+Chart.defaults.scale.border.display = false;
+Chart.defaults.scale.grid.drawTicks = false;
+Chart.defaults.scale.ticks.padding = 8;
+Chart.defaults.scale.ticks.maxRotation = 0;
+Object.assign(Chart.defaults.plugins.legend.labels, { boxWidth: 18, boxHeight: 6, padding: 16 });
+Object.assign(Chart.defaults.plugins.tooltip, {
+    backgroundColor: '#152f30', titleColor: '#fffdf3', bodyColor: '#e1efeb',
+    borderColor: '#52716c', borderWidth: 1, cornerRadius: 8,
+    padding: 12, bodySpacing: 5, boxPadding: 4,
+});
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('finance-theme-change', () => {
+        Object.values(Chart.instances).forEach(chart => chart.update('none'));
+    });
+}
+
+// Brand accent (Tailwind indigo-500 in this theme) for primary chart series.
+export const ACCENT = '#368b8e';
+export const accentFill = alpha => `rgba(54,139,142,${alpha})`;
+
+// Distinguishes benchmark lines from the accent self-series without relying on color alone.
+const BENCH_DASHES = [[7, 4], [2, 3], [8, 3, 2, 3]];
+
+const darkTheme = () => document.documentElement.classList.contains('dark');
+
 // Grid/label colors derived from the current dark-mode class, shared by all bundles.
 export function themeColors() {
-    const isDark = document.documentElement.classList.contains('dark');
+    const isDark = darkTheme();
     return {
         isDark,
-        gridColor:  isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
-        labelColor: isDark ? '#9ca3af' : '#6b7280',
+        gridColor: () => darkTheme() ? '#374b44' : '#dfe6e0',
+        labelColor: () => darkTheme() ? '#b0c3b8' : '#51665c',
     };
 }
 
@@ -69,6 +96,7 @@ export function resampleByRange(data) {
 function activateBtn(containerSel, activeRange) {
     document.querySelectorAll(containerSel + ' button[data-range]').forEach(b => {
         const active = b.dataset.range === activeRange;
+        b.setAttribute('aria-pressed', String(active));
         b.classList.toggle('bg-indigo-600', active);
         b.classList.toggle('text-white', active);
         b.classList.toggle('dark:bg-indigo-500', active);
@@ -85,12 +113,12 @@ function makeTimeScales(gridColor, labelColor, yFmt) {
             type: 'time',
             // Snapshots are daily, so never auto-pick hour ticks (autoTimeUnit charts).
             time: { unit: 'day', minUnit: 'day', tooltipFormat: 'MMM d, yyyy' },
-            grid: { color: gridColor },
-            ticks: { color: labelColor },
+            grid: { display: false },
+            ticks: { color: labelColor, maxTicksLimit: 8 },
         },
         y: {
             grid: { color: gridColor },
-            ticks: { color: labelColor, callback: yFmt },
+            ticks: { color: labelColor, maxTicksLimit: 6, callback: yFmt },
         },
     };
 }
@@ -223,7 +251,7 @@ export function makeValueCostChart({
         type: 'line',
         data: {
             datasets: [
-                { label: valueLabel,   data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', fill: true,  tension: 0.3, borderWidth: 2, pointRadius: 0 },
+                { label: valueLabel,   data: [], borderColor: ACCENT, backgroundColor: accentFill(0.15), fill: true,  tension: 0.3, borderWidth: 2, pointRadius: 0 },
                 { label: 'Cost Basis', data: [], borderColor: '#94a3b8', borderDash: [5, 5],                        fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 },
             ],
         },
@@ -298,8 +326,9 @@ export function makeBenchmarkChart({
 
     function update(r) {
         const self = typeof selfData === 'function' ? selfData() : selfData;
-        const datasets = [{ label: selfLabel, data: buildNorm(self, 'value', r), borderColor: '#6366f1', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 }];
-        Object.keys(benchRaw).forEach(t => datasets.push({
+        const datasets = [{ label: selfLabel, data: buildNorm(self, 'value', r), borderColor: ACCENT, fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0 }];
+        Object.keys(benchRaw).forEach((t, i) => datasets.push({
+            borderDash: BENCH_DASHES[i % BENCH_DASHES.length],
             label: t, data: buildNorm(benchRaw[t] || [], 'price', r), borderColor: benchTickerColors[t] || '#9ca3af', fill: false, tension: 0.3, borderWidth: 2, pointRadius: 0,
         }));
         chart.data.datasets = datasets;
@@ -316,14 +345,16 @@ export function makeBenchmarkChart({
 }
 
 // Shared allocation pie (dashboard asset-class donut, portfolio holdings donut):
-// legend off, borderless slices, tooltip showing the slice value (masked in demo mode).
+// legend off, separated slices, tooltip showing the slice value (masked in demo mode).
 export function makeAllocationPie({ el, labels, values, colors, demoMode = false }) {
     if (!el) return null;
 
     return new Chart(el, {
         type: 'pie',
-        data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
+        data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0, spacing: 2, borderRadius: 2, hoverOffset: 4 }] },
         options: {
+            cutout: '58%',
+            layout: { padding: 5 },
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -402,9 +433,9 @@ export function calendarColor(pct, isDark) {
     return pct > 0 ? CALENDAR_GREEN_SHADES[level] : CALENDAR_RED_SHADES[level];
 }
 
-const benchTickerColors = { SPY: '#10b981', BTC: '#f59e0b' };
+const benchTickerColors = { SPY: '#9471bb', BTC: '#c88a36' };
 
 export const slicePalette = [
-    '#6366f1','#10b981','#f59e0b','#ef4444','#3b82f6',
+    ACCENT,'#10b981','#f59e0b','#ef4444','#3b82f6',
     '#8b5cf6','#f97316','#14b8a6','#ec4899','#84cc16',
 ];

@@ -132,13 +132,13 @@
        class="fixed inset-y-0 left-0 z-40 w-64 flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 lg:translate-x-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ps-[env(safe-area-inset-left)]">
 
     {{-- Brand --}}
-    <div class="h-16 shrink-0 flex items-center gap-2 px-4 border-b border-gray-100 dark:border-gray-700">
+    <div class="engraved h-20 shrink-0 flex items-center gap-2 px-4">
         <a href="{{ route('dashboard') }}" class="flex items-center gap-2 min-w-0">
-            <x-application-logo class="block h-8 w-auto fill-current text-indigo-600" />
-            <span class="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">{{ config('app.name') }}</span>
+            <x-application-logo class="block h-8 w-auto fill-current text-[#a9dbce]" />
+            <span class="font-semibold text-sm overflow-hidden text-ellipsis leading-[1.2] text-[#fffdf3]">{{ config('app.name') }}</span>
         </a>
         <button @click="sidebarOpen = false"
-                class="ms-auto lg:hidden p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                class="ms-auto lg:hidden p-1.5 rounded-md text-[#a9dbce] hover:text-white hover:bg-[#31595a] dark:hover:bg-gray-700 transition"
                 title="Close menu">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -161,7 +161,7 @@
             <div class="pt-1">
                 <button type="button" @click="open['{{ $key }}'] = !open['{{ $key }}']"
                         :aria-expanded="open['{{ $key }}']"
-                        class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                     <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="{{ $section['icon'] }}" />
                     </svg>

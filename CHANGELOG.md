@@ -5,6 +5,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
 
+## [1.12.0] - 2026-11-26
+
+### Changed
+
+- **Visual retheme.** The app moves from indigo/slate to a teal-and-sage palette with a warm paper canvas. It adds an engraved masthead on the dashboard, landing page and sidebar brand panel, serif page headings, and carded guest/error/offline pages. Stat tiles gain a top rule with left-aligned text, and the primary button is now teal. The PWA `theme_color`/`background_color` follow suit.
+- **Charts.** Chart.js now has shared defaults: Figtree font, no axis borders, no x-axis gridlines, capped tick counts, and dark tooltips. Primary series use the new accent. Benchmark lines get distinct dash patterns so they can be told apart without color, and allocation pies get spaced slices. Toggling dark mode now recolors open charts and the dashboard calendar heatmap without a reload.
+
+### Fixed
+
+- Analysis chart tooltips were missing the space after the series label ("Income:$1,200").
+
+### Accessibility
+
+- Chart range buttons expose `aria-pressed`, the active sidebar link sets `aria-current="page"`, and interactive elements get a visible `:focus-visible` outline.
+
 ## [1.11.1] - 2026-08-17
 
 ### Fixed

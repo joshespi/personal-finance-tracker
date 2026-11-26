@@ -16,8 +16,8 @@
         @vite(['resources/css/app.css'])
     @endif
 </head>
-<body class="bg-slate-100 dark:bg-gray-900 min-h-screen flex items-center justify-center font-sans antialiased">
-    <main class="text-center px-6 max-w-md">
+<body class="finance-canvas guest-canvas min-h-screen flex items-center justify-center font-sans antialiased">
+    <main class="bg-white dark:bg-gray-800 rounded-lg shadow-sm text-center mx-4 px-6 py-8 max-w-md">
         <p class="text-6xl font-bold text-indigo-600 dark:text-indigo-400">{{ $code }}</p>
         <h1 class="mt-4 text-xl font-semibold text-gray-800 dark:text-gray-200">{{ $heading }}</h1>
         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ $message }}</p>

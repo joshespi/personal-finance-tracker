@@ -31,10 +31,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 responsive: true,
                 plugins: {
                     legend: { labels: { color: ticks } },
-                    tooltip: { callbacks: { label: ctx => fmtDollar2(ctx.parsed.y) } },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmtDollar2(ctx.parsed.y) } },
                 },
                 scales: {
-                    x: { ticks: { color: ticks }, grid: { color: grid } },
+                    x: { ticks: { color: ticks }, grid: { display: false } },
                     y: { beginAtZero: true, ticks: { color: ticks, callback: fmtDollar }, grid: { color: grid } },
                 },
             },
@@ -60,10 +60,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 responsive: true,
                 plugins: {
                     legend: { position: 'bottom', labels: { color: ticks, boxWidth: 12, padding: 16 } },
-                    tooltip: { callbacks: { label: ctx => ' ' + ctx.dataset.label + ':' + fmtDollar2(ctx.parsed.y) } },
+                    tooltip: { callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + fmtDollar2(ctx.parsed.y) } },
                 },
                 scales: {
-                    x: { stacked: true, ticks: { color: ticks }, grid: { color: grid } },
+                    x: { stacked: true, ticks: { color: ticks }, grid: { display: false } },
                     y: { stacked: true, beginAtZero: true, ticks: { color: ticks, callback: fmtDollar }, grid: { color: grid } },
                 },
             },

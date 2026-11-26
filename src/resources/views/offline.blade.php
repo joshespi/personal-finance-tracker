@@ -6,8 +6,8 @@
     <title>Offline · {{ config('app.name') }}</title>
     @vite(['resources/css/app.css'])
 </head>
-<body class="bg-slate-50 dark:bg-gray-900 min-h-screen flex items-center justify-center font-sans antialiased">
-    <div class="text-center px-6">
+<body class="finance-canvas guest-canvas min-h-screen flex items-center justify-center font-sans antialiased">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm text-center mx-4 px-6 py-8">
         <p class="text-5xl mb-4">📡</p>
         <h1 class="text-xl font-semibold text-gray-800 dark:text-gray-200">You're offline</h1>
         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Check your connection and try again.</p>

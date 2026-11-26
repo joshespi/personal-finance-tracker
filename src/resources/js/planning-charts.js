@@ -1,4 +1,4 @@
-import { themeColors } from './chart-utils';
+import { themeColors, ACCENT, accentFill } from './chart-utils';
 import { fmtWhole } from './format-utils';
 
 // Debt-payoff Alpine component: renders the snowball/avalanche projection chart and
@@ -87,8 +87,8 @@ document.addEventListener('alpine:init', () => {
                     data: {
                         labels: this.chartLabels(Math.max(s.length, a.length)),
                         datasets: [
-                            { label: 'Snowball',  data: s, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)', fill: true,  tension: 0.3, pointRadius: 0, borderWidth: 2 },
-                            { label: 'Avalanche', data: a, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.04)',  fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2, borderDash: [5, 4] },
+                            { label: 'Snowball',  data: s, borderColor: ACCENT, backgroundColor: accentFill(0.08), fill: true,  tension: 0.3, pointRadius: 0, borderWidth: 2 },
+                            { label: 'Avalanche', data: a, borderColor: '#bd8640', backgroundColor: '#bd8640',  fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2, borderDash: [5, 4] },
                         ],
                     },
                     options: {
@@ -98,7 +98,7 @@ document.addEventListener('alpine:init', () => {
                             tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmtWhole(ctx.raw) } },
                         },
                         scales: {
-                            x: { ticks: { maxTicksLimit: 12, color: tc }, grid: { color: gc } },
+                            x: { ticks: { maxTicksLimit: 12, color: tc }, grid: { display: false } },
                             y: { ticks: { callback: fmtWhole, color: tc }, grid: { color: gc } },
                         },
                     },

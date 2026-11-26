@@ -12,7 +12,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const { chartData: allDataFull, chartDataExManual: allDataMkt, benchmarkData: benchRaw, allocation: allocData } = window.__dashCharts ?? {};
     if (!allDataFull) return;
 
-    const { isDark, gridColor, labelColor } = themeColors();
+    const theme = themeColors();
+    const { gridColor, labelColor } = theme;
+    let { isDark } = theme;
 
     let showManual = localStorage.getItem('dashShowManual') !== 'false';
 
@@ -297,8 +299,11 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // The legend only depends on isDark, which is fixed for the life of the
-    // page, so it's rendered once rather than on every calendar re-render.
+    window.addEventListener('finance-theme-change', () => {
+        isDark = themeColors().isDark;
+        renderCalendarLegend(document.getElementById('calendarHeatmapLegend'));
+        renderCalendarHeatmap();
+    });
     renderCalendarLegend(document.getElementById('calendarHeatmapLegend'));
     renderCalendarHeatmap();
 

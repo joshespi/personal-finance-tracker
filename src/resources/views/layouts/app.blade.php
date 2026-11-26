@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <link rel="manifest" href="/manifest.json">
-        <meta name="theme-color" content="#4f46e5">
+        <meta name="theme-color" content="#205c61">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="{{ config('app.name') }}">
@@ -43,13 +43,13 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @livewireStyles
     </head>
-    <body class="font-sans antialiased bg-slate-100 dark:bg-gray-900">
+    <body class="font-sans antialiased finance-canvas text-gray-900 dark:text-gray-100">
         <div class="min-h-screen flex"
              x-data="{
                 sidebarOpen: false,
                 dark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
              }"
-             x-init="$watch('dark', val => { document.documentElement.classList.toggle('dark', val); localStorage.setItem('theme', val ? 'dark' : 'light'); })"
+             x-init="$watch('dark', val => { document.documentElement.classList.toggle('dark', val); localStorage.setItem('theme', val ? 'dark' : 'light'); window.dispatchEvent(new Event('finance-theme-change')); })"
              x-effect="document.body.classList.toggle('overflow-hidden', sidebarOpen)">
 
             @include('layouts.navigation')
@@ -121,15 +121,15 @@
 
                 <!-- Page Heading -->
                 @isset($header)
-                    <header class="bg-white dark:bg-gray-800 shadow dark:shadow-gray-700/50">
-                        <div class="py-6 px-4 sm:px-6 lg:px-8">
+                    <header class="page-heading">
+                        <div class="pt-7 pb-4 px-4 sm:px-6 lg:px-8">
                             {{ $header }}
                         </div>
                     </header>
                 @endisset
 
                 <!-- Page Content -->
-                <main class="flex-1">
+                <main class="workspace-content flex-1">
                     {{ $slot }}
                 </main>
 

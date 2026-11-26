@@ -21,16 +21,16 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans text-gray-900 dark:text-gray-100 antialiased bg-white dark:bg-gray-900">
+    <body class="font-sans text-gray-900 dark:text-gray-100 antialiased finance-canvas">
 
         {{-- Nav --}}
         <header class="border-b border-gray-100 dark:border-gray-800">
             <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <a href="/" class="flex items-center gap-2">
                     <x-application-logo class="w-8 h-8 fill-current text-indigo-600" />
-                    <span class="font-semibold text-gray-800 dark:text-gray-200">{{ config('app.name') }}</span>
+                    <span class="leading-tight font-semibold text-gray-800 dark:text-gray-200">{{ config('app.name') }}</span>
                 </a>
-                <div class="flex items-center gap-4">
+                <div class="shrink-0 flex items-center gap-2 sm:gap-4">
                     <a href="{{ route('login') }}" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition">
                         Log in
                     </a>
@@ -45,27 +45,27 @@
         </header>
 
         {{-- Hero --}}
-        <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20 sm:pt-24 sm:pb-28 text-center">
-            <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-gray-900 dark:text-white max-w-3xl mx-auto">
+        <section class="landing-masthead engraved px-4 sm:px-6 lg:px-8 pt-16 pb-20 sm:pt-24 sm:pb-28 text-center">
+            <h1 class="max-w-3xl mx-auto">
                 Investing and budgeting, on one balance sheet.
             </h1>
-            <p class="mt-6 text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
+            <p class="mt-6 text-lg max-w-2xl mx-auto leading-relaxed">
                 Track stocks, crypto, real estate, and anything else you own alongside envelope budgeting for your
                 everyday cash &mdash; in a single app that's free, self-hosted, and never sells or shares your data.
             </p>
             <div class="mt-10 flex items-center justify-center gap-4">
                 @if (Route::has('register'))
                     <a href="{{ route('register') }}"
-                       class="inline-flex items-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-md transition">
+                       class="inline-flex items-center px-6 py-3 border border-[rgb(198_231_218/0.5)] bg-[#d2e9df] hover:bg-[#ecf7f0] text-[#173d40] text-sm font-semibold rounded-md transition">
                         Get started &mdash; it's free
                     </a>
                 @endif
                 <a href="{{ route('login') }}"
-                   class="inline-flex items-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-semibold rounded-md transition">
+                   class="inline-flex items-center px-6 py-3 border border-[rgb(198_231_218/0.5)] text-[#f4faf7] hover:bg-[#315e5f] hover:text-white text-sm font-semibold rounded-md transition">
                     Log in
                 </a>
             </div>
-            <p class="mt-6 text-xs text-gray-400 dark:text-gray-500">
+            <p class="mt-6 text-xs">
                 Hosted for free on our own servers &mdash; no subscription, no ads, no credit card.
             </p>
         </section>

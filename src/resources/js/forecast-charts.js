@@ -1,4 +1,4 @@
-import { themeColors } from './chart-utils';
+import { themeColors, ACCENT, accentFill } from './chart-utils';
 import { fmtFull, fmtK } from './format-utils';
 
 // FIRE forecast nominal-vs-real projection line chart (the "trajectory" mode of the
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const cfg        = window.__forecastChart ?? {};
     const projection = cfg.projection ?? [];
-    const { isDark, gridColor, labelColor } = themeColors();
+    const { gridColor, labelColor } = themeColors();
 
     new Chart(el, {
         type: 'line',
@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 {
                     label: 'Nominal',
                     data: projection.map(p => p.nominal),
-                    borderColor: '#6366f1',
-                    backgroundColor: 'rgba(99,102,241,0.08)',
+                    borderColor: ACCENT,
+                    backgroundColor: accentFill(0.08),
                     fill: true,
                     tension: 0.35,
                     pointRadius: 0,
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 {
                     label: 'Real (inflation-adjusted)',
                     data: projection.map(p => p.real),
-                    borderColor: isDark ? '#6b7280' : '#9ca3af',
+                    borderColor: labelColor,
                     borderDash: [6, 4],
                     fill: false,
                     tension: 0.35,
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             scales: {
                 x: {
-                    grid: { color: gridColor },
+                    grid: { display: false },
                     ticks: { color: labelColor, maxTicksLimit: 10 },
                 },
                 y: {

@@ -1,4 +1,4 @@
-import { themeColors } from './chart-utils';
+import { themeColors, accentFill } from './chart-utils';
 
 // Monthly dividends bar chart. Reads its data from window.__dividendsChart, a plain
 // JSON blob set inline by the Blade view.
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function () {
             datasets: [{
                 label: 'Dividends',
                 data: monthData,
-                backgroundColor: 'rgba(99,102,241,0.7)',
+                backgroundColor: accentFill(0.7),
                 borderRadius: 4,
             }],
         },
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
             },
             scales: {
-                x: { grid: { color: gridColor }, ticks: { color: textColor } },
+                x: { grid: { display: false }, ticks: { color: textColor } },
                 y: {
                     grid: { color: gridColor },
                     ticks: {

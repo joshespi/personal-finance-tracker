@@ -4,8 +4,8 @@
     "description": "Track investments, budget envelopes, cash, and liabilities in one place.",
     "start_url": "/dashboard",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#4f46e5",
+    "background_color": "#f6f5ef",
+    "theme_color": "#205c61",
     "icons": [
         {
             "src": "/icons/icon-192.png",

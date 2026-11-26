@@ -1,5 +1,5 @@
 @props(['highlight' => false])
-<div {{ $attributes->class(['bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg px-5 py-4 text-center overflow-hidden', 'ring-1 ring-indigo-500/20' => $highlight]) }}>
+<div {{ $attributes->class(['shadow-sm border-t-2 rounded-lg px-4 py-4 text-start overflow-hidden', 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600' => !$highlight, 'bg-indigo-50 dark:bg-indigo-900 border-indigo-500 dark:border-indigo-400 ring-1 ring-indigo-500/20' => $highlight]) }}>
     @isset($label)
         <p {{ $label->attributes }} @class(['text-xs uppercase tracking-wide truncate', 'text-gray-500 dark:text-gray-400' => !$highlight, 'text-indigo-600 dark:text-indigo-400 font-semibold' => $highlight])>
             {{ $label }}

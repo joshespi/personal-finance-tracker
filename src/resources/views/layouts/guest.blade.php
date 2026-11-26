@@ -25,8 +25,8 @@
              used on guest pages actually initializes. --}}
         @livewireStyles
     </head>
-    <body class="font-sans text-gray-900 dark:text-gray-100 antialiased bg-gray-100 dark:bg-gray-900">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0">
+    <body class="font-sans text-gray-900 dark:text-gray-100 antialiased finance-canvas guest-canvas">
+        <div class="min-h-screen flex flex-col sm:justify-center items-center px-4 py-8">
             <div>
                 <a href="/" class="flex flex-col items-center gap-2">
                     <x-application-logo class="w-12 h-12 fill-current text-indigo-600" />
@@ -34,7 +34,7 @@
                 </a>
             </div>
 
-            <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white dark:bg-gray-800 shadow-md dark:shadow-gray-700/50 overflow-hidden sm:rounded-lg">
+            <div class="w-full sm:max-w-md mt-6 px-6 py-8 sm:px-8 bg-white dark:bg-gray-800 shadow-md dark:shadow-gray-700/50 overflow-hidden rounded-lg">
                 {{ $slot }}
             </div>
         </div>
