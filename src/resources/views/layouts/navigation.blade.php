@@ -134,11 +134,11 @@
     {{-- Brand --}}
     <div class="engraved h-20 shrink-0 flex items-center gap-2 px-4">
         <a href="{{ route('dashboard') }}" class="flex items-center gap-2 min-w-0">
-            <x-application-logo class="block h-8 w-auto fill-current text-[#a9dbce]" />
-            <span class="font-semibold text-sm overflow-hidden text-ellipsis leading-[1.2] text-[#fffdf3]">{{ config('app.name') }}</span>
+            <x-application-logo class="block h-8 w-auto" />
+            <span class="font-semibold text-sm overflow-hidden text-ellipsis leading-[1.2] text-gray-50">{{ config('app.name') }}</span>
         </a>
         <button @click="sidebarOpen = false"
-                class="ms-auto lg:hidden p-1.5 rounded-md text-[#a9dbce] hover:text-white hover:bg-[#31595a] dark:hover:bg-gray-700 transition"
+                class="ms-auto lg:hidden p-1.5 rounded-md text-indigo-200 hover:text-white hover:bg-gray-700 transition"
                 title="Close menu">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />

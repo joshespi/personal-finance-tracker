@@ -8,12 +8,7 @@
         <title>{{ config('app.name') }} &mdash; Free, self-hosted personal finance</title>
         <meta name="description" content="Track investments and budget your cash in one self-hosted app. Free forever, no ads, no third-party data sharing.">
 
-        <!-- Dark mode: apply class before paint to avoid flash -->
-        <script>
-            if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-            }
-        </script>
+        <x-brand-head />
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -27,7 +22,7 @@
         <header class="border-b border-gray-100 dark:border-gray-800">
             <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <a href="/" class="flex items-center gap-2">
-                    <x-application-logo class="w-8 h-8 fill-current text-indigo-600" />
+                    <x-application-logo class="w-8 h-8" />
                     <span class="leading-tight font-semibold text-gray-800 dark:text-gray-200">{{ config('app.name') }}</span>
                 </a>
                 <div class="shrink-0 flex items-center gap-2 sm:gap-4">
@@ -56,12 +51,12 @@
             <div class="mt-10 flex items-center justify-center gap-4">
                 @if (Route::has('register'))
                     <a href="{{ route('register') }}"
-                       class="inline-flex items-center px-6 py-3 border border-[rgb(198_231_218/0.5)] bg-[#d2e9df] hover:bg-[#ecf7f0] text-[#173d40] text-sm font-semibold rounded-md transition">
+                       class="inline-flex items-center px-6 py-3 border border-white/40 bg-indigo-100 hover:bg-white text-gray-900 text-sm font-semibold rounded-md transition">
                         Get started &mdash; it's free
                     </a>
                 @endif
                 <a href="{{ route('login') }}"
-                   class="inline-flex items-center px-6 py-3 border border-[rgb(198_231_218/0.5)] text-[#f4faf7] hover:bg-[#315e5f] hover:text-white text-sm font-semibold rounded-md transition">
+                   class="inline-flex items-center px-6 py-3 border border-white/40 text-gray-100 hover:bg-gray-700 hover:text-white text-sm font-semibold rounded-md transition">
                     Log in
                 </a>
             </div>

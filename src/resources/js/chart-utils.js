@@ -17,8 +17,8 @@ Chart.defaults.scale.ticks.padding = 8;
 Chart.defaults.scale.ticks.maxRotation = 0;
 Object.assign(Chart.defaults.plugins.legend.labels, { boxWidth: 18, boxHeight: 6, padding: 16 });
 Object.assign(Chart.defaults.plugins.tooltip, {
-    backgroundColor: '#152f30', titleColor: '#fffdf3', bodyColor: '#e1efeb',
-    borderColor: '#52716c', borderWidth: 1, cornerRadius: 8,
+    backgroundColor: '#181b24', titleColor: '#f9fafb', bodyColor: '#e5e7eb',
+    borderColor: '#4b5563', borderWidth: 1, cornerRadius: 8,
     padding: 12, bodySpacing: 5, boxPadding: 4,
 });
 
@@ -28,9 +28,9 @@ if (typeof window !== 'undefined') {
     });
 }
 
-// Brand accent (Tailwind indigo-500 in this theme) for primary chart series.
-export const ACCENT = '#368b8e';
-export const accentFill = alpha => `rgba(54,139,142,${alpha})`;
+// Brand accent (Tailwind indigo-500) for primary chart series.
+export const ACCENT = '#6366f1';
+export const accentFill = alpha => `rgba(99,102,241,${alpha})`;
 
 // Distinguishes benchmark lines from the accent self-series without relying on color alone.
 const BENCH_DASHES = [[7, 4], [2, 3], [8, 3, 2, 3]];
@@ -42,8 +42,8 @@ export function themeColors() {
     const isDark = darkTheme();
     return {
         isDark,
-        gridColor: () => darkTheme() ? '#374b44' : '#dfe6e0',
-        labelColor: () => darkTheme() ? '#b0c3b8' : '#51665c',
+        gridColor: () => darkTheme() ? '#374151' : '#e5e7eb',
+        labelColor: () => darkTheme() ? '#d1d5db' : '#4b5563',
     };
 }
 

@@ -7,12 +7,7 @@
 
         <title>{{ config('app.name') }}</title>
 
-        <!-- Dark mode: apply class before paint to avoid flash -->
-        <script>
-            if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-            }
-        </script>
+        <x-brand-head />
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -29,7 +24,7 @@
         <div class="min-h-screen flex flex-col sm:justify-center items-center px-4 py-8">
             <div>
                 <a href="/" class="flex flex-col items-center gap-2">
-                    <x-application-logo class="w-12 h-12 fill-current text-indigo-600" />
+                    <x-application-logo class="w-12 h-12" />
                     <span class="font-semibold text-gray-700 dark:text-gray-300 text-lg">{{ config('app.name') }}</span>
                 </a>
             </div>

@@ -4,13 +4,6 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <link rel="manifest" href="/manifest.json">
-        <meta name="theme-color" content="#205c61">
-        <meta name="mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-title" content="{{ config('app.name') }}">
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="apple-touch-icon" href="/icons/icon-180.png">
 
         {{-- Every page's header slot leads with an <h2> naming it; reuse that text as the tab title. --}}
         @php
@@ -20,12 +13,7 @@
         @endphp
         <title>{{ $pageTitle !== '' ? $pageTitle.' · ' : '' }}{{ config('app.name') }}</title>
 
-        <!-- Dark mode: apply class before paint to avoid flash -->
-        <script>
-            if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-            }
-        </script>
+        <x-brand-head />
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -47,7 +35,7 @@
         <div class="min-h-screen flex"
              x-data="{
                 sidebarOpen: false,
-                dark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+                dark: document.documentElement.classList.contains('dark')
              }"
              x-init="$watch('dark', val => { document.documentElement.classList.toggle('dark', val); localStorage.setItem('theme', val ? 'dark' : 'light'); window.dispatchEvent(new Event('finance-theme-change')); })"
              x-effect="document.body.classList.toggle('overflow-hidden', sidebarOpen)">
@@ -68,7 +56,7 @@
                         </svg>
                     </button>
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-2 min-w-0">
-                        <x-application-logo class="block h-7 w-auto fill-current text-indigo-600" />
+                        <x-application-logo class="block h-7 w-auto" />
                         <span class="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">{{ config('app.name') }}</span>
                     </a>
                     <div class="ms-auto flex items-center gap-1">

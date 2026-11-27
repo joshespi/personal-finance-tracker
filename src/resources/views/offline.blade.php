@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Offline · {{ config('app.name') }}</title>
+    <x-brand-head />
     @vite(['resources/css/app.css'])
 </head>
 <body class="finance-canvas guest-canvas min-h-screen flex items-center justify-center font-sans antialiased">

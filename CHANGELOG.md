@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
 
+## [1.13.0] - 2026-11-26
+
+### Changed
+
+- **Neutral palette and new logo.** The teal-and-sage palette from 1.12.0 is gone. The app returns to Tailwind's stock indigo accent on gray surfaces, and the masthead, sidebar brand panel, guest/landing canvas and chart colors all move to matching neutrals. Layout features from 1.12.0 (mastheads, serif headings, chart defaults) stay. A new ledger logo (`/icons/ledger.svg`) replaces the bar-chart mark, with a regenerated favicon and PWA icons. The PWA `theme_color`/`background_color` are now `#111827`, and the service-worker cache is bumped to `pt-v2` so installed copies pick up the new icons.
+- Every standalone layout (app, guest, landing, error, offline) now shares one `<x-brand-head />` partial for the manifest, icons and the pre-paint dark-mode script. The browser `theme-color` now follows the light/dark toggle.
+
+### Fixed
+
+- The offline page applied no dark mode and had no favicon.
+
 ## [1.12.0] - 2026-11-26
 
 ### Changed

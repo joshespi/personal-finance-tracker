@@ -6,11 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $heading }} · {{ config('app.name') }}</title>
-    <script>
-        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        }
-    </script>
+    <x-brand-head />
     {{-- Skip the stylesheet if assets haven't been built, so a missing manifest can't turn an error page into a second error. --}}
     @if (file_exists(public_path('build/manifest.json')))
         @vite(['resources/css/app.css'])

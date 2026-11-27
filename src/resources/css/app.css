@@ -4,30 +4,30 @@
 
 
 .finance-canvas {
-    --paper: #f6f5ef;
-    --rule: #d8ded6;
+    --paper: #f9fafb;
+    --rule: #d1d5db;
     background-color: var(--paper);
 }
 
 .dark .finance-canvas {
-    --paper: #14231f;
-    --rule: #354943;
+    --paper: #111827;
+    --rule: #374151;
     color-scheme: dark;
 }
 
 .guest-canvas {
-    background-image: radial-gradient(ellipse at 12% 0%, rgb(54 139 142 / 0.16), transparent 55%),
-        repeating-linear-gradient(0deg, transparent 0 31px, rgb(113 139 122 / 0.08) 31px 32px);
+    background-image: radial-gradient(ellipse at 12% 0%, rgb(99 102 241 / 0.16), transparent 55%),
+        repeating-linear-gradient(0deg, transparent 0 31px, rgb(107 114 128 / 0.08) 31px 32px);
 }
 
 .engraved {
-    background-color: #173d40;
-    background-image: repeating-radial-gradient(ellipse at 105% 140%, transparent 0 17px, rgb(150 216 197 / 0.12) 18px, transparent 19px 26px),
-        linear-gradient(110deg, #132f34, #225351);
+    background-color: #181b24;
+    background-image: repeating-radial-gradient(ellipse at 105% 140%, transparent 0 17px, rgb(176 180 211 / 0.12) 18px, transparent 19px 26px),
+        linear-gradient(110deg, #151720, #2b2e3d);
 }
 
 .dashboard-masthead h2, .landing-masthead h1 {
-    color: #fffdf3;
+    color: #f9fafb;
 }
 
 .page-heading { border-bottom: 1px solid var(--rule); }
@@ -43,7 +43,7 @@
     border-radius: 1rem;
     padding: clamp(1rem, 2.8vw, 2.5rem);
 }
-.landing-masthead p { color: #d3e4dd; }
+.landing-masthead p { color: #d1d5db; }
 .landing-masthead h1 { font-size: clamp(2.65rem, 6.5vw, 5.5rem); line-height: 1.02; }
 
 .workspace-content > .py-12 { padding-block: clamp(1.25rem, 2.5vw, 2.25rem); }
